@@ -1,0 +1,5 @@
+{
+  "name": "Supabase Christian Fellowship Dashboard",
+  "description": "A comprehensive dashboard for a Christian fellowship group to manage tasks, challenges, events, prayer requests, and community engagement, built with React and backed by Supabase.",
+  "requestFramePermissions": []
+}

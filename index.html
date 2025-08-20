@@ -1,0 +1,52 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fellowship Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary': {
+                '50': '#ecfdf5',
+                '100': '#d1fae5',
+                '200': '#a7f3d0',
+                '300': '#6ee7b7',
+                '400': '#34d399',
+                '500': '#10b981',
+                '600': '#059669',
+                '700': '#047857',
+                '800': '#065f46',
+                '900': '#064e3b',
+                '950': '#022c22',
+              },
+              'secondary': '#0f172a',
+              'light': '#f8fafc',
+              'dark': '#1e293b'
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "recharts": "https://esm.sh/recharts@^3.1.2",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-router-dom": "https://esm.sh/react-router-dom@6",
+    "react-router-dom/": "https://esm.sh/react-router-dom@6/"
+  }
+}
+</script>
+</head>
+  <body class="bg-light dark:bg-secondary">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
