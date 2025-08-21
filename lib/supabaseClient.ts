@@ -4,8 +4,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // These credentials must be stored in environment variables.
 // In development, you can use a .env file. For production, configure them
 // on your hosting platform.
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://tblkfcafwjconemdcrpk.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRibGtmY2Fmd2pjb25lbWRjcnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4MjMwNDksImV4cCI6MjA2ODM5OTA0OX0.RMf4-H4z9I8rdzroyl_an390s0SggD_5TqPw30vDV5Q';
 
 // The createClient function requires strings. If the env vars are missing,
 // we initialize supabase as null and the app will show a degraded state.
