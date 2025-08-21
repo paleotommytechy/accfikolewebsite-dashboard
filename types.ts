@@ -94,3 +94,28 @@ export interface StoreItem {
   cost: number;
   icon: string;
 }
+
+// Types for Developer Settings
+export interface AppSettings {
+  id: number;
+  scripture_of_the_day: string | null;
+  created_at: string;
+}
+
+export interface GroupChallenge {
+  id: string;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface MasterTask {
+    id: string;
+    title: string;
+    description: string | null;
+    created_by: string | null;
+    created_at: string;
+}

@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import PrayerRequests from './pages/PrayerRequests';
 import Store from './pages/Store';
 import BibleStudy from './pages/BibleStudy';
+import DeveloperSettings from './pages/DeveloperSettings';
 
 function App(): React.ReactNode {
   return (
@@ -43,6 +44,7 @@ function App(): React.ReactNode {
             <Route path="bible-study" element={<BibleStudy />} />
             <Route path="store" element={<Store />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="developer-settings" element={<DeveloperSettings />} />
           </Route>
         </Routes>
       </HashRouter>
