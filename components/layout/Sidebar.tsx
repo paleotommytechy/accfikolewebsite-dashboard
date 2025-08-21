@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
@@ -15,7 +14,7 @@ const Sidebar: React.FC = () => {
     <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-30 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
       <div className="flex items-center justify-center h-16 border-b border-gray-700">
         <LogoIcon className="w-8 h-8 text-primary-400" />
-        {isSidebarOpen && <span className="ml-3 text-white text-lg font-bold">Fellowship</span>}
+        {isSidebarOpen && <span className="ml-3 text-white text-lg font-bold">ACCF Ikole</span>}
       </div>
 
       <nav className="flex flex-col p-4 space-y-2 flex-grow">

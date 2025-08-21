@@ -1,5 +1,5 @@
 {
-  "name": "Supabase Christian Fellowship Dashboard",
-  "description": "A comprehensive dashboard for a Christian fellowship group to manage tasks, challenges, events, prayer requests, and community engagement, built with React and backed by Supabase.",
+  "name": "ACCF Ikole Campus Dashboard",
+  "description": "A comprehensive dashboard for the All Christian Campus Fellowship (ACCF Ikole Campus) to manage tasks, challenges, events, prayer requests, and community engagement, built with React and backed by Supabase.",
   "requestFramePermissions": []
 }

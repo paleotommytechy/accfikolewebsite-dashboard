@@ -1,5 +1,5 @@
 {
-  "name": "supabase-christian-fellowship-dashboard",
+  "name": "accf-ikole-campus-dashboard",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,8 @@
     "react-dom": "^19.1.1",
     "recharts": "^3.1.2",
     "react": "^19.1.1",
-    "react-router-dom": "6"
+    "react-router-dom": "6",
+    "@supabase/supabase-js": "2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

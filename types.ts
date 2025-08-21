@@ -2,8 +2,8 @@
 export interface UserProfile {
   id: string;
   name: string;
-  avatarUrl: string;
-  fellowshipPosition: string;
+  avatar_url: string;
+  fellowship_position: string;
   level: number;
   department: string;
   gender: 'Male' | 'Female' | 'Other';
@@ -12,7 +12,8 @@ export interface UserProfile {
   hotline: string;
   email: string;
   coins: number;
-  badges: Badge[];
+  badges: Badge[]; // In a real app, this would be a join from a separate table
+  role: 'admin' | 'member';
 }
 
 export interface Task {
@@ -20,7 +21,7 @@ export interface Task {
   title: string;
   description: string;
   status: 'pending' | 'completed' | 'overdue';
-  dueDate: string;
+  due_date: string;
   coins: number;
 }
 
@@ -28,36 +29,39 @@ export interface Challenge {
   id: string;
   title: string;
   description: string;
-  endDate: string;
+  end_date: string;
   progress: number; // 0-100
-  totalParticipants: number;
+  total_participants: number;
 }
 
 export interface Notification {
   id: string;
   type: 'new_post' | 'comment' | 'custom' | 'task';
   message: string;
-  timestamp: string;
+  created_at: string;
   read: boolean;
 }
 
 export interface PrayerRequest {
   id: string;
-  author: string;
-  authorAvatar: string;
+  author_id: string;
+  author_name: string; // denormalized for easier display
+  author_avatar: string; // denormalized for easier display
   request: string;
-  timestamp: string;
+  created_at: string;
   prayers: number;
 }
 
 export interface StudyProgress {
+  id: string;
+  user_id: string;
   book: string;
   chapters: number;
-  totalChapters: number;
+  total_chapters: number;
 }
 
 export interface Event {
-  id: string;
+  id:string;
   title: string;
   date: string;
   time: string;
@@ -67,11 +71,12 @@ export interface Event {
 
 export interface Message {
   id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar: string;
+  sender_id: string;
+  receiver_id: string;
   text: string;
-  timestamp: string;
+  created_at: string;
+  sender_name?: string;
+  sender_avatar?: string;
 }
 
 export interface Badge {

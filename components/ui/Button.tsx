@@ -6,6 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  href?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -13,6 +14,7 @@ const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   className = '',
+  href,
   ...props
 }) => {
   const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200';
@@ -30,9 +32,21 @@ const Button: React.FC<ButtonProps> = ({
     lg: 'px-6 py-3 text-lg',
   };
 
+  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+
+  if (href) {
+    // Cast props to 'any' for simplicity to allow anchor attributes.
+    // A more robust solution would involve generics.
+    return (
+      <a href={href} className={classes} {...(props as any)}>
+        {children}
+      </a>
+    );
+  }
+
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={classes}
       {...props}
     >
       {children}

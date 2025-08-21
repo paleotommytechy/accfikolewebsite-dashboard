@@ -5,11 +5,11 @@ import { mockStudyProgress } from '../services/mockData';
 import type { StudyProgress } from '../types';
 
 const ProgressItem: React.FC<{ progress: StudyProgress }> = ({ progress }) => {
-    const percentage = Math.round((progress.chapters / progress.totalChapters) * 100);
+    const percentage = Math.round((progress.chapters / progress.total_chapters) * 100);
     return (
         <div className="p-4 border dark:border-gray-700 rounded-lg">
             <h3 className="font-semibold text-lg">{progress.book}</h3>
-            <p className="text-sm text-gray-500">{progress.chapters} / {progress.totalChapters} chapters</p>
+            <p className="text-sm text-gray-500">{progress.chapters} / {progress.total_chapters} chapters</p>
             <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
                 <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
             </div>

@@ -4,6 +4,7 @@ import { MenuIcon, BellIcon, SunIcon, MoonIcon, ChevronDownIcon } from '../ui/Ic
 import { useAppContext } from '../../context/AppContext';
 import { mockNotifications } from '../../services/mockData';
 import Avatar from '../ui/Avatar';
+import { supabase } from '../../lib/supabaseClient';
 
 const Navbar: React.FC = () => {
   const { toggleSidebar, currentUser } = useAppContext();
@@ -47,7 +48,7 @@ const Navbar: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-300">{n.message}</p>
-                        <p className="text-xs text-gray-400">{n.timestamp}</p>
+                        <p className="text-xs text-gray-400">{n.created_at}</p>
                       </div>
                     </a>
                   </li>
@@ -59,7 +60,7 @@ const Navbar: React.FC = () => {
 
         <div className="relative">
           <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center space-x-2">
-            <Avatar src={currentUser?.avatarUrl} alt={currentUser?.name || ''} size="md" />
+            <Avatar src={currentUser?.avatar_url} alt={currentUser?.name || ''} size="md" />
             <span className="hidden md:inline text-sm font-medium">{currentUser?.name}</span>
             <ChevronDownIcon />
           </button>
@@ -67,7 +68,7 @@ const Navbar: React.FC = () => {
             <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark rounded-md shadow-lg py-1 z-20">
               <a href="#/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">My Profile</a>
               <a href="#/settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
-              <a href="#" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
+              <a href="#" onClick={() => supabase.auth.signOut()} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
             </div>
           )}
         </div>

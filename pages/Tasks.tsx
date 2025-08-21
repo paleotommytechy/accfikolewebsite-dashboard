@@ -22,7 +22,7 @@ const Tasks: React.FC = () => {
                             <div className="bg-primary-600 h-4 rounded-full" style={{width: `${mockWeeklyChallenge.progress}%`}}></div>
                         </div>
                     </div>
-                    <div className="text-sm text-gray-500 mt-2">Ends {mockWeeklyChallenge.endDate} • {mockWeeklyChallenge.totalParticipants} Participants</div>
+                    <div className="text-sm text-gray-500 mt-2">Ends {mockWeeklyChallenge.end_date} • {mockWeeklyChallenge.total_participants} Participants</div>
                 </div>
             </div>
         </Card>
@@ -36,7 +36,7 @@ const Tasks: React.FC = () => {
                             <h4 className={`font-semibold text-lg ${task.status === 'completed' ? 'line-through text-gray-500' : ''}`}>{task.title}</h4>
                             <p className="text-gray-500 text-sm mt-1">{task.description}</p>
                             <div className="mt-2 text-sm">
-                                <span className="font-semibold text-yellow-500">+{task.coins} Coins</span> • <span className="text-gray-400">Due: {task.dueDate}</span>
+                                <span className="font-semibold text-yellow-500">+{task.coins} Coins</span> • <span className="text-gray-400">Due: {task.due_date}</span>
                             </div>
                         </div>
                          <button className={`p-2 rounded-full ${task.status === 'completed' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>

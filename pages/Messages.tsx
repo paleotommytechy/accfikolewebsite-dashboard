@@ -20,7 +20,7 @@ const Messages: React.FC = () => {
                 <ul>
                     {mockLeaderboard.filter(u => u.id !== currentUser?.id).map(user => (
                         <li key={user.id} className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700">
-                            <Avatar src={user.avatarUrl} alt={user.name} />
+                            <Avatar src={user.avatar_url} alt={user.name || ''} />
                             <span className="ml-3 font-medium">{user.name}</span>
                         </li>
                     ))}
@@ -30,17 +30,17 @@ const Messages: React.FC = () => {
             <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full">
                 <Card className="flex-1 flex flex-col !p-0">
                     <div className="p-4 border-b dark:border-gray-700 flex items-center space-x-3">
-                        <Avatar src={mockLeaderboard[1].avatarUrl} alt={mockLeaderboard[1].name} />
+                        <Avatar src={mockLeaderboard[1].avatar_url} alt={mockLeaderboard[1].name || ''} />
                         <h2 className="font-semibold text-lg">{mockLeaderboard[1].name}</h2>
                     </div>
 
                     <div className="flex-1 p-6 space-y-4 overflow-y-auto">
                         {mockMessages.map((msg: Message) => (
-                            <div key={msg.id} className={`flex items-end gap-3 ${msg.senderId === currentUser?.id ? 'justify-end' : ''}`}>
-                                {msg.senderId !== currentUser?.id && <Avatar src={msg.senderAvatar} alt={msg.senderName} size="sm" />}
-                                <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.senderId === currentUser?.id ? 'bg-primary-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none'}`}>
+                            <div key={msg.id} className={`flex items-end gap-3 ${msg.sender_id === currentUser?.id ? 'justify-end' : ''}`}>
+                                {msg.sender_id !== currentUser?.id && <Avatar src={msg.sender_avatar} alt={msg.sender_name || ''} size="sm" />}
+                                <div className={`max-w-xs md:max-w-md p-3 rounded-lg ${msg.sender_id === currentUser?.id ? 'bg-primary-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none'}`}>
                                     <p>{msg.text}</p>
-                                    <p className="text-xs opacity-70 mt-1 text-right">{msg.timestamp}</p>
+                                    <p className="text-xs opacity-70 mt-1 text-right">{msg.created_at}</p>
                                 </div>
                             </div>
                         ))}

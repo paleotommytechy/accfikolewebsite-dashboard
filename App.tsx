@@ -3,6 +3,8 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import DashboardLayout from './components/layout/DashboardLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
@@ -20,7 +22,15 @@ function App(): React.ReactNode {
     <AppProvider>
       <HashRouter>
         <Routes>
-          <Route path="/" element={<DashboardLayout />}>
+          <Route path="/auth" element={<Auth />} />
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="profile" element={<Profile />} />

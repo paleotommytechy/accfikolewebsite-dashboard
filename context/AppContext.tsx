@@ -1,13 +1,15 @@
 
-import React, { createContext, useState, useContext, useMemo } from 'react';
+import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import type { UserProfile } from '../types';
-import { mockUserProfile } from '../services/mockData';
+import { supabase } from '../lib/supabaseClient';
+import { mockBadges } from '../services/mockData'; // Keeping mock badges for now for simplicity
 
 interface AppContextType {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
   currentUser: UserProfile | null;
   isLoading: boolean;
+  isAdmin: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -17,16 +19,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // In a real app, this would be a useEffect fetching from Supabase
-  React.useEffect(() => {
-    const fetchUser = async () => {
+  useEffect(() => {
+    const fetchSession = async () => {
       setIsLoading(true);
-      // Simulate API call
-      await new Promise(res => setTimeout(res, 500));
-      setCurrentUser(mockUserProfile);
-      setIsLoading(false);
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (session) {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url, fellowship_position, level, department, gender, dob, whatsapp, hotline, email, coins, role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching profile:', error.message);
+          } else if (profile) {
+            // The profile from Supabase doesn't include 'badges'.
+            // Add mocked badges to form a valid UserProfile.
+            setCurrentUser({ ...profile, badges: mockBadges } as UserProfile);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    fetchUser();
+
+    fetchSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        // For simplicity, we only refetch on auth change.
+        // A more robust solution might handle specific events like SIGNED_IN, SIGNED_OUT.
+        fetchSession();
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
 
@@ -38,7 +73,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isSidebarOpen,
     toggleSidebar,
     currentUser,
-    isLoading
+    isLoading,
+    isAdmin: currentUser?.role === 'admin'
   }), [isSidebarOpen, currentUser, isLoading]);
 
   return (
