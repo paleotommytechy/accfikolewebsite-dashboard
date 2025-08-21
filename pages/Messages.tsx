@@ -20,8 +20,8 @@ const Messages: React.FC = () => {
                 <ul>
                     {mockLeaderboard.filter(u => u.id !== currentUser?.id).map(user => (
                         <li key={user.id} className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700">
-                            <Avatar src={user.avatar_url} alt={user.name || ''} />
-                            <span className="ml-3 font-medium">{user.name}</span>
+                            <Avatar src={user.avatar_url} alt={user.full_name || ''} />
+                            <span className="ml-3 font-medium">{user.full_name}</span>
                         </li>
                     ))}
                 </ul>
@@ -30,8 +30,8 @@ const Messages: React.FC = () => {
             <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full">
                 <Card className="flex-1 flex flex-col !p-0">
                     <div className="p-4 border-b dark:border-gray-700 flex items-center space-x-3">
-                        <Avatar src={mockLeaderboard[1].avatar_url} alt={mockLeaderboard[1].name || ''} />
-                        <h2 className="font-semibold text-lg">{mockLeaderboard[1].name}</h2>
+                        <Avatar src={mockLeaderboard[1].avatar_url} alt={mockLeaderboard[1].full_name || ''} />
+                        <h2 className="font-semibold text-lg">{mockLeaderboard[1].full_name}</h2>
                     </div>
 
                     <div className="flex-1 p-6 space-y-4 overflow-y-auto">

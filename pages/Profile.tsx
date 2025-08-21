@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -6,110 +6,31 @@ import Avatar from '../components/ui/Avatar';
 import { supabase } from '../lib/supabaseClient';
 import type { UserProfile, Badge } from '../types';
 
-const ProfileEditor: React.FC<{user: UserProfile}> = ({ user }) => {
-    const [profile, setProfile] = useState(user);
-    const [isEditing, setIsEditing] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setProfile(prev => ({...prev, [name]: value}));
-    }
-
-    const handleSave = async () => {
-        if (!user || !supabase) return;
-        // Construct an explicit update payload with only the editable fields
-        // to ensure type safety and prevent accidentally updating protected fields.
-        const updateData = {
-            name: profile.name,
-            fellowship_position: profile.fellowship_position,
-            department: profile.department,
-            gender: profile.gender,
-            dob: profile.dob,
-            whatsapp: profile.whatsapp,
-            hotline: profile.hotline,
-        };
-        const { error } = await supabase
-            .from('profiles')
-            .update(updateData as any)
-            .eq('id', user.id);
-        
-        if (error) {
-            alert('Error updating profile: ' + error.message);
-        } else {
-            alert('Profile saved successfully!');
-            setIsEditing(false);
-        }
-    }
-
-    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0 || !user || !supabase) {
-            return;
-        }
-        
-        const file = e.target.files[0];
-        const fileExt = file.name.split('.').pop();
-        const filePath = `${user.id}.${fileExt}`;
-
-        setIsUploading(true);
-        const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file, { upsert: true });
-
-        if (uploadError) {
-            alert('Error uploading avatar: ' + uploadError.message);
-            setIsUploading(false);
-            return;
-        }
-
-        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        const newAvatarUrl = `${data.publicUrl}?t=${new Date().getTime()}`; // Add timestamp to break cache
-
-        const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ avatar_url: newAvatarUrl } as any)
-            .eq('id', user.id);
-
-        if (updateError) {
-            alert('Error updating profile with new avatar: ' + updateError.message);
-        } else {
-            setProfile(prev => ({ ...prev, avatar_url: newAvatarUrl }));
-        }
-        setIsUploading(false);
-    };
-
-
+// ProfileEditor is now a presentational component that receives state and handlers as props.
+const ProfileEditor: React.FC<{
+    profile: UserProfile;
+    isEditing: boolean;
+    onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+}> = ({ profile, isEditing, onInputChange }) => {
     return (
-        <Card>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Personal Information</h2>
-                {isEditing ? (
-                    <div className="space-x-2">
-                        <Button variant="ghost" onClick={() => { setIsEditing(false); setProfile(user); }}>Cancel</Button>
-                        <Button onClick={handleSave}>Save Changes</Button>
-                    </div>
-                ) : (
-                    <Button variant="outline" onClick={() => setIsEditing(true)}>Edit Profile</Button>
-                )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputField label="Full Name" name="name" value={profile.name} onChange={handleInputChange} disabled={!isEditing} />
-                <InputField label="Fellowship Position" name="fellowship_position" value={profile.fellowship_position} onChange={handleInputChange} disabled={!isEditing} />
-                <InputField label="Department" name="department" value={profile.department} onChange={handleInputChange} disabled={!isEditing} />
-                <SelectField label="Gender" name="gender" value={profile.gender} onChange={handleInputChange} disabled={!isEditing}>
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                </SelectField>
-                <InputField label="Birthday (MM-DD)" name="dob" value={profile.dob} onChange={handleInputChange} disabled={!isEditing} />
-                <InputField label="Email" name="email" value={profile.email} onChange={handleInputChange} disabled={true} type="email" />
-                <InputField label="WhatsApp" name="whatsapp" value={profile.whatsapp} onChange={handleInputChange} disabled={!isEditing} type="tel" />
-                <InputField label="Hotline" name="hotline" value={profile.hotline} onChange={handleInputChange} disabled={!isEditing} type="tel" />
-            </div>
-        </Card>
-    )
-}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputField label="Full Name" name="full_name" value={profile.full_name || ''} onChange={onInputChange} disabled={!isEditing} />
+            <InputField label="Fellowship Position" name="fellowship_position" value={profile.fellowship_position || ''} onChange={onInputChange} disabled={!isEditing} />
+            <InputField label="Department" name="department" value={profile.department || ''} onChange={onInputChange} disabled={!isEditing} />
+            <SelectField label="Gender" name="gender" value={profile.gender || ''} onChange={onInputChange} disabled={!isEditing}>
+                <option value="" disabled>Select gender...</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+            </SelectField>
+            <InputField label="Birthday (MM-DD)" name="dob" value={profile.dob || ''} onChange={onInputChange} disabled={!isEditing} />
+            <InputField label="Email" name="email" value={profile.email} onChange={onInputChange} disabled={true} type="email" />
+            <InputField label="WhatsApp" name="whatsapp" value={profile.whatsapp || ''} onChange={onInputChange} disabled={!isEditing} type="tel" />
+            <InputField label="Hotline" name="hotline" value={profile.hotline || ''} onChange={onInputChange} disabled={!isEditing} type="tel" />
+        </div>
+    );
+};
+
 
 const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & {label: string}> = ({label, ...props}) => (
     <div>
@@ -140,40 +61,137 @@ const Badges: React.FC<{badges: Badge[]}> = ({ badges }) => (
 );
 
 const Profile: React.FC = () => {
-  const { currentUser, isLoading } = useAppContext();
+  const { currentUser, isLoading, refreshCurrentUser } = useAppContext();
+  const [profile, setProfile] = useState<UserProfile | null>(currentUser);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  if (isLoading || !currentUser) {
+  useEffect(() => {
+    // Sync local state when currentUser from context changes
+    setProfile(currentUser);
+  }, [currentUser]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!profile) return;
+    const { name, value } = e.target;
+    setProfile(prev => prev ? ({...prev, [name]: value}) : null);
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent default form submission which causes a page reload.
+    if (!profile || !supabase) return;
+
+    try {
+        const upsertData = {
+            id: profile.id, // Include the primary key for upsert
+            full_name: profile.full_name,
+            fellowship_position: profile.fellowship_position,
+            department: profile.department,
+            gender: profile.gender,
+            dob: profile.dob,
+            whatsapp: profile.whatsapp,
+            hotline: profile.hotline,
+        };
+        const { error } = await supabase
+            .from('profiles')
+            .upsert(upsertData);
+        
+        if (error) throw error;
+        
+        alert('Profile saved successfully!');
+        await refreshCurrentUser();
+        setIsEditing(false);
+    } catch (error: any) {
+        alert('Error updating profile: ' + error.message);
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !profile || !supabase) {
+        return;
+    }
+    
+    setIsUploading(true);
+    try {
+        const file = e.target.files[0];
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${profile.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        const newAvatarUrl = data.publicUrl;
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: newAvatarUrl })
+            .eq('id', profile.id);
+
+        if (updateError) throw updateError;
+        
+        alert('Avatar updated successfully!');
+        await refreshCurrentUser();
+    } catch (error: any) {
+        alert('Error uploading avatar: ' + error.message);
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
+  if (isLoading || !profile) {
     return <div>Loading...</div>;
   }
 
   return (
     <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Welcome, {profile.full_name || 'Member'}.</h1>
+
         <Card className="!p-0">
             <div className="h-32 bg-primary-500 rounded-t-lg"></div>
             <div className="p-6">
                 <div className="flex items-end -mt-16">
                     <div className="relative group">
-                      <Avatar src={currentUser.avatar_url} alt={currentUser.name} size="xl" className="border-4 border-white dark:border-dark" />
+                      <Avatar src={profile.avatar_url} alt={profile.full_name || 'User Avatar'} size="xl" className="border-4 border-white dark:border-dark" />
                        <label htmlFor="avatar-upload" className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-white text-sm">Change</span>
+                            <span className="text-white text-sm">{isUploading ? 'Uploading...' : 'Change'}</span>
                         </label>
-                       <input type="file" id="avatar-upload" accept="image/*" className="hidden" />
+                       <input type="file" id="avatar-upload" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={isUploading} ref={avatarInputRef} />
                     </div>
                     <div className="ml-4">
-                        <h1 className="text-2xl font-bold">{currentUser.name}</h1>
-                        <p className="text-gray-500">{currentUser.fellowship_position}</p>
+                        <h2 className="text-2xl font-bold">{profile.full_name || 'New Member'}</h2>
+                        <p className="text-gray-500">{profile.fellowship_position || 'position not set'}</p>
                     </div>
                 </div>
                  <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-300">
-                    <span>Level: <span className="font-semibold text-primary-500">{currentUser.level}</span></span>
-                    <span>Coins: <span className="font-semibold text-yellow-500">{currentUser.coins}</span></span>
+                    <span>Level: <span className="font-semibold text-primary-500">{profile.level}</span></span>
+                    <span>Coins: <span className="font-semibold text-yellow-500">{profile.coins}</span></span>
                 </div>
             </div>
         </Card>
         
-        <ProfileEditor user={currentUser} />
+        <Card>
+            <form onSubmit={handleSave}>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold">Personal Information</h2>
+                    {isEditing ? (
+                        <div className="space-x-2">
+                            <Button type="button" variant="ghost" onClick={() => { setIsEditing(false); setProfile(currentUser); }}>Cancel</Button>
+                            <Button type="submit">Save Changes</Button>
+                        </div>
+                    ) : (
+                        <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                    )}
+                </div>
+                <ProfileEditor profile={profile} isEditing={isEditing} onInputChange={handleInputChange} />
+            </form>
+        </Card>
         
-        <Badges badges={currentUser.badges} />
+        <Badges badges={profile.badges} />
     </div>
   );
 };

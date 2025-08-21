@@ -11,7 +11,11 @@ const Auth: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
     useEffect(() => {
         if (!isLoading && currentUser) {
@@ -19,27 +23,41 @@ const Auth: React.FC = () => {
         }
     }, [currentUser, isLoading, navigate]);
 
-    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!supabase) {
-            setMessage('Error: Application is not configured to connect to a database.');
+            setError('Error: Application is not configured to connect to a database.');
+            return;
+        }
+
+        if (authMode === 'signup' && password !== confirmPassword) {
+            setError("Passwords do not match.");
             return;
         }
 
         setLoading(true);
         setMessage('');
-        const { error } = await supabase.auth.signInWithOtp({
-            email: email,
-            options: {
-                emailRedirectTo: window.location.origin,
-            },
-        });
+        setError('');
 
-        if (error) {
-            setMessage(error.message);
-        } else {
-            setMessage('Check your email for the login link!');
+        if (authMode === 'login') {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) setError(error.message);
+        } else { // signup
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                setError(error.message);
+            } else {
+                // Supabase sends a confirmation email by default if enabled.
+                // The user is technically logged in at this point if confirmation is not required.
+                // The useEffect hook will handle redirection if login is successful.
+                if (data.user?.identities?.length === 0) {
+                    setError("User with this email already exists but is unconfirmed. Please check your email for a confirmation link.");
+                } else {
+                    setMessage('Signup successful! Please check your email for a verification link.');
+                }
+            }
         }
+
         setLoading(false);
     };
 
@@ -50,6 +68,8 @@ const Auth: React.FC = () => {
             </div>
         );
     }
+    
+    const title = authMode === 'login' ? 'Login to your Account' : 'Create a New Account';
 
     return (
         <div className="min-h-screen bg-light dark:bg-secondary flex flex-col justify-center items-center p-4">
@@ -57,44 +77,50 @@ const Auth: React.FC = () => {
                 <div className="text-center mb-8">
                     <LogoIcon className="w-16 h-16 text-primary-500 mx-auto" />
                     <h1 className="text-3xl font-bold mt-4 text-gray-800 dark:text-white">ACCF Ikole Dashboard</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Sign in via magic link with your email below.</p>
+                    <p className="text-gray-500 dark:text-gray-400">{title}</p>
                 </div>
                 
-                {message ? (
-                    <div className={`text-center p-4 mb-4 rounded-md ${message.includes('error') || message.includes('Error') ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300' : 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'}`}>
-                        {message}
-                    </div>
-                ) : (
-                    <form onSubmit={handleLogin} className="space-y-6">
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Email address
-                            </label>
-                            <div className="mt-1">
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="your.email@example.com"
-                                />
-                            </div>
-                        </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <InputField id="email" label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+                    <InputField id="password" label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} />
+                    {authMode === 'signup' && (
+                         <InputField id="confirm-password" label="Confirm Password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required autoComplete="new-password" />
+                    )}
+                    
+                    {error && <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>}
+                    {message && <p className="text-sm text-green-600 dark:text-green-400 text-center">{message}</p>}
 
-                        <div>
-                            <Button type="submit" className="w-full" disabled={loading}>
-                                {loading ? 'Sending...' : 'Send Magic Link'}
-                            </Button>
-                        </div>
-                    </form>
-                )}
+                    <div>
+                        <Button type="submit" className="w-full" disabled={loading}>
+                            {loading ? 'Processing...' : (authMode === 'login' ? 'Login' : 'Sign Up')}
+                        </Button>
+                    </div>
+                </form>
+
+                <div className="mt-6 text-center">
+                    <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); setMessage(''); }} className="text-sm text-primary-600 hover:underline dark:text-primary-400">
+                        {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+                    </button>
+                </div>
             </Card>
         </div>
     );
 };
+
+const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & {label: string}> = ({id, label, ...props}) => (
+    <div>
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {label}
+        </label>
+        <div className="mt-1">
+            <input
+                id={id}
+                {...props}
+                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+        </div>
+    </div>
+);
+
 
 export default Auth;

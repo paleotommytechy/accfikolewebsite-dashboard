@@ -1,15 +1,15 @@
 
 export interface UserProfile {
   id: string;
-  name: string;
-  avatar_url: string;
-  fellowship_position: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  fellowship_position: string | null;
   level: number;
-  department: string;
-  gender: 'Male' | 'Female' | 'Other';
-  dob: string; // MM-DD format
-  whatsapp: string;
-  hotline: string;
+  department: string | null;
+  gender: 'Male' | 'Female' | 'Other' | null;
+  dob: string | null; // MM-DD format
+  whatsapp: string | null;
+  hotline: string | null;
   email: string;
   coins: number;
   badges: Badge[]; // In a real app, this would be a join from a separate table
@@ -23,6 +23,7 @@ export interface Task {
   status: 'pending' | 'completed' | 'overdue';
   due_date: string;
   coins: number;
+  assigned_to: string; // The user ID this task is for.
 }
 
 export interface Challenge {
@@ -46,7 +47,7 @@ export interface PrayerRequest {
   id: string;
   author_id: string;
   author_name: string; // denormalized for easier display
-  author_avatar: string; // denormalized for easier display
+  author_avatar: string | null; // denormalized for easier display
   request: string;
   created_at: string;
   prayers: number;

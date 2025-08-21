@@ -21,7 +21,7 @@ const Navbar: React.FC = () => {
         <button onClick={toggleSidebar} className="text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
           <MenuIcon />
         </button>
-        <h1 className="text-xl font-semibold ml-4 text-gray-800 dark:text-white">Welcome, {currentUser?.name}</h1>
+        <h1 className="text-xl font-semibold ml-4 text-gray-800 dark:text-white">Welcome, {currentUser?.full_name || 'Member'}</h1>
       </div>
 
       <div className="flex items-center space-x-4">
@@ -59,8 +59,8 @@ const Navbar: React.FC = () => {
 
         <div className="relative">
           <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center space-x-2">
-            <Avatar src={currentUser?.avatar_url} alt={currentUser?.name || ''} size="md" />
-            <span className="hidden md:inline text-sm font-medium">{currentUser?.name}</span>
+            <Avatar src={currentUser?.avatar_url} alt={currentUser?.full_name || 'User Avatar'} size="md" />
+            <span className="hidden md:inline text-sm font-medium">{currentUser?.full_name || 'Member'}</span>
             <ChevronDownIcon />
           </button>
           {isProfileOpen && (

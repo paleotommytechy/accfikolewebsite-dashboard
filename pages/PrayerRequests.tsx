@@ -30,10 +30,13 @@ const PrayerRequests: React.FC = () => {
         e.preventDefault();
         if (!newRequest.trim() || !currentUser || !supabase) return;
 
+        // Use email prefix as a fallback if the name isn't set yet.
+        const authorName = currentUser.full_name || currentUser.email.split('@')[0];
+
         const { error } = await supabase.from('prayer_requests').insert({
             request: newRequest,
             author_id: currentUser.id,
-            author_name: currentUser.name,
+            author_name: authorName,
             author_avatar: currentUser.avatar_url,
         } as any);
 

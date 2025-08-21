@@ -9,7 +9,7 @@ export const mockBadges: Badge[] = [
 
 export const mockUserProfile: UserProfile = {
   id: 'user-123',
-  name: 'John Doe',
+  full_name: 'John Doe',
   avatar_url: 'https://picsum.photos/seed/johndoe/200',
   fellowship_position: 'Member',
   level: 12,
@@ -25,9 +25,9 @@ export const mockUserProfile: UserProfile = {
 };
 
 export const mockDailyTasks: Task[] = [
-  { id: 'task-1', title: 'Morning Devotion', description: 'Read Proverbs 1 and pray.', status: 'completed', due_date: 'Today', coins: 10 },
-  { id: 'task-2', title: 'Reach out to a friend', description: 'Call or text someone from the fellowship.', status: 'pending', due_date: 'Today', coins: 15 },
-  { id: 'task-3', title: 'Scripture Memorization', description: 'Memorize John 3:16.', status: 'pending', due_date: 'Today', coins: 20 },
+  { id: 'task-1', title: 'Morning Devotion', description: 'Read Proverbs 1 and pray.', status: 'completed', due_date: 'Today', coins: 10, assigned_to: 'user-123' },
+  { id: 'task-2', title: 'Reach out to a friend', description: 'Call or text someone from the fellowship.', status: 'pending', due_date: 'Today', coins: 15, assigned_to: 'user-123' },
+  { id: 'task-3', title: 'Scripture Memorization', description: 'Memorize John 3:16.', status: 'pending', due_date: 'Today', coins: 20, assigned_to: 'user-123' },
 ];
 
 export const mockWeeklyChallenge: Challenge = {
@@ -40,11 +40,11 @@ export const mockWeeklyChallenge: Challenge = {
 };
 
 export const mockLeaderboard: (Omit<UserProfile, 'badges' | 'dob' | 'email' | 'whatsapp' | 'hotline' | 'gender' | 'department' | 'fellowship_position' | 'role'>)[] = [
-  { id: 'user-1', name: 'Sarah Lee', avatar_url: 'https://picsum.photos/seed/sarah/100', level: 15, coins: 2100 },
-  { id: 'user-2', name: 'Michael Chen', avatar_url: 'https://picsum.photos/seed/michael/100', level: 14, coins: 1850 },
-  { id: 'user-123', name: 'John Doe', avatar_url: 'https://picsum.photos/seed/johndoe/100', level: 12, coins: 1250 },
-  { id: 'user-4', name: 'Emily White', avatar_url: 'https://picsum.photos/seed/emily/100', level: 11, coins: 1100 },
-  { id: 'user-5', name: 'David Kim', avatar_url: 'https://picsum.photos/seed/david/100', level: 10, coins: 950 },
+  { id: 'user-1', full_name: 'Sarah Lee', avatar_url: 'https://picsum.photos/seed/sarah/100', level: 15, coins: 2100 },
+  { id: 'user-2', full_name: 'Michael Chen', avatar_url: 'https://picsum.photos/seed/michael/100', level: 14, coins: 1850 },
+  { id: 'user-123', full_name: 'John Doe', avatar_url: 'https://picsum.photos/seed/johndoe/100', level: 12, coins: 1250 },
+  { id: 'user-4', full_name: 'Emily White', avatar_url: 'https://picsum.photos/seed/emily/100', level: 11, coins: 1100 },
+  { id: 'user-5', full_name: 'David Kim', avatar_url: 'https://picsum.photos/seed/david/100', level: 10, coins: 950 },
 ];
 
 export const mockNotifications: Notification[] = [

@@ -60,9 +60,9 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
             {leaderboard.map((user, index) => (
                 <li key={user.id} className="flex items-center">
                     <span className="text-lg font-bold w-6">{index + 1}</span>
-                    <Avatar src={user.avatar_url} alt={user.name || ''} size="md" className="mx-3" />
+                    <Avatar src={user.avatar_url} alt={user.full_name || ''} size="md" className="mx-3" />
                     <div className="flex-1">
-                        <p className="font-semibold">{user.name}</p>
+                        <p className="font-semibold">{user.full_name}</p>
                         <p className="text-sm text-gray-500">{user.coins} coins</p>
                     </div>
                 </li>
@@ -105,8 +105,17 @@ const Dashboard: React.FC = () => {
           .select('*')
           .eq('assigned_to', currentUser.id)
           .limit(3);
-        if (error) console.error('Error fetching tasks', error);
-        else setTasks(data || []);
+        if (error) {
+            // Gracefully handle if table/column doesn't exist (common during setup)
+            if (error.code === '42P01' || error.code === '42703') {
+                console.warn('Warning: Tasks table or assigned_to column not found. Using empty list for tasks.');
+                setTasks([]);
+            } else {
+                console.error('Error fetching tasks', error.message);
+            }
+        } else {
+            setTasks(data || []);
+        }
       };
 
       // Fetch the current weekly challenge
@@ -116,19 +125,28 @@ const Dashboard: React.FC = () => {
           .select('*')
           .order('end_date', { ascending: false })
           .limit(1)
-          .single();
-        if (error) console.error('Error fetching challenge', error);
-        else setChallenge(data);
+          .maybeSingle();
+        if (error) {
+             // Gracefully handle if table doesn't exist
+            if (error.code === '42P01') {
+                console.warn('Warning: Challenges table not found. Weekly challenge will not be displayed.');
+                setChallenge(null);
+            } else {
+                console.error('Error fetching challenge', error.message);
+            }
+        } else {
+            setChallenge(data);
+        }
       };
 
       // Fetch top 4 users for the leaderboard
       const fetchLeaderboard = async () => {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, avatar_url, coins')
+          .select('id, full_name, avatar_url, coins')
           .order('coins', { ascending: false })
           .limit(4);
-        if (error) console.error('Error fetching leaderboard', error);
+        if (error) console.error('Error fetching leaderboard', error.message);
         else setLeaderboard(data || []);
       };
 
@@ -139,7 +157,7 @@ const Dashboard: React.FC = () => {
             .select('*')
             .order('created_at', { ascending: false })
             .limit(3);
-          if (error) console.error('Error fetching prayer requests', error);
+          if (error) console.error('Error fetching prayer requests', error.message);
           else {
             setPrayerRequests(data || []);
           }
@@ -163,7 +181,7 @@ const Dashboard: React.FC = () => {
               <ScriptureOfTheDay />
           </div>
           <Card title="My Progress" className="flex flex-col justify-center items-center text-center">
-              <Avatar src={currentUser.avatar_url} alt={currentUser.name} size="lg"/>
+              <Avatar src={currentUser.avatar_url} alt={currentUser.full_name || 'User Avatar'} size="lg"/>
               <p className="font-bold text-xl mt-2">Level {currentUser.level}</p>
               <p className="text-yellow-500 font-semibold">{currentUser.coins} Coins</p>
               <Button href="#/profile" variant="outline" size="sm" className="mt-4">View Profile</Button>

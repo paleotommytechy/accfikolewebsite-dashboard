@@ -14,7 +14,7 @@ const Leaderboard: React.FC = () => {
       if (!supabase) return;
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, avatar_url, coins, level')
+        .select('id, full_name, avatar_url, coins, level')
         .order('coins', { ascending: false })
         .limit(20);
       
@@ -36,8 +36,8 @@ const Leaderboard: React.FC = () => {
             {/* 2nd Place */}
             {topThree[1] && (
               <div className="text-center">
-                <Avatar src={topThree[1].avatar_url} alt={topThree[1].name || ''} size="lg" className="border-4 border-gray-400" />
-                <h3 className="font-bold mt-2">{topThree[1].name}</h3>
+                <Avatar src={topThree[1].avatar_url} alt={topThree[1].full_name || ''} size="lg" className="border-4 border-gray-400" />
+                <h3 className="font-bold mt-2">{topThree[1].full_name}</h3>
                 <p className="text-gray-500 text-sm">{topThree[1].coins} coins</p>
                 <div className="bg-gray-300 dark:bg-gray-600 rounded-t-lg h-24 mt-2 p-2 flex items-center justify-center font-black text-3xl text-gray-600 dark:text-gray-300">2</div>
               </div>
@@ -45,8 +45,8 @@ const Leaderboard: React.FC = () => {
             {/* 1st Place */}
             {topThree[0] && (
               <div className="text-center">
-                <Avatar src={topThree[0].avatar_url} alt={topThree[0].name || ''} size="xl" className="border-4 border-yellow-400" />
-                <h3 className="font-bold mt-2 text-lg">{topThree[0].name}</h3>
+                <Avatar src={topThree[0].avatar_url} alt={topThree[0].full_name || ''} size="xl" className="border-4 border-yellow-400" />
+                <h3 className="font-bold mt-2 text-lg">{topThree[0].full_name}</h3>
                 <p className="text-yellow-500 text-sm font-semibold">{topThree[0].coins} coins</p>
                 <div className="bg-yellow-400 dark:bg-yellow-500 rounded-t-lg h-32 mt-2 p-2 flex items-center justify-center font-black text-4xl text-white">1</div>
               </div>
@@ -54,8 +54,8 @@ const Leaderboard: React.FC = () => {
             {/* 3rd Place */}
             {topThree[2] && (
               <div className="text-center">
-                <Avatar src={topThree[2].avatar_url} alt={topThree[2].name || ''} size="lg" className="border-4 border-yellow-700" />
-                <h3 className="font-bold mt-2">{topThree[2].name}</h3>
+                <Avatar src={topThree[2].avatar_url} alt={topThree[2].full_name || ''} size="lg" className="border-4 border-yellow-700" />
+                <h3 className="font-bold mt-2">{topThree[2].full_name}</h3>
                 <p className="text-gray-500 text-sm">{topThree[2].coins} coins</p>
                 <div className="bg-yellow-700 dark:bg-yellow-800 rounded-t-lg h-20 mt-2 p-2 flex items-center justify-center font-black text-3xl text-yellow-200">3</div>
               </div>
@@ -69,11 +69,11 @@ const Leaderboard: React.FC = () => {
                 <div className="flex items-center space-x-4 px-4">
                   <div className="w-6 text-center text-gray-500 font-bold">{index + 4}</div>
                   <div className="flex-shrink-0">
-                    <Avatar src={person.avatar_url} alt={person.name || ''} />
+                    <Avatar src={person.avatar_url} alt={person.full_name || ''} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate dark:text-white">
-                      {person.name}
+                      {person.full_name}
                     </p>
                     <p className="text-sm text-gray-500 truncate dark:text-gray-400">
                       Level {person.level}

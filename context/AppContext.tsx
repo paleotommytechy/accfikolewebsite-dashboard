@@ -9,6 +9,7 @@ interface AppContextType {
   currentUser: UserProfile | null;
   isLoading: boolean;
   isAdmin: boolean;
+  refreshCurrentUser: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -18,49 +19,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchSession = async () => {
-      if (!supabase) {
-        setIsLoading(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const fetchCurrentUser = async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+    
+    // Set loading to true only if not already loading to avoid flickers on refetch
+    setIsLoading(true);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError) throw sessionError;
+      if (sessionError) throw sessionError;
 
-        if (session) {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('id, name, avatar_url, fellowship_position, level, department, gender, dob, whatsapp, hotline, email, coins, role')
-            .eq('id', session.user.id)
-            .single();
+      if (session) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, fellowship_position, level, department, gender, dob, whatsapp, hotline, email, coins, role')
+          .eq('id', session.user.id)
+          .maybeSingle(); 
 
-          if (error) {
-            console.error('Error fetching profile:', error.message);
-          } else if (profile) {
-            // The profile from Supabase doesn't include 'badges'.
-            // Add mocked badges to form a valid UserProfile.
-            setCurrentUser({ ...(profile as any), badges: mockBadges });
-          }
+        if (error) {
+          console.error('Error fetching profile:', error.message);
+          setCurrentUser(null);
+        } else if (profile) {
+          setCurrentUser({ ...(profile as any), badges: mockBadges });
+        } else if (session.user) {
+          const temporaryProfile: UserProfile = {
+              id: session.user.id,
+              email: session.user.email || '',
+              full_name: null,
+              avatar_url: null,
+              fellowship_position: null,
+              level: 1,
+              department: null,
+              gender: null,
+              dob: null,
+              whatsapp: null,
+              hotline: null,
+              coins: 0,
+              badges: [],
+              role: 'member',
+          };
+          setCurrentUser(temporaryProfile);
+        } else {
+          setCurrentUser(null);
         }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsLoading(false);
+      } else {
+        setCurrentUser(null);
       }
-    };
+    } catch (e) {
+      console.error(e);
+      setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchSession();
+  useEffect(() => {
+    fetchCurrentUser();
 
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         (_event, session) => {
-          // For simplicity, we only refetch on auth change.
-          // A more robust solution might handle specific events like SIGNED_IN, SIGNED_OUT.
-          fetchSession();
+          fetchCurrentUser();
         }
       );
 
@@ -80,7 +102,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toggleSidebar,
     currentUser,
     isLoading,
-    isAdmin: currentUser?.role === 'admin'
+    isAdmin: currentUser?.role === 'admin',
+    refreshCurrentUser: fetchCurrentUser,
   }), [isSidebarOpen, currentUser, isLoading]);
 
   return (
