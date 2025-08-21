@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { useAppContext } from '../context/AppContext';
 import Card from '../components/ui/Card';
@@ -19,7 +18,7 @@ const ProfileEditor: React.FC<{user: UserProfile}> = ({ user }) => {
     }
 
     const handleSave = async () => {
-        if (!user) return;
+        if (!user || !supabase) return;
         // Construct an explicit update payload with only the editable fields
         // to ensure type safety and prevent accidentally updating protected fields.
         const updateData = {
@@ -33,7 +32,7 @@ const ProfileEditor: React.FC<{user: UserProfile}> = ({ user }) => {
         };
         const { error } = await supabase
             .from('profiles')
-            .update(updateData)
+            .update(updateData as any)
             .eq('id', user.id);
         
         if (error) {
@@ -45,7 +44,7 @@ const ProfileEditor: React.FC<{user: UserProfile}> = ({ user }) => {
     }
 
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0 || !user) {
+        if (!e.target.files || e.target.files.length === 0 || !user || !supabase) {
             return;
         }
         
@@ -69,7 +68,7 @@ const ProfileEditor: React.FC<{user: UserProfile}> = ({ user }) => {
 
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ avatar_url: newAvatarUrl })
+            .update({ avatar_url: newAvatarUrl } as any)
             .eq('id', user.id);
 
         if (updateError) {

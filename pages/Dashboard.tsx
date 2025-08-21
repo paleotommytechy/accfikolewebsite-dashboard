@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -98,7 +97,7 @@ const Dashboard: React.FC = () => {
   const [prayerRequests, setPrayerRequests] = useState<PrayerRequest[]>([]);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && supabase) {
       // Fetch tasks assigned to the current user
       const fetchTasks = async () => {
         const { data, error } = await supabase
@@ -130,7 +129,7 @@ const Dashboard: React.FC = () => {
           .order('coins', { ascending: false })
           .limit(4);
         if (error) console.error('Error fetching leaderboard', error);
-        else setLeaderboard((data as Partial<UserProfile>[]) || []);
+        else setLeaderboard(data || []);
       };
 
       // Fetch recent prayer requests

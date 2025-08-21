@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
@@ -12,6 +11,7 @@ const Leaderboard: React.FC = () => {
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
+      if (!supabase) return;
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name, avatar_url, coins, level')

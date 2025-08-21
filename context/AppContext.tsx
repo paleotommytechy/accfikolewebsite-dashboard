@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import type { UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -21,6 +20,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     const fetchSession = async () => {
+      if (!supabase) {
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -39,7 +43,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (profile) {
             // The profile from Supabase doesn't include 'badges'.
             // Add mocked badges to form a valid UserProfile.
-            setCurrentUser({ ...profile, badges: mockBadges } as UserProfile);
+            setCurrentUser({ ...(profile as any), badges: mockBadges });
           }
         }
       } catch (e) {
@@ -51,17 +55,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     fetchSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        // For simplicity, we only refetch on auth change.
-        // A more robust solution might handle specific events like SIGNED_IN, SIGNED_OUT.
-        fetchSession();
-      }
-    );
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          // For simplicity, we only refetch on auth change.
+          // A more robust solution might handle specific events like SIGNED_IN, SIGNED_OUT.
+          fetchSession();
+        }
+      );
 
-    return () => {
-      subscription.unsubscribe();
-    };
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
   }, []);
 
 

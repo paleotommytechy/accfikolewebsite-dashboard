@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -33,6 +32,7 @@ const Events: React.FC = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
+      if (!supabase) return;
       const { data, error } = await supabase
         .from('events')
         .select('*')

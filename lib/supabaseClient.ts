@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // --- IMPORTANT ---
 // These credentials must be stored in environment variables.
@@ -7,14 +7,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Supabase URL and/or Anon Key are missing from environment variables (SUPABASE_URL, SUPABASE_ANON_KEY). The application will not be able to connect to Supabase.");
-    // A user-friendly app would show a proper error message on the screen.
-}
-
 // The createClient function requires strings. If the env vars are missing,
-// we pass empty strings to avoid a startup crash, but Supabase calls will fail.
-export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '');
+// we initialize supabase as null and the app will show a degraded state.
+export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
+
+if (!supabase) {
+    console.error("Supabase URL and/or Anon Key are missing from environment variables (SUPABASE_URL, SUPABASE_ANON_KEY). The application will not be able to connect to Supabase and will be in a read-only/mocked state.");
+}
 
 /**
  * --- RECOMMENDED SUPABASE SETUP ---

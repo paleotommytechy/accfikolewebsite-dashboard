@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
@@ -14,6 +13,7 @@ const PrayerRequests: React.FC = () => {
     const [newRequest, setNewRequest] = useState('');
 
     const fetchRequests = async () => {
+        if (!supabase) return;
         const { data, error } = await supabase
             .from('prayer_requests')
             .select('*')
@@ -28,7 +28,7 @@ const PrayerRequests: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newRequest.trim() || !currentUser) return;
+        if (!newRequest.trim() || !currentUser || !supabase) return;
 
         const { error } = await supabase.from('prayer_requests').insert({
             request: newRequest,

@@ -21,6 +21,11 @@ const Auth: React.FC = () => {
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!supabase) {
+            setMessage('Error: Application is not configured to connect to a database.');
+            return;
+        }
+
         setLoading(true);
         setMessage('');
         const { error } = await supabase.auth.signInWithOtp({
@@ -56,7 +61,7 @@ const Auth: React.FC = () => {
                 </div>
                 
                 {message ? (
-                    <div className={`text-center p-4 mb-4 rounded-md ${message.includes('error') ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300' : 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'}`}>
+                    <div className={`text-center p-4 mb-4 rounded-md ${message.includes('error') || message.includes('Error') ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300' : 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'}`}>
                         {message}
                     </div>
                 ) : (
