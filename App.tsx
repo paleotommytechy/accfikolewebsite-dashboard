@@ -38,7 +38,7 @@ function App(): React.ReactNode {
             <Route path="messages" element={<Messages />} />
             <Route path="analytics" element={<ProtectedRoute adminOnly={true}><Analytics /></ProtectedRoute>} />
             <Route path="store" element={<Store />} />
-            <Route path="settings" element={<ProtectedRoute adminOnly={true}><Settings /></ProtectedRoute>} />
+            <Route path="developer-settings" element={<ProtectedRoute adminOnly={true}><Settings /></ProtectedRoute>} />
           </Route>
         </Routes>
       </HashRouter>

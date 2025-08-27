@@ -43,8 +43,7 @@ if (!supabase) {
  *        whatsapp text,
  *        hotline text,
  *        email text,
- *        coins integer DEFAULT 0,
- *        role text DEFAULT 'member'::text
+ *        coins integer DEFAULT 0
  *    );
  *    COMMENT ON TABLE public.profiles IS 'Stores user-specific public data.';
  *
@@ -63,7 +62,8 @@ if (!supabase) {
  *        start_date date,
  *        due_date date,
  *        rules text,
- *        created_at timestamp with time zone DEFAULT now()
+ *        created_at timestamp with time zone DEFAULT now(),
+ *        coin_reward integer NOT NULL DEFAULT 0
  *    );
  *    COMMENT ON TABLE public.weekly_challenges IS 'Stores weekly group challenges for all users.';
  *
@@ -87,7 +87,8 @@ if (!supabase) {
  *        details text,
  *        due_date date,
  *        created_at timestamp with time zone DEFAULT now(),
- *        updated_at timestamp with time zone
+ *        updated_at timestamp with time zone,
+ *        coin_reward integer NOT NULL DEFAULT 0
  *    );
  *    COMMENT ON TABLE public.tasks IS 'Stores master tasks that can be assigned.';
  *
@@ -102,10 +103,31 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.tasks_assignments IS 'Assigns tasks to specific users and tracks completion.';
  *
+ *    -- Create user_coins table to hold the official coin balance
+ *    CREATE TABLE IF NOT EXISTS public.user_coins (
+ *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *      user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+ *      total_coins integer NOT NULL DEFAULT 0,
+ *      updated_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.user_coins IS 'Stores the official total coin count for each user.';
+ *
+ *    -- Create coin_transactions table to log all coin movements
+ *    CREATE TABLE IF NOT EXISTS public.coin_transactions (
+ *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+ *      source_type text NOT NULL, -- 'task' or 'challenge'
+ *      source_id uuid NOT NULL,
+ *      coin_amount integer NOT NULL,
+ *      status text NOT NULL DEFAULT 'pending'::text CHECK (status IN ('pending', 'approved', 'rejected')),
+ *      created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.coin_transactions IS 'Logs every coin transaction for auditing and history.';
+ *
  *    ```
  * 
  * 3. Create Profile on Signup (Database Trigger):
- *    - This function automatically creates a profile and a role for new users.
+ *    - This function automatically creates a profile, role, and coin record for new users.
  * 
  *    ```sql
  *    -- Function to create a new profile and role for a new user
@@ -116,11 +138,14 @@ if (!supabase) {
  *    as $$
  *    begin
  *      -- Create a profile
- *      insert into public.profiles (id, email, role, coins, level)
- *      values (new.id, new.email, 'member', 0, 1);
+ *      insert into public.profiles (id, email, coins)
+ *      values (new.id, new.email, 0);
  *      -- Assign a default role
  *      insert into public.user_roles (user_id, role)
  *      values (new.id, 'member');
+ *      -- Create a coin record
+ *      insert into public.user_coins (user_id, total_coins)
+ *      values (new.id, 0);
  *      return new;
  *    end;
  *    $$;
@@ -131,14 +156,61 @@ if (!supabase) {
  *      for each row execute procedure public.handle_new_user();
  *    ```
  * 
- * 4. Storage:
+ * 4. Coin Approval Function (RPC)
+ *    - This function securely credits coins to a user's account.
+ *
+ *    ```sql
+ *    create or replace function public.approve_coin_transaction(transaction_id uuid)
+ *    returns void
+ *    language plpgsql
+ *    security definer set search_path = public
+ *    as $$
+ *    declare
+ *      trans_info record;
+ *      current_role text;
+ *    begin
+ *      -- Check if current user is an admin
+ *      select role into current_role from public.user_roles where user_id = auth.uid();
+ *      if current_role <> 'admin' then
+ *        raise exception 'Only admins can approve transactions.';
+ *      end if;
+ *
+ *      -- Get transaction details
+ *      select user_id, coin_amount, status into trans_info
+ *      from public.coin_transactions where id = transaction_id;
+ *
+ *      -- Ensure transaction is pending
+ *      if trans_info.status <> 'pending' then
+ *        raise exception 'Transaction is not pending.';
+ *      end if;
+ *
+ *      -- Update user_coins table
+ *      update public.user_coins
+ *      set total_coins = total_coins + trans_info.coin_amount
+ *      where user_id = trans_info.user_id;
+ *
+ *      -- For convenience, also update the profiles table if you use it for display
+ *      update public.profiles
+ *      set coins = coins + trans_info.coin_amount
+ *      where id = trans_info.user_id;
+ *
+ *      -- Mark transaction as approved
+ *      update public.coin_transactions
+ *      set status = 'approved'
+ *      where id = transaction_id;
+ *
+ *    end;
+ *    $$;
+ *    ```
+ * 
+ * 5. Storage:
  *    - Create a public bucket named `avatars`.
  * 
- * 5. Row Level Security (RLS) Policies:
+ * 6. Row Level Security (RLS) Policies:
  *    - It's critical to enable RLS on all tables and create policies
  *      to secure your data.
- *    - Example: Only admins can manage challenges.
- *      `CREATE POLICY "Admins can manage challenges" ON public.weekly_challenges FOR ALL USING ( (SELECT role FROM public.user_roles WHERE user_id = auth.uid()) = 'admin' );`
- *    - Example: Users can only see their own task assignments.
- *      `CREATE POLICY "Users can view their own assignments" ON public.tasks_assignments FOR SELECT USING ( auth.uid() = assignee_id );`
+ *    - Example: Admins can do anything, users can only see their own transactions.
+ *      `CREATE POLICY "Enable all for admins" ON public.coin_transactions FOR ALL TO authenticated USING ( (SELECT role FROM public.user_roles WHERE user_id = auth.uid()) = 'admin' );`
+ *      `CREATE POLICY "Users can see their own transactions" ON public.coin_transactions FOR SELECT TO authenticated USING ( auth.uid() = user_id );`
+ *      `CREATE POLICY "Users can create their own transactions" ON public.coin_transactions FOR INSERT TO authenticated WITH CHECK ( auth.uid() = user_id );`
  */

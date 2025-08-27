@@ -10,7 +10,8 @@ const WeeklyGroupChallenge: React.FC<{
     challenge: WeeklyChallenge | null,
     participant: WeeklyParticipant | null,
     onJoin: () => void,
-}> = ({ challenge, participant, onJoin }) => {
+    onProgress: () => void,
+}> = ({ challenge, participant, onJoin, onProgress }) => {
     if (!challenge) {
         return (
             <Card title="Weekly Group Challenge">
@@ -20,6 +21,7 @@ const WeeklyGroupChallenge: React.FC<{
     }
     
     const progress = participant ? participant.progress : 0;
+    const isCompleted = progress >= 100;
 
     return (
         <Card title="Weekly Group Challenge">
@@ -39,6 +41,13 @@ const WeeklyGroupChallenge: React.FC<{
                                     <div className="bg-primary-600 h-4 rounded-full" style={{ width: `${progress}%` }}></div>
                                 </div>
                             </div>
+                             <div className="mt-4">
+                                {isCompleted ? (
+                                    <p className="font-semibold text-green-600">Challenge completed! Your reward is pending approval.</p>
+                                ) : (
+                                    <Button onClick={onProgress} size="sm">Increment Progress</Button>
+                                )}
+                            </div>
                         </>
                     ) : (
                          <Button onClick={onJoin} className="mt-4">Join Challenge</Button>
@@ -52,7 +61,7 @@ const WeeklyGroupChallenge: React.FC<{
 
 const MyDailyTasks: React.FC<{
     tasks: TaskAssignment[],
-    onToggle: (taskId: string, currentStatus: 'assigned' | 'done') => void
+    onToggle: (assignment: TaskAssignment, currentStatus: 'assigned' | 'done') => void
 }> = ({ tasks, onToggle }) => {
     return (
         <Card title="My Daily Tasks">
@@ -63,9 +72,9 @@ const MyDailyTasks: React.FC<{
                         <div>
                             <h4 className={`font-semibold text-lg ${assignment.status === 'done' ? 'line-through text-gray-500' : ''}`}>{assignment.tasks?.title}</h4>
                             <p className="text-gray-500 text-sm mt-1">{assignment.tasks?.details}</p>
-                            {assignment.tasks?.due_date && <div className="mt-2 text-sm text-gray-400">Due: {new Date(assignment.tasks.due_date).toLocaleDateString()}</div>}
+                            {assignment.tasks?.coin_reward && <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 font-semibold">{assignment.tasks.coin_reward} Coins</p>}
                         </div>
-                         <button onClick={() => onToggle(assignment.id, assignment.status)} className={`p-2 rounded-full ${assignment.status === 'done' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>
+                         <button onClick={() => onToggle(assignment, assignment.status)} className={`p-2 rounded-full ${assignment.status === 'done' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>
                             {assignment.status === 'done' ? 
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg> :
                                 <span className="h-5 w-5 block"></span>
@@ -139,22 +148,69 @@ const Tasks: React.FC = () => {
             fetchData();
         }
     };
+
+    const handleChallengeProgress = async () => {
+        if (!supabase || !currentUser || !participant) return;
+
+        const newProgress = Math.min(100, participant.progress + 10); // Increment by 10%
+        const { error } = await supabase.from('weekly_participants')
+            .update({ progress: newProgress })
+            .eq('id', participant.id);
+        
+        if (error) alert("Error updating progress: " + error.message);
+        else {
+            // If progress reaches 100 and it's the first time
+            if (newProgress >= 100 && participant.progress < 100 && challenge) {
+                // Check if a transaction already exists to prevent duplicates
+                const { data: existingTx } = await supabase.from('coin_transactions').select('id').eq('user_id', currentUser.id).eq('source_type', 'challenge').eq('source_id', challenge.id).limit(1).single();
+
+                if (!existingTx) {
+                    const { error: txError } = await supabase.from('coin_transactions').insert({
+                        user_id: currentUser.id,
+                        source_type: 'challenge',
+                        source_id: challenge.id,
+                        coin_amount: challenge.coin_reward,
+                        status: 'pending',
+                    });
+                    if (txError) alert("Error creating coin transaction: " + txError.message);
+                    else alert("Challenge complete! Reward is pending approval.");
+                }
+            }
+            fetchData();
+        }
+    };
     
-    const handleToggleTask = async (assignmentId: string, currentStatus: 'assigned' | 'done') => {
-        if (!supabase) return;
+    const handleToggleTask = async (assignment: TaskAssignment, currentStatus: 'assigned' | 'done') => {
+        if (!supabase || !currentUser) return;
         const newStatus = currentStatus === 'assigned' ? 'done' : 'assigned';
+        
         const { error } = await supabase
             .from('tasks_assignments')
             .update({ status: newStatus, completed_at: newStatus === 'done' ? new Date().toISOString() : null })
-            .eq('id', assignmentId);
+            .eq('id', assignment.id);
+            
         if (error) alert("Error updating task: " + error.message);
-        else fetchData();
+        else {
+            // Create a pending coin transaction if task is completed and has a reward
+            if (newStatus === 'done' && assignment.tasks && assignment.tasks.coin_reward > 0) {
+                 const { error: txError } = await supabase.from('coin_transactions').insert({
+                    user_id: currentUser.id,
+                    source_type: 'task',
+                    source_id: assignment.task_id,
+                    coin_amount: assignment.tasks.coin_reward,
+                    status: 'pending',
+                 });
+                 if (txError) alert("Error creating coin transaction: " + txError.message);
+                 else alert("Task complete! Reward is pending approval.");
+            }
+            fetchData();
+        }
     };
 
   return (
     <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Tasks & Challenges</h1>
-        <WeeklyGroupChallenge challenge={challenge} participant={participant} onJoin={handleJoinChallenge} />
+        <WeeklyGroupChallenge challenge={challenge} participant={participant} onJoin={handleJoinChallenge} onProgress={handleChallengeProgress} />
         <MyDailyTasks tasks={assignments} onToggle={handleToggleTask} />
     </div>
   );

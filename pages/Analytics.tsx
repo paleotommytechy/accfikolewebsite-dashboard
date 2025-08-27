@@ -11,7 +11,7 @@ const Analytics: React.FC = () => {
     <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Leader Analytics</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
             <Card title="Total Members">
                 <p className="text-4xl font-bold">128</p>
                 <p className="text-sm text-green-500">+5 this month</p>
@@ -23,10 +23,6 @@ const Analytics: React.FC = () => {
             <Card title="Active Users (24h)">
                 <p className="text-4xl font-bold">92</p>
                 <p className="text-sm text-gray-500">72% of total</p>
-            </Card>
-             <Card title="Prayer Requests">
-                <p className="text-4xl font-bold">45</p>
-                <p className="text-sm text-gray-500">This week</p>
             </Card>
         </div>
 

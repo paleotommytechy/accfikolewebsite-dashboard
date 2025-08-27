@@ -23,6 +23,7 @@ export interface Task {
   due_date: string | null;
   created_at: string;
   updated_at: string | null;
+  coin_reward: number;
 }
 
 export interface TaskAssignment {
@@ -43,6 +44,7 @@ export interface WeeklyChallenge {
   due_date: string | null;
   rules: string | null;
   created_at: string;
+  coin_reward: number;
 }
 
 export interface WeeklyParticipant {
@@ -52,6 +54,19 @@ export interface WeeklyParticipant {
     progress: number;
     streak: number;
     joined_at: string;
+}
+
+export interface CoinTransaction {
+  id: string;
+  user_id: string;
+  source_type: 'task' | 'challenge';
+  source_id: string;
+  coin_amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  tasks?: { title: string };
+  weekly_challenges?: { title: string };
+  profiles?: { full_name: string | null };
 }
 
 export interface Notification {
@@ -89,7 +104,7 @@ export interface StoreItem {
   icon: string;
 }
 
-// FIX: Added missing PrayerRequest type to resolve import error in pages/PrayerRequests.tsx.
+// FIX: Add missing PrayerRequest interface.
 export interface PrayerRequest {
   id: string;
   request: string;
@@ -97,10 +112,10 @@ export interface PrayerRequest {
   author_name: string;
   author_avatar: string | null;
   created_at: string;
-  prayers?: number;
+  prayers: number;
 }
 
-// FIX: Added missing StudyProgress type to resolve import error in pages/BibleStudy.tsx.
+// FIX: Add missing StudyProgress interface.
 export interface StudyProgress {
   book: string;
   chapters: number;

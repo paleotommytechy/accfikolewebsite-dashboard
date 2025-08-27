@@ -1,5 +1,5 @@
 
-// FIX: Add StudyProgress to the type import to support mockStudyProgress.
+// FIX: Import StudyProgress type
 import type { UserProfile, Notification, Event, Message, StoreItem, StudyProgress } from '../types';
 
 export const mockUserProfile: UserProfile = {
@@ -53,7 +53,7 @@ export const mockStoreItems: StoreItem[] = [
     { id: 'item-4', name: 'Bookstore Voucher', description: 'A $5 voucher for the church bookstore.', cost: 750, icon: '📚' },
 ];
 
-// FIX: Added missing mockStudyProgress to resolve import error in pages/BibleStudy.tsx.
+// FIX: Add missing mockStudyProgress data.
 export const mockStudyProgress: StudyProgress[] = [
     { book: 'Genesis', chapters: 25, total_chapters: 50 },
     { book: 'Psalms', chapters: 90, total_chapters: 150 },
@@ -71,7 +71,7 @@ export const mockAnalyticsData = {
     engagement: [
         { name: 'Tasks', value: 400 },
         { name: 'Events', value: 300 },
-        { name: 'Prayers', value: 300 },
         { name: 'Messages', value: 200 },
+        { name: 'Challenges', value: 250 },
     ],
 };
