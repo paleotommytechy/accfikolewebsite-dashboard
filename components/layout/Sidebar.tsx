@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
@@ -5,7 +6,7 @@ import { NAV_LINKS, ADMIN_LINKS } from '../../constants';
 import { LogoIcon } from '../ui/Icons';
 
 const Sidebar: React.FC = () => {
-  const { isSidebarOpen } = useAppContext();
+  const { isSidebarOpen, isAdmin } = useAppContext();
 
   const linkClasses = "flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-primary-700 hover:text-white";
   const activeLinkClasses = "bg-primary-700 text-white";
@@ -30,19 +31,22 @@ const Sidebar: React.FC = () => {
           </NavLink>
         ))}
         
-        <hr className="my-4 border-gray-700" />
-
-        {ADMIN_LINKS.map((link) => (
-          <NavLink
-            key={link.name}
-            to={link.href}
-            className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
-            title={link.name}
-          >
-            <div className="w-6 h-6">{link.icon}</div>
-            {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-          </NavLink>
-        ))}
+        {isAdmin && (
+          <>
+            <hr className="my-4 border-gray-700" />
+            {ADMIN_LINKS.map((link) => (
+              <NavLink
+                key={link.name}
+                to={link.href}
+                className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                title={link.name}
+              >
+                <div className="w-6 h-6">{link.icon}</div>
+                {isSidebarOpen && <span className="ml-4">{link.name}</span>}
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
     </aside>
   );

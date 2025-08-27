@@ -12,27 +12,46 @@ export interface UserProfile {
   hotline: string | null;
   email: string;
   coins: number;
-  badges: Badge[]; // In a real app, this would be a join from a separate table
-  role: 'admin' | 'member';
+  role: string;
 }
 
 export interface Task {
   id: string;
   title: string;
-  description: string;
-  status: 'pending' | 'completed' | 'overdue';
-  due_date: string;
-  coins: number;
-  assigned_to: string; // The user ID this task is for.
+  frequency: 'daily' | 'once' | 'weekly';
+  details: string | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
-export interface Challenge {
+export interface TaskAssignment {
+    id: string;
+    task_id: string;
+    assignee_id: string;
+    status: 'assigned' | 'done';
+    completed_at: string | null;
+    created_at: string;
+    tasks?: Task; // for joins
+}
+
+export interface WeeklyChallenge {
   id: string;
   title: string;
-  description: string;
-  end_date: string;
-  progress: number; // 0-100
-  total_participants: number;
+  details: string | null;
+  start_date: string | null;
+  due_date: string | null;
+  rules: string | null;
+  created_at: string;
+}
+
+export interface WeeklyParticipant {
+    id: string;
+    challenge_id: string;
+    user_id: string;
+    progress: number;
+    streak: number;
+    joined_at: string;
 }
 
 export interface Notification {
@@ -41,24 +60,6 @@ export interface Notification {
   message: string;
   created_at: string;
   read: boolean;
-}
-
-export interface PrayerRequest {
-  id: string;
-  author_id: string;
-  author_name: string; // denormalized for easier display
-  author_avatar: string | null; // denormalized for easier display
-  request: string;
-  created_at: string;
-  prayers: number;
-}
-
-export interface StudyProgress {
-  id: string;
-  user_id: string;
-  book: string;
-  chapters: number;
-  total_chapters: number;
 }
 
 export interface Event {
@@ -80,13 +81,6 @@ export interface Message {
   sender_avatar?: string;
 }
 
-export interface Badge {
-  id: string;
-  name: string;
-  icon: string; // emoji or component name
-  description: string;
-}
-
 export interface StoreItem {
   id: string;
   name: string;
@@ -95,27 +89,20 @@ export interface StoreItem {
   icon: string;
 }
 
-// Types for Developer Settings
-export interface AppSettings {
-  id: number;
-  scripture_of_the_day: string | null;
-  created_at: string;
-}
-
-export interface GroupChallenge {
+// FIX: Added missing PrayerRequest type to resolve import error in pages/PrayerRequests.tsx.
+export interface PrayerRequest {
   id: string;
-  title: string;
-  description: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  created_by: string | null;
+  request: string;
+  author_id: string;
+  author_name: string;
+  author_avatar: string | null;
   created_at: string;
+  prayers?: number;
 }
 
-export interface MasterTask {
-    id: string;
-    title: string;
-    description: string | null;
-    created_by: string | null;
-    created_at: string;
+// FIX: Added missing StudyProgress type to resolve import error in pages/BibleStudy.tsx.
+export interface StudyProgress {
+  book: string;
+  chapters: number;
+  total_chapters: number;
 }

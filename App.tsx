@@ -13,10 +13,7 @@ import Events from './pages/Events';
 import Messages from './pages/Messages';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
-import PrayerRequests from './pages/PrayerRequests';
 import Store from './pages/Store';
-import BibleStudy from './pages/BibleStudy';
-import DeveloperSettings from './pages/DeveloperSettings';
 
 function App(): React.ReactNode {
   return (
@@ -39,12 +36,9 @@ function App(): React.ReactNode {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="events" element={<Events />} />
             <Route path="messages" element={<Messages />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="prayer-requests" element={<PrayerRequests />} />
-            <Route path="bible-study" element={<BibleStudy />} />
+            <Route path="analytics" element={<ProtectedRoute adminOnly={true}><Analytics /></ProtectedRoute>} />
             <Route path="store" element={<Store />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="developer-settings" element={<DeveloperSettings />} />
+            <Route path="settings" element={<ProtectedRoute adminOnly={true}><Settings /></ProtectedRoute>} />
           </Route>
         </Routes>
       </HashRouter>

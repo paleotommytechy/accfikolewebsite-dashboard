@@ -1,10 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import { supabase } from '../lib/supabaseClient';
-import type { UserProfile, Badge } from '../types';
+import type { UserProfile } from '../types';
 
 // ProfileEditor is now a presentational component that receives state and handlers as props.
 const ProfileEditor: React.FC<{
@@ -45,19 +46,6 @@ const SelectField: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & {lab
             {children}
         </select>
     </div>
-);
-
-const Badges: React.FC<{badges: Badge[]}> = ({ badges }) => (
-    <Card title="My Badges">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {badges.map(badge => (
-                <div key={badge.id} className="flex flex-col items-center text-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title={badge.description}>
-                    <span className="text-4xl">{badge.icon}</span>
-                    <p className="text-sm font-semibold mt-2">{badge.name}</p>
-                </div>
-            ))}
-        </div>
-    </Card>
 );
 
 const Profile: React.FC = () => {
@@ -190,8 +178,6 @@ const Profile: React.FC = () => {
                 <ProfileEditor profile={profile} isEditing={isEditing} onInputChange={handleInputChange} />
             </form>
         </Card>
-        
-        <Badges badges={profile.badges} />
     </div>
   );
 };

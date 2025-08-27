@@ -1,11 +1,6 @@
-import type { UserProfile, Task, Challenge, Notification, PrayerRequest, StudyProgress, Event, Message, Badge, StoreItem } from '../types';
 
-export const mockBadges: Badge[] = [
-    { id: '1', name: 'Early Bird', icon: '☀️', description: 'Completed a task before 8 AM.' },
-    { id: '2', name: 'Prayer Warrior', icon: '🙏', description: 'Prayed for 10 requests.' },
-    { id: '3', name: 'Bible Scholar', icon: '📖', description: 'Completed the book of John.' },
-    { id: '4', name: 'Community Pillar', icon: '🤝', description: 'Attended 5 fellowship events.' },
-];
+// FIX: Add StudyProgress to the type import to support mockStudyProgress.
+import type { UserProfile, Notification, Event, Message, StoreItem, StudyProgress } from '../types';
 
 export const mockUserProfile: UserProfile = {
   id: 'user-123',
@@ -20,24 +15,9 @@ export const mockUserProfile: UserProfile = {
   hotline: '+1 987 654 3210',
   email: 'john.doe@example.com',
   coins: 1250,
-  badges: mockBadges,
   role: 'member',
 };
 
-export const mockDailyTasks: Task[] = [
-  { id: 'task-1', title: 'Morning Devotion', description: 'Read Proverbs 1 and pray.', status: 'completed', due_date: 'Today', coins: 10, assigned_to: 'user-123' },
-  { id: 'task-2', title: 'Reach out to a friend', description: 'Call or text someone from the fellowship.', status: 'pending', due_date: 'Today', coins: 15, assigned_to: 'user-123' },
-  { id: 'task-3', title: 'Scripture Memorization', description: 'Memorize John 3:16.', status: 'pending', due_date: 'Today', coins: 20, assigned_to: 'user-123' },
-];
-
-export const mockWeeklyChallenge: Challenge = {
-  id: 'challenge-1',
-  title: 'Book of Psalms Reading Challenge',
-  description: 'Read 5 chapters of Psalms this week.',
-  end_date: 'In 4 days',
-  progress: 60,
-  total_participants: 45,
-};
 
 export const mockLeaderboard: (Omit<UserProfile, 'badges' | 'dob' | 'email' | 'whatsapp' | 'hotline' | 'gender' | 'department' | 'fellowship_position' | 'role'>)[] = [
   { id: 'user-1', full_name: 'Sarah Lee', avatar_url: 'https://picsum.photos/seed/sarah/100', level: 15, coins: 2100 },
@@ -52,19 +32,6 @@ export const mockNotifications: Notification[] = [
   { id: 'notif-2', type: 'task', message: 'Your daily tasks have been assigned.', created_at: '8 hours ago', read: false },
   { id: 'notif-3', type: 'comment', message: 'Sarah commented on your prayer request.', created_at: '1 day ago', read: true },
   { id: 'notif-4', type: 'custom', message: 'Reminder: Small group meeting tonight at 7 PM.', created_at: '2 days ago', read: true },
-];
-
-export const mockPrayerRequests: PrayerRequest[] = [
-  { id: 'pray-1', author_id: 'user-456', author_name: 'Anna Smith', author_avatar: 'https://picsum.photos/seed/anna/100', request: 'Please pray for my upcoming exams, that I may have wisdom and peace.', created_at: '5 hours ago', prayers: 12 },
-  { id: 'pray-2', author_id: 'user-789', author_name: 'Mark Johnson', author_avatar: 'https://picsum.photos/seed/mark/100', request: 'Praying for my family\'s health and protection.', created_at: '1 day ago', prayers: 34 },
-  { id: 'pray-3', author_id: mockUserProfile.id, author_name: 'You', author_avatar: mockUserProfile.avatar_url, request: 'Strength to overcome challenges this week.', created_at: '3 days ago', prayers: 22 },
-];
-
-export const mockStudyProgress: StudyProgress[] = [
-  { id: 'study-1', user_id: 'user-123', book: 'Genesis', chapters: 50, total_chapters: 50 },
-  { id: 'study-2', user_id: 'user-123', book: 'John', chapters: 21, total_chapters: 21 },
-  { id: 'study-3', user_id: 'user-123', book: 'Romans', chapters: 8, total_chapters: 16 },
-  { id: 'study-4', user_id: 'user-123', book: 'Psalms', chapters: 75, total_chapters: 150 },
 ];
 
 export const mockEvents: Event[] = [
@@ -84,6 +51,14 @@ export const mockStoreItems: StoreItem[] = [
     { id: 'item-2', name: 'Fellowship T-Shirt', description: 'A custom-designed fellowship T-shirt.', cost: 1500, icon: '👕' },
     { id: 'item-3', name: 'Donate to Mission Fund', description: 'Contribute your coins to the mission fund.', cost: 100, icon: '❤️' },
     { id: 'item-4', name: 'Bookstore Voucher', description: 'A $5 voucher for the church bookstore.', cost: 750, icon: '📚' },
+];
+
+// FIX: Added missing mockStudyProgress to resolve import error in pages/BibleStudy.tsx.
+export const mockStudyProgress: StudyProgress[] = [
+    { book: 'Genesis', chapters: 25, total_chapters: 50 },
+    { book: 'Psalms', chapters: 90, total_chapters: 150 },
+    { book: 'John', chapters: 15, total_chapters: 21 },
+    { book: 'Romans', chapters: 8, total_chapters: 16 },
 ];
 
 export const mockAnalyticsData = {

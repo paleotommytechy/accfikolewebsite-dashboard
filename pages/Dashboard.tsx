@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
-import { Task, Challenge, UserProfile, PrayerRequest } from '../types';
+import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
 
 const ScriptureOfTheDay: React.FC = () => {
     // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
@@ -19,16 +20,15 @@ const ScriptureOfTheDay: React.FC = () => {
     );
 }
 
-const DailyTasks: React.FC<{tasks: Task[]}> = ({tasks}) => (
+const DailyTasks: React.FC<{tasks: TaskAssignment[]}> = ({tasks}) => (
     <Card title="Today's Tasks">
         <ul className="space-y-3">
-            {tasks.map(task => (
-                <li key={task.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            {tasks.map(assignment => (
+                <li key={assignment.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div>
-                        <p className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-500' : ''}`}>{task.title}</p>
-                        <p className="text-sm text-gray-500">{task.coins} coins</p>
+                        <p className={`font-medium ${assignment.status === 'done' ? 'line-through text-gray-500' : ''}`}>{assignment.tasks?.title}</p>
                     </div>
-                    <input type="checkbox" defaultChecked={task.status === 'completed'} className="h-5 w-5 rounded text-primary-600 focus:ring-primary-500 border-gray-300"/>
+                    <input type="checkbox" defaultChecked={assignment.status === 'done'} className="h-5 w-5 rounded text-primary-600 focus:ring-primary-500 border-gray-300" disabled/>
                 </li>
             ))}
         </ul>
@@ -36,18 +36,15 @@ const DailyTasks: React.FC<{tasks: Task[]}> = ({tasks}) => (
     </Card>
 );
 
-const WeeklyChallenge: React.FC<{challenge: Challenge | null}> = ({challenge}) => (
+const WeeklyChallenge: React.FC<{challenge: WeeklyChallenge | null}> = ({challenge}) => (
     <Card title="Weekly Challenge">
         {challenge ? (
             <>
                 <h4 className="font-semibold text-lg">{challenge.title}</h4>
-                <p className="text-sm text-gray-500 mt-1">{challenge.description}</p>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 my-4">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${challenge.progress}%` }}></div>
-                </div>
-                <div className="flex justify-between text-sm text-gray-500">
-                    <span>{challenge.progress}% complete</span>
-                    <span>Ends {challenge.end_date}</span>
+                <p className="text-sm text-gray-500 mt-1">{challenge.details}</p>
+                <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
+                     <a href="#/tasks" className="text-primary-600 hover:underline font-semibold">Join Challenge</a>
+                    {challenge.due_date && <span>Ends {new Date(challenge.due_date).toLocaleDateString()}</span>}
                 </div>
             </>
         ) : <p className="text-gray-500">No active challenge this week.</p>}
@@ -71,75 +68,45 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
     </Card>
 );
 
-const PrayerRequestsWidget: React.FC<{requests: PrayerRequest[]}> = ({requests}) => (
-    <Card title="Prayer Wall" action={<a href="#/prayer-requests" className="text-sm text-primary-600 hover:underline">View All</a>}>
-        <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
-            {requests.map(req => (
-                 <div key={req.id} className="flex items-start space-x-3">
-                    <Avatar src={req.author_avatar} alt={req.author_name} size="md"/>
-                    <div>
-                        <p className="font-semibold text-sm">{req.author_name}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{req.request}</p>
-                    </div>
-                 </div>
-            ))}
-             {requests.length === 0 && <p className="text-gray-500 text-sm">No prayer requests yet.</p>}
-        </div>
-    </Card>
-);
-
-
 const Dashboard: React.FC = () => {
   const { currentUser, isLoading } = useAppContext();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [taskAssignments, setTaskAssignments] = useState<TaskAssignment[]>([]);
+  const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
   const [leaderboard, setLeaderboard] = useState<Partial<UserProfile>[]>([]);
-  const [prayerRequests, setPrayerRequests] = useState<PrayerRequest[]>([]);
 
   useEffect(() => {
     if (currentUser && supabase) {
-      // Fetch tasks assigned to the current user
-      const fetchTasks = async () => {
+      const fetchTaskAssignments = async () => {
         const { data, error } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('assigned_to', currentUser.id)
+          .from('tasks_assignments')
+          .select('*, tasks!inner(*)')
+          .eq('assignee_id', currentUser.id)
+          .eq('tasks.frequency', 'daily')
           .limit(3);
         if (error) {
-            // Gracefully handle if table/column doesn't exist (common during setup)
-            if (error.code === '42P01' || error.code === '42703') {
-                console.warn('Warning: Tasks table or assigned_to column not found. Using empty list for tasks.');
-                setTasks([]);
-            } else {
-                console.error('Error fetching tasks', error.message);
-            }
+            console.error('Error fetching tasks', error.message);
         } else {
-            setTasks(data || []);
+            setTaskAssignments((data as TaskAssignment[]) || []);
         }
       };
 
-      // Fetch the current weekly challenge
       const fetchChallenge = async () => {
+        const today = new Date().toISOString();
         const { data, error } = await supabase
-          .from('challenges')
+          .from('weekly_challenges')
           .select('*')
-          .order('end_date', { ascending: false })
+          .lte('start_date', today)
+          .gte('due_date', today)
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
         if (error) {
-             // Gracefully handle if table doesn't exist
-            if (error.code === '42P01') {
-                console.warn('Warning: Challenges table not found. Weekly challenge will not be displayed.');
-                setChallenge(null);
-            } else {
-                console.error('Error fetching challenge', error.message);
-            }
+            console.error('Error fetching challenge', error.message);
         } else {
             setChallenge(data);
         }
       };
 
-      // Fetch top 4 users for the leaderboard
       const fetchLeaderboard = async () => {
         const { data, error } = await supabase
           .from('profiles')
@@ -150,23 +117,9 @@ const Dashboard: React.FC = () => {
         else setLeaderboard(data || []);
       };
 
-      // Fetch recent prayer requests
-      const fetchPrayerRequests = async () => {
-          const { data, error } = await supabase
-            .from('prayer_requests')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(3);
-          if (error) console.error('Error fetching prayer requests', error.message);
-          else {
-            setPrayerRequests(data || []);
-          }
-      }
-
-      fetchTasks();
+      fetchTaskAssignments();
       fetchChallenge();
       fetchLeaderboard();
-      fetchPrayerRequests();
     }
   }, [currentUser]);
 
@@ -189,12 +142,11 @@ const Dashboard: React.FC = () => {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-            <DailyTasks tasks={tasks} />
+            <DailyTasks tasks={taskAssignments} />
             <WeeklyChallenge challenge={challenge} />
         </div>
         <div className="space-y-6">
             <MiniLeaderboard leaderboard={leaderboard} />
-            <PrayerRequestsWidget requests={prayerRequests}/>
         </div>
       </div>
     </div>

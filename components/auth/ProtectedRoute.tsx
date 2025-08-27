@@ -3,8 +3,8 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }): React.ReactNode => {
-  const { currentUser, isLoading } = useAppContext();
+const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }): React.ReactNode => {
+  const { currentUser, isAdmin, isLoading } = useAppContext();
 
   if (isLoading) {
     return (
@@ -16,6 +16,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }): React.Reac
 
   if (!currentUser) {
     return <Navigate to="/auth" replace />;
+  }
+  
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
