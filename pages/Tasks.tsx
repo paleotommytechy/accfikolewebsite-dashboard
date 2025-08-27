@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant } from '../types';
+import { TrophyIcon } from '../components/ui/Icons';
 
 const WeeklyGroupChallenge: React.FC<{
     challenge: WeeklyChallenge | null,
@@ -12,10 +13,14 @@ const WeeklyGroupChallenge: React.FC<{
     onJoin: () => void,
     onProgress: () => void,
 }> = ({ challenge, participant, onJoin, onProgress }) => {
+    
     if (!challenge) {
         return (
-            <Card title="Weekly Group Challenge">
-                <p className="text-gray-500">No active challenge this week. Check back soon!</p>
+            <Card>
+                <div className="text-center p-4">
+                    <h3 className="text-lg font-semibold">Weekly Group Challenge</h3>
+                    <p className="text-gray-500 mt-2">No active challenge this week. Check back soon!</p>
+                </div>
             </Card>
         );
     }
@@ -23,39 +28,74 @@ const WeeklyGroupChallenge: React.FC<{
     const progress = participant ? participant.progress : 0;
     const isCompleted = progress >= 100;
 
+    const daysLeft = challenge.due_date ? (() => {
+        const due = new Date(challenge.due_date);
+        const today = new Date();
+        // Adjust for timezone offset to compare dates correctly by using UTC
+        const utcDue = Date.UTC(due.getFullYear(), due.getMonth(), due.getUTCDate());
+        const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getUTCDate());
+        const diffTime = utcDue - utcToday;
+
+        if (diffTime < 0) return 'Ended';
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'Ends Today';
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} left`;
+    })() : '';
+
     return (
-        <Card title="Weekly Group Challenge">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="flex-shrink-0 text-6xl">🏆</div>
-                <div className="flex-1">
-                    <h3 className="text-xl font-bold">{challenge.title}</h3>
-                    <p className="text-gray-500 mt-1">{challenge.details}</p>
+        <div className="rounded-lg shadow-lg bg-gradient-to-br from-primary-700 to-primary-900 text-white p-6 relative overflow-hidden">
+            <div className="absolute -bottom-10 -right-10 opacity-10">
+                <TrophyIcon className="w-48 h-48" />
+            </div>
+            <div className="relative z-10">
+                 <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                    <div className="flex-1">
+                        <span className="text-sm uppercase font-bold text-primary-300 tracking-wider">Weekly Challenge</span>
+                        <h3 className="text-2xl font-bold mt-1">{challenge.title}</h3>
+                        <p className="text-primary-200 mt-2 text-sm opacity-90">{challenge.details}</p>
+                    </div>
+
+                    <div className="flex-shrink-0 bg-white/20 backdrop-blur-sm p-3 rounded-lg text-center">
+                        <p className="font-bold text-2xl text-yellow-300">{challenge.coin_reward}</p>
+                        <p className="text-xs uppercase font-semibold">Coins</p>
+                    </div>
+                </div>
+
+                <div className="mt-6">
                     {participant ? (
-                        <>
-                            <div className="mt-4">
-                                <div className="flex justify-between mb-1">
-                                    <span className="text-base font-medium text-primary-700 dark:text-white">Your Progress</span>
-                                    <span className="text-sm font-medium text-primary-700 dark:text-white">{progress}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700">
-                                    <div className="bg-primary-600 h-4 rounded-full" style={{ width: `${progress}%` }}></div>
+                         <>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-semibold">Your Progress</span>
+                                {daysLeft && <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full">{daysLeft}</span>}
+                            </div>
+                            <div className="w-full bg-black/20 rounded-full h-5 relative">
+                                <div className="bg-gradient-to-r from-yellow-300 to-yellow-400 h-5 rounded-full flex items-center justify-center transition-all duration-500" style={{ width: `${progress}%` }}>
+                                     <span className="font-bold text-xs text-primary-800">{progress}%</span>
                                 </div>
                             </div>
                              <div className="mt-4">
                                 {isCompleted ? (
-                                    <p className="font-semibold text-green-600">Challenge completed! Your reward is pending approval.</p>
+                                    <div className="text-center font-semibold bg-white/20 py-3 px-4 rounded-lg">
+                                        Challenge completed! Your reward is pending approval.
+                                    </div>
                                 ) : (
-                                    <Button onClick={onProgress} size="sm">Increment Progress</Button>
+                                    <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
+                                        Log Progress
+                                    </Button>
                                 )}
                             </div>
                         </>
                     ) : (
-                         <Button onClick={onJoin} className="mt-4">Join Challenge</Button>
+                         <div className="mt-4 flex flex-col sm:flex-row items-center gap-4">
+                            <Button onClick={onJoin} className="w-full sm:w-auto flex-grow bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
+                                Join Challenge
+                            </Button>
+                            {daysLeft && <span className="text-sm font-medium bg-white/20 px-3 py-2 rounded-full">{daysLeft}</span>}
+                        </div>
                     )}
-                    {challenge.due_date && <div className="text-sm text-gray-500 mt-2">Ends {new Date(challenge.due_date).toLocaleDateString()}</div>}
                 </div>
             </div>
-        </Card>
+        </div>
     );
 };
 

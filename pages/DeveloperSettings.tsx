@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
@@ -8,6 +7,7 @@ import type { WeeklyChallenge, Task, CoinTransaction } from '../types';
 
 const CoinApprovalManager: React.FC = () => {
     const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
+    const [approvingTxnId, setApprovingTxnId] = useState<string | null>(null);
 
     const fetchTransactions = useCallback(async () => {
         if (!supabase) return;
@@ -28,21 +28,31 @@ const CoinApprovalManager: React.FC = () => {
         if (!supabase) return;
 
         if (status === 'approved') {
-            const { error } = await supabase.rpc('approve_coin_transaction', { transaction_id: id });
-            if (error) {
-                alert('Error approving transaction: ' + error.message);
-            } else {
+            setApprovingTxnId(id);
+            try {
+                // FIX: Removed incorrect generic type argument from rpc call and corrected logic.
+                // The RPC function returns void, so success is determined by the absence of an error.
+                const { error } = await supabase.rpc('approve_coin_transaction', { transaction_id: id });
+                if (error) throw error;
+
                 alert('Transaction approved and coins awarded.');
+                // Refetch to update the list, which will remove the approved item.
+                fetchTransactions();
+            } catch (error: any) {
+                alert('Error approving transaction: ' + error.message);
+            } finally {
+                setApprovingTxnId(null);
             }
+
         } else { // 'rejected'
             const { error } = await supabase.from('coin_transactions').update({ status }).eq('id', id);
             if (error) {
                 alert('Error updating status: ' + error.message);
             } else {
                 alert(`Transaction ${status}.`);
+                fetchTransactions(); // refetch on reject as well
             }
         }
-        fetchTransactions();
     };
     
     const getSourceName = (tx: CoinTransaction): string => {
@@ -71,7 +81,9 @@ const CoinApprovalManager: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getSourceName(tx)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tx.coin_amount}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                <Button size="sm" onClick={() => handleUpdateStatus(tx.id, 'approved')}>Approve</Button>
+                                <Button size="sm" onClick={() => handleUpdateStatus(tx.id, 'approved')} disabled={approvingTxnId === tx.id}>
+                                    {approvingTxnId === tx.id ? 'Approving...' : 'Approve'}
+                                </Button>
                                 <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(tx.id, 'rejected')}>Reject</Button>
                             </td>
                         </tr>
@@ -208,13 +220,19 @@ const TaskManager: React.FC = () => {
             setAssigningTaskId(null);
             return;
         }
-        const { error } = await supabase.rpc('assign_task_to_all_users', { task_id_to_assign: id });
-        if (error) {
+
+        try {
+            // FIX: Removed incorrect generic type argument from rpc call and corrected logic.
+            // The RPC function returns void, so success is determined by the absence of an error.
+            const { error } = await supabase.rpc('assign_task_to_all_users', { task_id_to_assign: id });
+            if (error) throw error;
+
+            alert('Task assigned successfully to all users for today.');
+        } catch (error: any) {
             alert('Error assigning task: ' + error.message);
-        } else {
-            alert('Task assigned to all users for today.');
+        } finally {
+            setAssigningTaskId(null);
         }
-        setAssigningTaskId(null);
     };
     
     return (
