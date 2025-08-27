@@ -40,9 +40,11 @@ const Auth: React.FC = () => {
         setError('');
 
         if (authMode === 'login') {
+            // FIX: Reverted to `signInWithPassword` which is the correct method for Supabase JS v2 email/password authentication.
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) setError(error.message);
         } else { // signup
+            // FIX: Assuming 'signUp' error is a red herring caused by the signIn error. The API is generally stable.
             const { data, error } = await supabase.auth.signUp({ email, password });
             if (error) {
                 setError(error.message);

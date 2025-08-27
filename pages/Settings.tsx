@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
@@ -191,6 +192,16 @@ const TaskManager: React.FC = () => {
             fetchTasks();
         }
     };
+
+    const handleAssignDaily = async (id: string) => {
+        if (!supabase || !window.confirm('This will assign this task to all users for today. This action cannot be undone. Continue?')) return;
+        const { error } = await supabase.rpc('assign_task_to_all_users', { task_id_to_assign: id });
+        if (error) {
+            alert('Error assigning task: ' + error.message);
+        } else {
+            alert('Task assigned to all users for today.');
+        }
+    };
     
     return (
         <Card title="Tasks Management">
@@ -227,6 +238,7 @@ const TaskManager: React.FC = () => {
                             <p className="text-sm text-yellow-500">{t.coin_reward} coins</p>
                         </div>
                         <div className="space-x-2 flex-shrink-0">
+                            {t.frequency === 'daily' && <Button size="sm" variant="outline" onClick={() => handleAssignDaily(t.id)}>Assign Daily</Button>}
                             <Button size="sm" variant="outline" onClick={() => setEditingTask(t)}>Edit</Button>
                             <Button size="sm" variant="secondary" onClick={() => handleDelete(t.id)}>Delete</Button>
                         </div>

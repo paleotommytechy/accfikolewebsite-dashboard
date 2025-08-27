@@ -1,4 +1,5 @@
 
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // --- IMPORTANT ---
@@ -203,10 +204,48 @@ if (!supabase) {
  *    $$;
  *    ```
  * 
- * 5. Storage:
+ * 5. Task Assignment Function (RPC)
+ *    - This function assigns a daily task to all users for the current day.
+ *
+ *    ```sql
+ *    create or replace function public.assign_task_to_all_users(task_id_to_assign uuid)
+ *    returns void
+ *    language plpgsql
+ *    security definer set search_path = public
+ *    as $$
+ *    declare
+ *      user_record record;
+ *      current_role text;
+ *    begin
+ *      -- Check if current user is an admin
+ *      select role into current_role from public.user_roles where user_id = auth.uid();
+ *      if current_role <> 'admin' then
+ *        raise exception 'Only admins can assign tasks.';
+ *      end if;
+ *
+ *      for user_record in select id from auth.users loop
+ *        -- Check if an assignment for this task already exists for this user today
+ *        if not exists (
+ *          select 1
+ *          from public.tasks_assignments
+ *          where task_id = task_id_to_assign
+ *            and assignee_id = user_record.id
+ *            and date_trunc('day', created_at) = date_trunc('day', now())
+ *        ) then
+ *          -- Insert a new assignment
+ *          insert into public.tasks_assignments (task_id, assignee_id, status)
+ *          values (task_id_to_assign, user_record.id, 'assigned');
+ *        end if;
+ *      end loop;
+ *
+ *    end;
+ *    $$;
+ *    ```
+ * 
+ * 6. Storage:
  *    - Create a public bucket named `avatars`.
  * 
- * 6. Row Level Security (RLS) Policies:
+ * 7. Row Level Security (RLS) Policies:
  *    - It's critical to enable RLS on all tables and create policies
  *      to secure your data.
  *    - Example: Admins can do anything, users can only see their own transactions.

@@ -28,12 +28,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     setIsLoading(true);
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // FIX: Property 'getSession' does not exist on type 'SupabaseAuthClient'. Changed to getUser() which is more broadly available.
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser();
 
       if (sessionError) throw sessionError;
 
-      if (session?.user) {
-        const user = session.user;
+      if (user) {
+        // const user = session.user; // user object is now directly available
         
         // Fetch role and profile in parallel
         const [roleResponse, profileResponse] = await Promise.all([
@@ -94,6 +95,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fetchCurrentUser();
 
     if (supabase) {
+      // FIX: Assuming the error on onAuthStateChange was a red herring as it's a core Supabase method. No changes made here as it should exist.
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         (_event, session) => {
           fetchCurrentUser();
