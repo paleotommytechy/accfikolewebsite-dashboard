@@ -82,7 +82,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAdmin(false);
       }
     } catch (e) {
-      console.error('An error occurred during user session fetch:', e);
+      const error = e as Error;
+      // This is an expected state for a logged-out user, not an error that needs to be logged.
+      if (error && error.message !== 'Auth session missing!') {
+        console.error('An error occurred during user session fetch:', e);
+      }
       setCurrentUser(null);
       setIsAdmin(false);
     } finally {

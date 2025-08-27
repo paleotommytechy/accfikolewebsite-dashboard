@@ -12,7 +12,7 @@ import Leaderboard from './pages/Leaderboard';
 import Events from './pages/Events';
 import Messages from './pages/Messages';
 import Analytics from './pages/Analytics';
-import Settings from './pages/Settings';
+import DeveloperSettings from './pages/DeveloperSettings';
 import Store from './pages/Store';
 
 function App(): React.ReactNode {
@@ -38,7 +38,7 @@ function App(): React.ReactNode {
             <Route path="messages" element={<Messages />} />
             <Route path="analytics" element={<ProtectedRoute adminOnly={true}><Analytics /></ProtectedRoute>} />
             <Route path="store" element={<Store />} />
-            <Route path="developer-settings" element={<ProtectedRoute adminOnly={true}><Settings /></ProtectedRoute>} />
+            <Route path="developer-settings" element={<ProtectedRoute adminOnly={true}><DeveloperSettings /></ProtectedRoute>} />
           </Route>
         </Routes>
       </HashRouter>

@@ -74,15 +74,20 @@ const MyDailyTasks: React.FC<{
                             <p className="text-gray-500 text-sm mt-1">{assignment.tasks?.details}</p>
                             {assignment.tasks?.coin_reward && <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 font-semibold">{assignment.tasks.coin_reward} Coins</p>}
                         </div>
-                         <button onClick={() => onToggle(assignment, assignment.status)} className={`p-2 rounded-full ${assignment.status === 'done' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>
-                            {assignment.status === 'done' ? 
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg> :
-                                <span className="h-5 w-5 block"></span>
-                            }
-                         </button>
+                        <div className="flex items-center space-x-4">
+                            <span className={`text-xs font-bold uppercase ${assignment.status === 'done' ? 'text-green-500' : 'text-yellow-500'}`}>
+                                {assignment.status === 'done' ? 'Completed' : 'Pending'}
+                            </span>
+                            <button onClick={() => onToggle(assignment, assignment.status)} className={`p-2 rounded-full ${assignment.status === 'done' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>
+                                {assignment.status === 'done' ? 
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg> :
+                                    <span className="h-5 w-5 block"></span>
+                                }
+                            </button>
+                        </div>
                     </div>
                 </div>
-            )) : <p className="text-gray-500">No daily tasks assigned. Great job!</p>}
+            )) : <p className="text-gray-500">No daily tasks assigned for today. Great job!</p>}
             </div>
         </Card>
     );
@@ -121,11 +126,18 @@ const Tasks: React.FC = () => {
             else setParticipant(participantData);
         }
 
-        // Fetch daily task assignments
+        // Fetch daily task assignments for today
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23,59,59,999);
+        
         const { data: assignmentsData, error: assignmentsError } = await supabase
             .from('tasks_assignments')
             .select('*, tasks(*)')
             .eq('assignee_id', currentUser.id)
+            .gte('created_at', todayStart.toISOString())
+            .lte('created_at', todayEnd.toISOString())
             .eq('tasks.frequency', 'daily');
 
         if (assignmentsError) console.error("Error fetching task assignments", assignmentsError);

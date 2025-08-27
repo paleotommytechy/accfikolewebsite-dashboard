@@ -77,10 +77,17 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (currentUser && supabase) {
       const fetchTaskAssignments = async () => {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
         const { data, error } = await supabase
           .from('tasks_assignments')
           .select('*, tasks!inner(*)')
           .eq('assignee_id', currentUser.id)
+          .gte('created_at', todayStart.toISOString())
+          .lte('created_at', todayEnd.toISOString())
           .eq('tasks.frequency', 'daily')
           .limit(3);
         if (error) {

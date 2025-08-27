@@ -247,9 +247,72 @@ if (!supabase) {
  * 
  * 7. Row Level Security (RLS) Policies:
  *    - It's critical to enable RLS on all tables and create policies
- *      to secure your data.
- *    - Example: Admins can do anything, users can only see their own transactions.
- *      `CREATE POLICY "Enable all for admins" ON public.coin_transactions FOR ALL TO authenticated USING ( (SELECT role FROM public.user_roles WHERE user_id = auth.uid()) = 'admin' );`
- *      `CREATE POLICY "Users can see their own transactions" ON public.coin_transactions FOR SELECT TO authenticated USING ( auth.uid() = user_id );`
- *      `CREATE POLICY "Users can create their own transactions" ON public.coin_transactions FOR INSERT TO authenticated WITH CHECK ( auth.uid() = user_id );`
+ *      to secure your data. After creating tables, go to the "Authentication" -> "Policies"
+ *      section in Supabase Studio for each table and add the following policies.
+ * 
+ *    ```sql
+ *    -- Helper function to check for admin role
+ *    create or replace function is_admin()
+ *    returns boolean
+ *    language sql
+ *    security definer
+ *    as $$
+ *      select exists(
+ *        select 1 from public.user_roles
+ *        where user_id = auth.uid() and role = 'admin'
+ *      );
+ *    $$;
+ * 
+ *    -- PROFILES TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.profiles enable row level security;
+ *    -- 2. Policy: Allow users to see all profiles
+ *    create policy "Allow all users to read profiles" on public.profiles for select using (true);
+ *    -- 3. Policy: Allow users to update their own profile
+ *    create policy "Allow user to update own profile" on public.profiles for update using (auth.uid() = id);
+ * 
+ *    -- TASKS TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.tasks enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to tasks" on public.tasks for all using (is_admin());
+ *    -- 3. Policy: Authenticated users can read tasks
+ *    create policy "Allow users to read tasks" on public.tasks for select using (auth.role() = 'authenticated');
+ * 
+ *    -- TASKS_ASSIGNMENTS TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.tasks_assignments enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to assignments" on public.tasks_assignments for all using (is_admin());
+ *    -- 3. Policy: Users can see their own assignments
+ *    create policy "Allow user to see own assignments" on public.tasks_assignments for select using (auth.uid() = assignee_id);
+ *    -- 4. Policy: Users can update their own assignments (e.g., mark as done)
+ *    create policy "Allow user to update own assignments" on public.tasks_assignments for update using (auth.uid() = assignee_id);
+ * 
+ *    -- WEEKLY_CHALLENGES TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.weekly_challenges enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to challenges" on public.weekly_challenges for all using (is_admin());
+ *    -- 3. Policy: Authenticated users can read challenges
+ *    create policy "Allow users to read challenges" on public.weekly_challenges for select using (auth.role() = 'authenticated');
+ * 
+ *    -- WEEKLY_PARTICIPANTS TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.weekly_participants enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to participants" on public.weekly_participants for all using (is_admin());
+ *    -- 3. Policy: Users can manage their own participation record
+ *    create policy "Allow user to manage own participation" on public.weekly_participants for all using (auth.uid() = user_id);
+ * 
+ *    -- COIN_TRANSACTIONS TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.coin_transactions enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to transactions" on public.coin_transactions for all using (is_admin());
+ *    -- 3. Policy: Users can see their own transactions
+ *    create policy "Allow user to see own transactions" on public.coin_transactions for select using (auth.uid() = user_id);
+ *    -- 4. Policy: Users can create their own transactions
+ *    create policy "Allow user to create own transactions" on public.coin_transactions for insert with check (auth.uid() = user_id);
+ *    ```
  */
