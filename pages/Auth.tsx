@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // FIX: Replaced useHistory with useNavigate for react-router-dom v6 compatibility.
 import { useNavigate } from 'react-router-dom';
@@ -77,6 +76,9 @@ const Auth: React.FC = () => {
             provider: 'google',
             options: {
                 redirectTo,
+                queryParams: {
+                  prompt: 'select_account'
+                }
             },
         });
         if (error) {
