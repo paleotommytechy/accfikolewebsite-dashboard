@@ -100,7 +100,7 @@ const Auth: React.FC = () => {
     return (
         <div 
             className="min-h-screen bg-cover bg-center flex flex-col justify-center items-center p-4" 
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1484482340112-e1e2682b4856?q=80&w=1960&auto=format&fit=crop')" }}
+            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1455581502452-42178824e3d0?q=80&w=1974&auto=format&fit=crop')" }}
         >
             <div className="w-full max-w-sm bg-white/30 backdrop-blur-lg rounded-2xl shadow-2xl p-6 md:p-8 space-y-4">
                 <div className="text-center">
