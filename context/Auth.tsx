@@ -70,7 +70,7 @@ const Auth: React.FC = () => {
         // The redirectTo URL tells Supabase where to send the user back to *your app*
         // after they have authenticated with Google.
         // Using window.location.origin makes this dynamic for any environment (dev, staging, prod).
-        const redirectTo = `${window.location.origin}/auth/callback`;
+        const redirectTo = window.location.origin;
 
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
