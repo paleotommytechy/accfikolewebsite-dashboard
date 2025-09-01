@@ -66,10 +66,20 @@ const Auth: React.FC = () => {
             return;
         }
         setLoading(true);
+
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        // The redirectTo URL tells Supabase where to send the user back to *your app*
+        // after they have authenticated with Google.
+        // It must include the hash '#' for react-router's HashRouter to work correctly.
+        const redirectTo = isDevelopment
+            ? `${window.location.origin}/#/auth/callback`
+            : 'https://accfikolewebsite-dashboard.vercel.app/#/auth/callback';
+
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin,
+                redirectTo,
             },
         });
         if (error) {

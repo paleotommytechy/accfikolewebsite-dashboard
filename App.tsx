@@ -1,11 +1,12 @@
 
 import React from 'react';
-// FIX: Updated react-router-dom imports and usage from v5 to v6 syntax.
+// FIX: Upgraded to react-router-dom v6 syntax to resolve module export errors.
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Auth from './pages/Auth';
+import AuthCallback from './context/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
@@ -22,39 +23,42 @@ function App(): React.ReactNode {
       <HashRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route
-            path="/"
+            path="/*"
             element={
               <ProtectedRoute>
-                <DashboardLayout />
+                <DashboardLayout>
+                  <Routes>
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="tasks" element={<Tasks />} />
+                    <Route path="leaderboard" element={<Leaderboard />} />
+                    <Route path="events" element={<Events />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="store" element={<Store />} />
+                    <Route
+                      path="analytics"
+                      element={
+                        <ProtectedRoute adminOnly={true}>
+                          <Analytics />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="developer-settings"
+                      element={
+                        <ProtectedRoute adminOnly={true}>
+                          <DeveloperSettings />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="*" element={<Navigate to="/dashboard" />} />
+                  </Routes>
+                </DashboardLayout>
               </ProtectedRoute>
             }
-          >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="leaderboard" element={<Leaderboard />} />
-            <Route path="events" element={<Events />} />
-            <Route path="messages" element={<Messages />} />
-            <Route path="store" element={<Store />} />
-            <Route
-              path="analytics"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <Analytics />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="developer-settings"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <DeveloperSettings />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
+          />
         </Routes>
       </HashRouter>
     </AppProvider>
