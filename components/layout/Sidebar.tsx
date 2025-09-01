@@ -13,7 +13,7 @@ const Sidebar: React.FC = () => {
   return (
     <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-30 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
       <div className="flex items-center justify-center h-16 border-b border-gray-700">
-        <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Logo" className="w-10 h-10 rounded-full" />
+        <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Logo" className="w-10 h-10 rounded-full border-2 border-gray-700" />
         {isSidebarOpen && <span className="ml-3 text-white text-lg font-bold">ACCF Ikole</span>}
       </div>
 

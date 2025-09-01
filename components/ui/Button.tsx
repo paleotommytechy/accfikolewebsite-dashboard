@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
@@ -7,6 +8,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   href?: string;
+  to?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -15,6 +17,7 @@ const Button: React.FC<ButtonProps> = ({
   size = 'md',
   className = '',
   href,
+  to,
   ...props
 }) => {
   const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200';
@@ -33,6 +36,16 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+
+  if (to) {
+    // Cast props to 'any' for simplicity to allow anchor attributes.
+    // A more robust solution would involve generics.
+    return (
+      <Link to={to} className={classes} {...(props as any)}>
+        {children}
+      </Link>
+    );
+  }
 
   if (href) {
     // Cast props to 'any' for simplicity to allow anchor attributes.

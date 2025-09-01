@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 // FIX: Replaced useHistory with useNavigate for react-router-dom v6 compatibility.
 import { useNavigate } from 'react-router-dom';
@@ -68,7 +69,6 @@ const Auth: React.FC = () => {
 
         // The redirectTo URL tells Supabase where to send the user back to *your app*
         // after they have authenticated with Google.
-        // It must include the hash '#' for react-router's HashRouter to work correctly.
         // Using window.location.origin makes this dynamic for any environment (dev, staging, prod).
         const redirectTo = `${window.location.origin}/#/auth/callback`;
 
@@ -104,7 +104,7 @@ const Auth: React.FC = () => {
         >
             <div className="w-full max-w-sm bg-white/30 backdrop-blur-lg rounded-2xl shadow-2xl p-6 md:p-8 space-y-4">
                 <div className="text-center">
-                    <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Chapter Logo" className="w-20 h-20 mx-auto rounded-full border-4 border-cyan-200 bg-white" />
+                    <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Chapter Logo" className="w-20 h-20 mx-auto rounded-full border-4 border-primary-300 bg-white" />
                     <h1 className="text-xl font-bold mt-4 text-slate-800">ACCF IKOLE CHAPTER</h1>
                     <p className="text-slate-600 text-sm">{title}</p>
                 </div>

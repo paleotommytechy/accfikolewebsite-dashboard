@@ -1,7 +1,6 @@
 
 import React from 'react';
-// FIX: Upgraded to react-router-dom v6 syntax to resolve module export errors.
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import DashboardLayout from './components/ui/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -24,41 +23,43 @@ function App(): React.ReactNode {
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route
-            path="/*"
+          
+          {/* Protected Routes using Layout Route pattern */}
+          <Route 
             element={
               <ProtectedRoute>
-                <DashboardLayout>
-                  <Routes>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="profile" element={<Profile />} />
-                    <Route path="tasks" element={<Tasks />} />
-                    <Route path="leaderboard" element={<Leaderboard />} />
-                    <Route path="events" element={<Events />} />
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="store" element={<Store />} />
-                    <Route
-                      path="analytics"
-                      element={
-                        <ProtectedRoute adminOnly={true}>
-                          <Analytics />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="developer-settings"
-                      element={
-                        <ProtectedRoute adminOnly={true}>
-                          <DeveloperSettings />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="*" element={<Navigate to="/dashboard" />} />
-                  </Routes>
-                </DashboardLayout>
+                <DashboardLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/store" element={<Store />} />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/developer-settings"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <DeveloperSettings />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Redirect from root and any other unmatched protected route to dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
         </Routes>
       </HashRouter>
     </AppProvider>

@@ -1,11 +1,11 @@
 
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Navbar from '../layout/Navbar';
 import Sidebar from '../layout/Sidebar';
 import { useAppContext } from '../../context/AppContext';
-// FIX: Reverted to using children prop for react-router-dom v5 compatibility.
 
-const DashboardLayout: React.FC<{children: React.ReactNode}> = ({ children }) => {
+const DashboardLayout: React.FC = () => {
   const { isSidebarOpen } = useAppContext();
 
   return (
@@ -14,8 +14,7 @@ const DashboardLayout: React.FC<{children: React.ReactNode}> = ({ children }) =>
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <Navbar />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {/* FIX: Using children prop for react-router-dom v5 compatibility */}
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

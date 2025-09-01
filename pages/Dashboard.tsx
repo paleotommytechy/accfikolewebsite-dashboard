@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
@@ -43,7 +44,7 @@ const WeeklyChallenge: React.FC<{challenge: WeeklyChallenge | null}> = ({challen
                 <h4 className="font-semibold text-lg">{challenge.title}</h4>
                 <p className="text-sm text-gray-500 mt-1">{challenge.details}</p>
                 <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
-                     <a href="#/tasks" className="text-primary-600 hover:underline font-semibold">Join Challenge</a>
+                     <Link to="/tasks" className="text-primary-600 hover:underline font-semibold">Join Challenge</Link>
                     {challenge.due_date && <span>Ends {new Date(challenge.due_date).toLocaleDateString()}</span>}
                 </div>
             </>
@@ -52,7 +53,7 @@ const WeeklyChallenge: React.FC<{challenge: WeeklyChallenge | null}> = ({challen
 );
 
 const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leaderboard}) => (
-    <Card title="Leaderboard" action={<a href="#/leaderboard" className="text-sm text-primary-600 hover:underline">View All</a>}>
+    <Card title="Leaderboard" action={<Link to="/leaderboard" className="text-sm text-primary-600 hover:underline">View All</Link>}>
         <ul className="space-y-4">
             {leaderboard.map((user, index) => (
                 <li key={user.id} className="flex items-center">
@@ -144,7 +145,7 @@ const Dashboard: React.FC = () => {
               <Avatar src={currentUser.avatar_url} alt={currentUser.full_name || 'User Avatar'} size="lg"/>
               <p className="font-bold text-xl mt-2">Level {currentUser.level}</p>
               <p className="text-yellow-500 font-semibold">{currentUser.coins} Coins</p>
-              <Button href="#/profile" variant="outline" size="sm" className="mt-4">View Profile</Button>
+              <Button to="/profile" variant="outline" size="sm" className="mt-4">View Profile</Button>
           </Card>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
