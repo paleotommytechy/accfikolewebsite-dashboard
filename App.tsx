@@ -5,7 +5,6 @@ import { AppProvider } from './context/AppContext';
 import DashboardLayout from './components/ui/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Auth from './context/Auth';
-import AuthCallback from './context/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
@@ -22,7 +21,6 @@ function App(): React.ReactNode {
       <HashRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
           
           {/* Protected Routes using Layout Route pattern */}
           <Route 
