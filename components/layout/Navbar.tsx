@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MenuIcon, BellIcon, SunIcon, MoonIcon, ChevronDownIcon } from '../ui/Icons';
 import { useAppContext } from '../../context/AppContext';
 import { mockNotifications } from '../../services/mockData';
-import Avatar from '../ui/Avatar';
+import Avatar from '../auth/Avatar';
 import { supabase } from '../../lib/supabaseClient';
 
 const Navbar: React.FC = () => {

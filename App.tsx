@@ -3,9 +3,9 @@ import React from 'react';
 // FIX: Upgraded to react-router-dom v6 syntax to resolve module export errors.
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
-import DashboardLayout from './components/layout/DashboardLayout';
+import DashboardLayout from './components/ui/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Auth from './pages/Auth';
+import Auth from './context/Auth';
 import AuthCallback from './context/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';

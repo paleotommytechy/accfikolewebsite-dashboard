@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import Avatar from '../components/ui/Avatar';
+import Avatar from '../components/auth/Avatar';
 import { supabase } from '../lib/supabaseClient';
 import type { UserProfile } from '../types';
 

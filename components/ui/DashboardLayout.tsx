@@ -1,7 +1,7 @@
 
 import React from 'react';
-import Navbar from './Navbar';
-import Sidebar from './Sidebar';
+import Navbar from '../layout/Navbar';
+import Sidebar from '../layout/Sidebar';
 import { useAppContext } from '../../context/AppContext';
 // FIX: Reverted to using children prop for react-router-dom v5 compatibility.
 

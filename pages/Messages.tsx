@@ -1,7 +1,7 @@
 
 import React from 'react';
 import Card from '../components/ui/Card';
-import Avatar from '../components/ui/Avatar';
+import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { mockLeaderboard, mockMessages } from '../services/mockData';
 import type { Message } from '../types';
