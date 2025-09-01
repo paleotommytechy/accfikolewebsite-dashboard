@@ -1,5 +1,6 @@
 
 import React from 'react';
+// FIX: Replaced Redirect with Navigate for react-router-dom v6 compatibility.
 import { Navigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 

@@ -20,11 +20,15 @@ const Sidebar: React.FC = () => {
 
       <nav className="flex flex-col p-4 space-y-2 flex-grow">
         {NAV_LINKS.map((link) => (
+          // FIX: Updated NavLink to use v6 props: className function and `end` prop.
           <NavLink
             key={link.name}
             to={link.href}
-            className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+            className={({ isActive }) =>
+              isActive ? `${linkClasses} ${activeLinkClasses}` : linkClasses
+            }
             title={link.name}
+            end={link.href === '/dashboard'}
           >
             <div className="w-6 h-6">{link.icon}</div>
             {isSidebarOpen && <span className="ml-4">{link.name}</span>}
@@ -35,10 +39,13 @@ const Sidebar: React.FC = () => {
           <>
             <hr className="my-4 border-gray-700" />
             {ADMIN_LINKS.map((link) => (
+              // FIX: Updated NavLink to use v6 props: className function.
               <NavLink
                 key={link.name}
                 to={link.href}
-                className={({ isActive }) => `${linkClasses} ${isActive ? activeLinkClasses : ''}`}
+                className={({ isActive }) =>
+                  isActive ? `${linkClasses} ${activeLinkClasses}` : linkClasses
+                }
                 title={link.name}
               >
                 <div className="w-6 h-6">{link.icon}</div>

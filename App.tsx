@@ -1,5 +1,6 @@
 
 import React from 'react';
+// FIX: Updated react-router-dom imports and usage from v5 to v6 syntax.
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -21,8 +22,8 @@ function App(): React.ReactNode {
       <HashRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <DashboardLayout />
@@ -36,9 +37,23 @@ function App(): React.ReactNode {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="events" element={<Events />} />
             <Route path="messages" element={<Messages />} />
-            <Route path="analytics" element={<ProtectedRoute adminOnly={true}><Analytics /></ProtectedRoute>} />
             <Route path="store" element={<Store />} />
-            <Route path="developer-settings" element={<ProtectedRoute adminOnly={true}><DeveloperSettings /></ProtectedRoute>} />
+            <Route
+              path="analytics"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="developer-settings"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <DeveloperSettings />
+                </ProtectedRoute>
+              }
+            />
           </Route>
         </Routes>
       </HashRouter>
