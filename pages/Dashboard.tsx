@@ -8,7 +8,7 @@ import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
-import { TrophyIcon, StarIcon, CoinIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon } from '../components/ui/Icons';
 
 const ScriptureOfTheDay: React.FC = () => {
     // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
@@ -143,28 +143,45 @@ const WeeklyChallengeCard: React.FC<{challenge: WeeklyChallenge | null}> = ({cha
 };
 
 const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leaderboard}) => {
-    const rankColors: { [key: number]: string } = {
-        0: 'text-yellow-400',
-        1: 'text-slate-400',
-        2: 'text-amber-600',
+    const rankStyles: { [key: number]: { bg: string; text: string; crown?: boolean } } = {
+        0: { bg: 'bg-yellow-400/20 dark:bg-yellow-500/10', text: 'text-yellow-500 dark:text-yellow-400', crown: true },
+        1: { bg: 'bg-slate-400/20 dark:bg-slate-500/10', text: 'text-slate-600 dark:text-slate-400' },
+        2: { bg: 'bg-amber-600/20 dark:bg-amber-700/10', text: 'text-amber-700 dark:text-amber-500' },
     };
 
     return (
-        <Card title="Leaderboard" action={<ReactRouterDOM.Link to="/leaderboard" className="text-sm text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}>
-            <ul className="space-y-3">
-                {leaderboard.map((user, index) => (
-                    <li key={user.id} className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                        <span className={`text-xl font-bold w-6 text-center ${rankColors[index] ?? 'text-gray-500'}`}>
-                            {index + 1}
-                        </span>
-                        <Avatar src={user.avatar_url} alt={user.full_name || ''} size="md" />
-                        <div className="flex-1 overflow-hidden">
-                            <p className="font-semibold truncate text-gray-800 dark:text-gray-200">{user.full_name}</p>
-                            <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">{user.coins} coins</p>
-                        </div>
-                    </li>
-                ))}
+        <Card title="Leaderboard" action={<ReactRouterDOM.Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}>
+            <ul className="space-y-2">
+                {leaderboard.map((user, index) => {
+                    const style = rankStyles[index];
+                    return (
+                        <li 
+                            key={user.id} 
+                            className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${style ? style.bg : ''}`}
+                        >
+                             <div className="relative flex items-center justify-center w-8">
+                                <span className={`text-lg font-bold ${style ? style.text : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {index + 1}
+                                </span>
+                                {style?.crown && (
+                                    <CrownIcon className="w-5 h-5 text-yellow-400 absolute -top-3 left-1/2 -translate-x-1/2" />
+                                )}
+                            </div>
+                            <Avatar src={user.avatar_url} alt={user.full_name || ''} size="md" />
+                            <div className="flex-1 overflow-hidden">
+                                <p className="font-semibold truncate text-gray-800 dark:text-gray-200">{user.full_name}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                                <p className="text-sm font-bold text-yellow-600 dark:text-yellow-500">
+                                    {user.coins}
+                                </p>
+                                <p className="text-xs text-gray-500">coins</p>
+                            </div>
+                        </li>
+                    )
+                })}
             </ul>
+             {leaderboard.length === 0 && <p className="text-center text-gray-500 pt-4">No rankings yet.</p>}
         </Card>
     );
 };
