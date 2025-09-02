@@ -8,7 +8,7 @@ import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
-import { TrophyIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon } from '../components/ui/Icons';
 
 const ScriptureOfTheDay: React.FC = () => {
     // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
@@ -38,6 +38,53 @@ const DailyTasks: React.FC<{tasks: TaskAssignment[]}> = ({tasks}) => (
         {tasks.length === 0 && <p className="text-gray-500">No tasks for today. Check back later!</p>}
     </Card>
 );
+
+const MyProgressCard: React.FC<{ user: UserProfile }> = ({ user }) => {
+  // Mock XP calculation for visual representation
+  const xpForNextLevel = 1000;
+  const currentXp = user.coins % xpForNextLevel;
+  const progressPercentage = (currentXp / xpForNextLevel) * 100;
+
+  return (
+    <div className="rounded-lg shadow-lg bg-gradient-to-br from-primary-600 to-primary-800 text-white p-6 relative overflow-hidden flex flex-col items-center text-center">
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full"></div>
+      <div className="absolute -bottom-12 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
+      
+      <Avatar src={user.avatar_url} alt={user.full_name || 'User Avatar'} size="xl" className="border-4 border-white/50 shadow-lg mb-3 relative z-10" />
+      <h3 className="text-xl font-bold relative z-10">{user.full_name || 'Member'}</h3>
+      
+      <div className="flex justify-around w-full my-4 relative z-10">
+        <div className="flex flex-col items-center px-2">
+          <StarIcon className="w-8 h-8 text-yellow-300" />
+          <p className="font-bold text-lg mt-1">{user.level}</p>
+          <p className="text-xs uppercase font-semibold opacity-80">Level</p>
+        </div>
+        <div className="flex flex-col items-center px-2">
+          <CoinIcon className="w-8 h-8 text-yellow-300" />
+          <p className="font-bold text-lg mt-1">{user.coins}</p>
+          <p className="text-xs uppercase font-semibold opacity-80">Coins</p>
+        </div>
+      </div>
+      
+      <div className="w-full relative z-10">
+        <div className="flex justify-between text-xs font-medium mb-1 opacity-80">
+          <span>Progress to Level {user.level + 1}</span>
+          <span>{currentXp} / {xpForNextLevel} XP</span>
+        </div>
+        <div className="w-full bg-black/20 rounded-full h-2.5">
+          <div className="bg-yellow-300 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
+        </div>
+      </div>
+      
+      <Button
+        to="/profile"
+        className="mt-6 w-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm relative z-10"
+      >
+        View Full Profile
+      </Button>
+    </div>
+  );
+};
 
 const WeeklyChallengeCard: React.FC<{challenge: WeeklyChallenge | null}> = ({challenge}) => {
     if (!challenge) {
@@ -198,12 +245,7 @@ const Dashboard: React.FC = () => {
 
       {/* Sidebar Column */}
       <div className="lg:col-span-1 space-y-6">
-        <Card title="My Progress" className="flex flex-col justify-center items-center text-center">
-            <Avatar src={currentUser.avatar_url} alt={currentUser.full_name || 'User Avatar'} size="lg"/>
-            <p className="font-bold text-xl mt-2">Level {currentUser.level}</p>
-            <p className="text-yellow-500 font-semibold">{currentUser.coins} Coins</p>
-            <Button to="/profile" variant="outline" size="sm" className="mt-4">View Profile</Button>
-        </Card>
+        <MyProgressCard user={currentUser} />
         <WeeklyChallengeCard challenge={challenge} />
         <MiniLeaderboard leaderboard={leaderboard} />
       </div>
