@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+// FIX: Changed to namespace import to fix module resolution issues with react-router-dom.
+import * as ReactRouterDOM from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
+import { TrophyIcon } from '../components/ui/Icons';
 
 const ScriptureOfTheDay: React.FC = () => {
     // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
@@ -37,37 +39,88 @@ const DailyTasks: React.FC<{tasks: TaskAssignment[]}> = ({tasks}) => (
     </Card>
 );
 
-const WeeklyChallenge: React.FC<{challenge: WeeklyChallenge | null}> = ({challenge}) => (
-    <Card title="Weekly Challenge">
-        {challenge ? (
-            <>
-                <h4 className="font-semibold text-lg">{challenge.title}</h4>
-                <p className="text-sm text-gray-500 mt-1">{challenge.details}</p>
-                <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
-                     <Link to="/tasks" className="text-primary-600 hover:underline font-semibold">Join Challenge</Link>
-                    {challenge.due_date && <span>Ends {new Date(challenge.due_date).toLocaleDateString()}</span>}
+const WeeklyChallengeCard: React.FC<{challenge: WeeklyChallenge | null}> = ({challenge}) => {
+    if (!challenge) {
+        return (
+            <div className="rounded-lg shadow-lg bg-gradient-to-br from-primary-700 to-primary-900 text-white p-6 relative overflow-hidden flex flex-col items-center justify-center text-center">
+                 <div className="absolute -bottom-10 -right-10 opacity-10">
+                    <TrophyIcon className="w-48 h-48" />
                 </div>
-            </>
-        ) : <p className="text-gray-500">No active challenge this week.</p>}
-    </Card>
-);
+                <div className="relative z-10">
+                    <h3 className="text-xl font-bold">Weekly Challenge</h3>
+                    <p className="text-primary-200 mt-2 text-sm opacity-90">No active challenge this week. Check back soon!</p>
+                </div>
+            </div>
+        )
+    }
 
-const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leaderboard}) => (
-    <Card title="Leaderboard" action={<Link to="/leaderboard" className="text-sm text-primary-600 hover:underline">View All</Link>}>
-        <ul className="space-y-4">
-            {leaderboard.map((user, index) => (
-                <li key={user.id} className="flex items-center">
-                    <span className="text-lg font-bold w-6">{index + 1}</span>
-                    <Avatar src={user.avatar_url} alt={user.full_name || ''} size="md" className="mx-3" />
+    const daysLeft = challenge.due_date ? (() => {
+        const due = new Date(challenge.due_date);
+        const today = new Date();
+        const utcDue = Date.UTC(due.getFullYear(), due.getMonth(), due.getUTCDate());
+        const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getUTCDate());
+        const diffTime = utcDue - utcToday;
+
+        if (diffTime < 0) return 'Ended';
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'Ends Today';
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} left`;
+    })() : '';
+
+    return (
+        <div className="rounded-lg shadow-lg bg-gradient-to-br from-primary-700 to-primary-900 text-white p-6 relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute -bottom-10 -right-10 opacity-10">
+                <TrophyIcon className="w-48 h-48" />
+            </div>
+            <div className="relative z-10">
+                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div className="flex-1">
-                        <p className="font-semibold">{user.full_name}</p>
-                        <p className="text-sm text-gray-500">{user.coins} coins</p>
+                        <span className="text-sm uppercase font-bold text-primary-300 tracking-wider">Weekly Challenge</span>
+                        <h3 className="text-2xl font-bold mt-1">{challenge.title}</h3>
                     </div>
-                </li>
-            ))}
-        </ul>
-    </Card>
-);
+                    <div className="flex-shrink-0 bg-white/20 backdrop-blur-sm p-3 rounded-lg text-center">
+                        <p className="font-bold text-2xl text-yellow-300">{challenge.coin_reward}</p>
+                        <p className="text-xs uppercase font-semibold">Coins</p>
+                    </div>
+                </div>
+                <p className="text-primary-200 mt-2 text-sm opacity-90 line-clamp-2">{challenge.details}</p>
+            </div>
+            <div className="relative z-10 mt-6 flex flex-col sm:flex-row items-center gap-4">
+                <Button to="/tasks" className="w-full sm:w-auto flex-grow bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
+                    View Challenge
+                </Button>
+                {daysLeft && <span className="text-sm font-medium bg-white/20 px-3 py-2 rounded-full flex-shrink-0">{daysLeft}</span>}
+            </div>
+        </div>
+    );
+};
+
+const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leaderboard}) => {
+    const rankColors: { [key: number]: string } = {
+        0: 'text-yellow-400',
+        1: 'text-slate-400',
+        2: 'text-amber-600',
+    };
+
+    return (
+        <Card title="Leaderboard" action={<ReactRouterDOM.Link to="/leaderboard" className="text-sm text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}>
+            <ul className="space-y-3">
+                {leaderboard.map((user, index) => (
+                    <li key={user.id} className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                        <span className={`text-xl font-bold w-6 text-center ${rankColors[index] ?? 'text-gray-500'}`}>
+                            {index + 1}
+                        </span>
+                        <Avatar src={user.avatar_url} alt={user.full_name || ''} size="md" />
+                        <div className="flex-1 overflow-hidden">
+                            <p className="font-semibold truncate text-gray-800 dark:text-gray-200">{user.full_name}</p>
+                            <p className="text-sm text-yellow-600 dark:text-yellow-500 font-medium">{user.coins} coins</p>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+};
 
 const Dashboard: React.FC = () => {
   const { currentUser, isLoading } = useAppContext();
@@ -136,26 +189,23 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-              <ScriptureOfTheDay />
-          </div>
-          <Card title="My Progress" className="flex flex-col justify-center items-center text-center">
-              <Avatar src={currentUser.avatar_url} alt={currentUser.full_name || 'User Avatar'} size="lg"/>
-              <p className="font-bold text-xl mt-2">Level {currentUser.level}</p>
-              <p className="text-yellow-500 font-semibold">{currentUser.coins} Coins</p>
-              <Button to="/profile" variant="outline" size="sm" className="mt-4">View Profile</Button>
-          </Card>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Column */}
+      <div className="lg:col-span-2 space-y-6">
+        <ScriptureOfTheDay />
+        <DailyTasks tasks={taskAssignments} />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-            <DailyTasks tasks={taskAssignments} />
-            <WeeklyChallenge challenge={challenge} />
-        </div>
-        <div className="space-y-6">
-            <MiniLeaderboard leaderboard={leaderboard} />
-        </div>
+
+      {/* Sidebar Column */}
+      <div className="lg:col-span-1 space-y-6">
+        <Card title="My Progress" className="flex flex-col justify-center items-center text-center">
+            <Avatar src={currentUser.avatar_url} alt={currentUser.full_name || 'User Avatar'} size="lg"/>
+            <p className="font-bold text-xl mt-2">Level {currentUser.level}</p>
+            <p className="text-yellow-500 font-semibold">{currentUser.coins} Coins</p>
+            <Button to="/profile" variant="outline" size="sm" className="mt-4">View Profile</Button>
+        </Card>
+        <WeeklyChallengeCard challenge={challenge} />
+        <MiniLeaderboard leaderboard={leaderboard} />
       </div>
     </div>
   );

@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-// FIX: Replaced useHistory with useNavigate for react-router-dom v6 compatibility.
-import { useNavigate } from 'react-router-dom';
+// FIX: Changed to namespace import to fix module resolution issues with react-router-dom.
+import * as ReactRouterDOM from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from './AppContext';
 import { EmailIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, GoogleIcon } from '../components/ui/Icons';
 
 const Auth: React.FC = () => {
     const { currentUser, isLoading } = useAppContext();
-    const navigate = useNavigate();
+    const navigate = ReactRouterDOM.useNavigate();
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

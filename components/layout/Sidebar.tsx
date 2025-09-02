@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+// FIX: Changed to namespace import to fix module resolution issues with react-router-dom.
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { NAV_LINKS, ADMIN_LINKS } from '../../constants';
 
@@ -20,7 +21,7 @@ const Sidebar: React.FC = () => {
       <nav className="flex flex-col p-4 space-y-2 flex-grow">
         {NAV_LINKS.map((link) => (
           // FIX: Updated NavLink to use v6 props: className function and `end` prop.
-          <NavLink
+          <ReactRouterDOM.NavLink
             key={link.name}
             to={link.href}
             className={({ isActive }) =>
@@ -31,7 +32,7 @@ const Sidebar: React.FC = () => {
           >
             <div className="w-6 h-6">{link.icon}</div>
             {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-          </NavLink>
+          </ReactRouterDOM.NavLink>
         ))}
         
         {isAdmin && (
@@ -39,7 +40,7 @@ const Sidebar: React.FC = () => {
             <hr className="my-4 border-gray-700" />
             {ADMIN_LINKS.map((link) => (
               // FIX: Updated NavLink to use v6 props: className function.
-              <NavLink
+              <ReactRouterDOM.NavLink
                 key={link.name}
                 to={link.href}
                 className={({ isActive }) =>
@@ -49,7 +50,7 @@ const Sidebar: React.FC = () => {
               >
                 <div className="w-6 h-6">{link.icon}</div>
                 {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-              </NavLink>
+              </ReactRouterDOM.NavLink>
             ))}
           </>
         )}

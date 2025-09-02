@@ -84,6 +84,7 @@ export interface Event {
   time: string;
   location: string;
   description: string;
+  image_url?: string;
 }
 
 export interface Message {
