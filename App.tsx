@@ -15,6 +15,7 @@ import Messages from './pages/Messages';
 import Analytics from './pages/Analytics';
 import DeveloperSettings from './pages/DeveloperSettings';
 import Store from './pages/Store';
+import ChatHistory from './pages/ChatHistory';
 
 function App(): React.ReactNode {
   return (
@@ -36,7 +37,8 @@ function App(): React.ReactNode {
             <ReactRouterDOM.Route path="/tasks" element={<Tasks />} />
             <ReactRouterDOM.Route path="/leaderboard" element={<Leaderboard />} />
             <ReactRouterDOM.Route path="/events" element={<Events />} />
-            <ReactRouterDOM.Route path="/messages" element={<Messages />} />
+            <ReactRouterDOM.Route path="/messages" element={<ChatHistory />} />
+            <ReactRouterDOM.Route path="/compose" element={<Messages />} />
             <ReactRouterDOM.Route path="/store" element={<Store />} />
             <ReactRouterDOM.Route
               path="/analytics"

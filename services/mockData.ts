@@ -46,6 +46,15 @@ export const mockMessages: Message[] = [
     { id: 'msg-3', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Definitely! See you there.', created_at: '10:32 AM' },
 ];
 
+export const mockChatHistory = [
+    { id: 'chat-1', name: 'Ifeoluwa (President)', avatar: 'https://picsum.photos/seed/ifeoluwa/100', lastMessage: 'The slides for the presentation are ready.', timestamp: '11:30 AM', unreadCount: 0 },
+    { id: 'chat-2', name: 'Pastor Ariyo', avatar: 'https://picsum.photos/seed/ariyo/100', lastMessage: 'Can we meet tomorrow to discuss the outreach?', timestamp: 'Yesterday', unreadCount: 2 },
+    { id: 'chat-3', name: 'Daniel (Alumni-President)', avatar: 'https://picsum.photos/seed/daniel/100', lastMessage: 'Thanks for sending over the documents!', timestamp: '2 days ago', unreadCount: 0 },
+    { id: 'chat-4', name: 'Gift (Worker)', avatar: 'https://picsum.photos/seed/gift/100', lastMessage: 'I have a question about the task assigned.', timestamp: '2 days ago', unreadCount: 0 },
+    { id: 'chat-5', name: 'Toluwanimi', avatar: 'https://picsum.photos/seed/toluwanimi/100', lastMessage: 'Great job on the evangelism plan.', timestamp: 'Mar 15', unreadCount: 0 },
+];
+
+
 export const mockStoreItems: StoreItem[] = [
     { id: 'item-1', name: 'Coffee with a Leader', description: 'Get a 30-minute coffee session with a fellowship leader.', cost: 500, icon: '☕' },
     { id: 'item-2', name: 'Fellowship T-Shirt', description: 'A custom-designed fellowship T-shirt.', cost: 1500, icon: '👕' },
