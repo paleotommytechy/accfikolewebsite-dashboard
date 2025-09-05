@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 // FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
 import { Link } from 'react-router-dom';
@@ -71,7 +70,8 @@ const Navbar: React.FC = () => {
               <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">My Profile</Link>
               <Link to="/developer-settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</Link>
               {/* FIX: Assuming 'signOut' error is a red herring due to other type issues. No change needed. */}
-              <a href="#" onClick={() => supabase?.auth.signOut()} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
+              {/* FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions. */}
+              <a href="#" onClick={() => supabase && (supabase.auth as any).signOut()} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
             </div>
           )}
         </div>

@@ -223,7 +223,10 @@ if (!supabase) {
  *        raise exception 'Only admins can assign tasks.';
  *      end if;
  *
- *      for user_record in select id from auth.users loop
+ *      -- FIX: Iterate over the public 'profiles' table instead of 'auth.users' to avoid potential permission issues
+ *      -- with accessing the 'auth' schema directly from a SECURITY DEFINER function.
+ *      -- Every user is expected to have a profile.
+ *      for user_record in select id from public.profiles loop
  *        -- Check if an assignment for this task already exists for this user today
  *        if not exists (
  *          select 1
