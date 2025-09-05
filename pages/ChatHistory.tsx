@@ -5,7 +5,7 @@ import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
 import { SearchIcon, PencilAltIcon } from '../components/ui/Icons';
 import { mockChatHistory } from '../services/mockData';
-import * as ReactRouterDOM from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const ChatHistory: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,7 +44,7 @@ const ChatHistory: React.FC = () => {
                 <ul className="divide-y dark:divide-gray-700">
                     {filteredChats.map(chat => (
                         <li key={chat.id}>
-                            <ReactRouterDOM.Link to="#" className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer space-x-4">
+                            <Link to="#" className="flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer space-x-4">
                                 <Avatar src={chat.avatar} alt={chat.name} size="md" />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center">
@@ -60,7 +60,7 @@ const ChatHistory: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                            </ReactRouterDOM.Link>
+                            </Link>
                         </li>
                     ))}
                     {filteredChats.length === 0 && (

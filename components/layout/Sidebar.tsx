@@ -1,7 +1,7 @@
 
 import React from 'react';
-// FIX: Changed to namespace import to fix module resolution issues with react-router-dom.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
+import { NavLink } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { NAV_LINKS, ADMIN_LINKS } from '../../constants';
 
@@ -12,16 +12,20 @@ const Sidebar: React.FC = () => {
   const activeLinkClasses = "bg-primary-700 text-white";
 
   return (
-    <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-30 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+    <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-40 w-64
+      ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+      lg:translate-x-0 
+      ${isSidebarOpen ? 'lg:w-64' : 'lg:w-20'}
+    `}>
       <div className="flex items-center justify-center h-16 border-b border-gray-700">
-        <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Logo" className="w-10 h-10 rounded-full border-2 border-gray-700" />
+        <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Logo" className="w-10 h-10 rounded-full border-2 border-gray-700 flex-shrink-0" />
         {isSidebarOpen && <span className="ml-3 text-white text-lg font-bold">ACCF Ikole</span>}
       </div>
 
-      <nav className="flex flex-col p-4 space-y-2 flex-grow">
+      <nav className="flex flex-col p-4 space-y-2 flex-grow overflow-y-auto">
         {NAV_LINKS.map((link) => (
           // FIX: Updated NavLink to use v6 props: className function and `end` prop.
-          <ReactRouterDOM.NavLink
+          <NavLink
             key={link.name}
             to={link.href}
             className={({ isActive }) =>
@@ -30,9 +34,9 @@ const Sidebar: React.FC = () => {
             title={link.name}
             end={link.href === '/dashboard'}
           >
-            <div className="w-6 h-6">{link.icon}</div>
+            <div className="w-6 h-6 flex-shrink-0">{link.icon}</div>
             {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-          </ReactRouterDOM.NavLink>
+          </NavLink>
         ))}
         
         {isAdmin && (
@@ -40,7 +44,7 @@ const Sidebar: React.FC = () => {
             <hr className="my-4 border-gray-700" />
             {ADMIN_LINKS.map((link) => (
               // FIX: Updated NavLink to use v6 props: className function.
-              <ReactRouterDOM.NavLink
+              <NavLink
                 key={link.name}
                 to={link.href}
                 className={({ isActive }) =>
@@ -48,9 +52,9 @@ const Sidebar: React.FC = () => {
                 }
                 title={link.name}
               >
-                <div className="w-6 h-6">{link.icon}</div>
+                <div className="w-6 h-6 flex-shrink-0">{link.icon}</div>
                 {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-              </ReactRouterDOM.NavLink>
+              </NavLink>
             ))}
           </>
         )}

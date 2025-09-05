@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-// FIX: Changed to namespace import to fix module resolution issues with react-router-dom.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
+import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
@@ -150,7 +150,7 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
     };
 
     return (
-        <Card title="Leaderboard" action={<ReactRouterDOM.Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}>
+        <Card title="Leaderboard" action={<Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</Link>}>
             <ul className="space-y-2">
                 {leaderboard.map((user, index) => {
                     const style = rankStyles[index];

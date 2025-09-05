@@ -1,7 +1,7 @@
 
 import React from 'react';
-// FIX: Changed to namespace import to fix module resolution issues with react-router-dom.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
+import { Link } from 'react-router-dom';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
@@ -42,9 +42,9 @@ const Button: React.FC<ButtonProps> = ({
     // Cast props to 'any' for simplicity to allow anchor attributes.
     // A more robust solution would involve generics.
     return (
-      <ReactRouterDOM.Link to={to} className={classes} {...(props as any)}>
+      <Link to={to} className={classes} {...(props as any)}>
         {children}
-      </ReactRouterDOM.Link>
+      </Link>
     );
   }
 

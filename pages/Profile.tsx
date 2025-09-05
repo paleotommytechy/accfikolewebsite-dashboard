@@ -142,7 +142,7 @@ const Profile: React.FC = () => {
         <Card className="!p-0">
             <div className="h-32 bg-primary-500 rounded-t-lg"></div>
             <div className="p-6">
-                <div className="flex items-end -mt-16">
+                <div className="flex flex-col items-center sm:flex-row sm:items-end -mt-16 sm:-mt-20">
                     <div className="relative group">
                       <Avatar src={profile.avatar_url} alt={profile.full_name || 'User Avatar'} size="xl" className="border-4 border-white dark:border-dark" />
                        <label htmlFor="avatar-upload" className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
@@ -150,12 +150,12 @@ const Profile: React.FC = () => {
                         </label>
                        <input type="file" id="avatar-upload" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={isUploading} ref={avatarInputRef} />
                     </div>
-                    <div className="ml-4">
+                    <div className="sm:ml-4 mt-4 sm:mt-0 text-center sm:text-left">
                         <h2 className="text-2xl font-bold">{profile.full_name || 'New Member'}</h2>
                         <p className="text-gray-500">{profile.fellowship_position || 'position not set'}</p>
                     </div>
                 </div>
-                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-300">
+                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-300 justify-center sm:justify-start">
                     <span>Level: <span className="font-semibold text-primary-500">{profile.level}</span></span>
                     <span>Coins: <span className="font-semibold text-yellow-500">{profile.coins}</span></span>
                 </div>

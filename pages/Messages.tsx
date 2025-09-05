@@ -93,11 +93,11 @@ const Messages: React.FC = () => {
     const isAllVisibleSelected = filteredRecipients.length > 0 && filteredRecipients.every(r => selectedRecipients.has(r.id));
     
     return (
-        <div className="h-full flex flex-col">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Compose Message</h1>
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Compose Message</h1>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recipient Selection Panel */}
-                <Card className="lg:col-span-1 flex flex-col !p-0">
+                <Card className="lg:col-span-1 flex flex-col !p-0 lg:max-h-[calc(100vh-12rem)]">
                     <div className="p-4 border-b dark:border-gray-700">
                         <h2 className="font-semibold text-lg">Select Recipients</h2>
                         <p className="text-sm text-gray-500">{selectedRecipients.size} selected</p>
@@ -174,8 +174,8 @@ const Messages: React.FC = () => {
                 </Card>
 
                 {/* Message Composition Panel */}
-                <div className="lg:col-span-2 flex flex-col h-full">
-                    <Card className="flex-1 flex flex-col !p-0">
+                <div className="lg:col-span-2 flex flex-col">
+                    <Card className="flex-1 flex flex-col !p-0 lg:h-[calc(100vh-12rem)] min-h-[500px]">
                          <div className="p-4 border-b dark:border-gray-700">
                             <label htmlFor="subject" className="sr-only">Subject</label>
                              <input
