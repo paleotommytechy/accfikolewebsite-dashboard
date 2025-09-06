@@ -1,5 +1,6 @@
 
 
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // --- IMPORTANT ---
@@ -137,6 +138,17 @@ if (!supabase) {
  *      created_at timestamp with time zone DEFAULT now()
  *    );
  *    COMMENT ON TABLE public.notifications IS 'Stores user-specific notifications.';
+ * 
+ *    -- Create messages table
+ *    CREATE TABLE IF NOT EXISTS public.messages (
+ *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *        sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+ *        receiver_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+ *        text text NOT NULL,
+ *        created_at timestamp with time zone DEFAULT now(),
+ *        read boolean DEFAULT false
+ *    );
+ *    COMMENT ON TABLE public.messages IS 'Stores private messages between users.';
  *    ```
  * 
  * 3. Create Profile on Signup (Database Trigger):
@@ -149,6 +161,8 @@ if (!supabase) {
  *    language plpgsql
  *    security definer set search_path = public
  *    as $$
+ *    declare
+ *      admin_user_id uuid;
  *    begin
  *      -- Create a profile
  *      insert into public.profiles (id, email, coins)
@@ -159,6 +173,18 @@ if (!supabase) {
  *      -- Create a coin record
  *      insert into public.user_coins (user_id, total_coins)
  *      values (new.id, 0);
+ *      
+ *      -- Notify all admins about the new user
+ *      for admin_user_id in select user_id from public.user_roles where role = 'admin' loop
+ *        insert into public.notifications (user_id, type, message, link)
+ *        values (
+ *            admin_user_id,
+ *            'new_user',
+ *            'New member ' || coalesce(new.email, 'with unknown email') || ' has joined. Click to send a welcome message!',
+ *            '/compose?recipientId=' || new.id
+ *        );
+ *      end loop;
+ *
  *      return new;
  *    end;
  *    $$;
@@ -339,6 +365,12 @@ if (!supabase) {
  *    create policy "Allow user to see own notifications" on public.notifications for select using (auth.uid() = user_id);
  *    -- 4. Policy: Users can update their own notifications (e.g., mark as read)
  *    create policy "Allow user to update own notifications" on public.notifications for update using (auth.uid() = user_id);
+ *
+ *    -- MESSAGES TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.messages enable row level security;
+ *    -- 2. Policy: Users can manage their own messages (send, receive, read)
+ *    create policy "Allow users to manage their own messages" on public.messages for all using (auth.uid() = sender_id or auth.uid() = receiver_id);
  *    ```
  * 
  * 8. User Management Functions (RPC for Admins)

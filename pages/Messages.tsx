@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
@@ -11,9 +12,12 @@ import {
     PaperAirplaneIcon,
     SearchIcon,
 } from '../components/ui/Icons';
+import { useSearchParams } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import { useAppContext } from '../context/AppContext';
+import { useNotifier } from '../context/NotificationContext';
 
-// Mock Data based on the user request
-interface MockRecipient {
+interface Recipient {
   id: string;
   name: string;
   role: string;
@@ -21,25 +25,118 @@ interface MockRecipient {
   category: 'Executives' | 'Alumni' | 'Pastors' | 'Workers' | 'Members';
 }
 
-const allRecipients: MockRecipient[] = [
-  { id: '1', name: 'Ifeoluwa', role: 'President', category: 'Executives', avatar: 'https://picsum.photos/seed/ifeoluwa/100' },
-  { id: '2', name: 'Daniel', role: 'Alumni-President', category: 'Alumni', avatar: 'https://picsum.photos/seed/daniel/100' },
-  { id: '3', name: 'Pastor Ariyo', role: 'Pastor', category: 'Pastors', avatar: 'https://picsum.photos/seed/ariyo/100' },
-  { id: '4', name: 'Gift', role: 'Worker', category: 'Workers', avatar: 'https://picsum.photos/seed/gift/100' },
-  { id: '5', name: 'Toluwanimi', role: 'Evangelism Coordinator', category: 'Executives', avatar: 'https://picsum.photos/seed/toluwanimi/100' },
-  { id: '6', name: 'Caleb', role: 'Alumni-President', category: 'Alumni', avatar: 'https://picsum.photos/seed/caleb/100' },
-  { id: '7', name: 'Isaac', role: 'Alumni-MD', category: 'Alumni', avatar: 'https://picsum.photos/seed/isaac/100' },
-  { id: '8', name: 'Tosin', role: 'Member', category: 'Members', avatar: 'https://picsum.photos/seed/tosin/100' },
-];
-
-const categories: MockRecipient['category'][] = ['Executives', 'Workers', 'Pastors', 'Alumni', 'Members'];
+const categories: Recipient['category'][] = ['Executives', 'Workers', 'Pastors', 'Alumni', 'Members'];
 
 const Messages: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const { currentUser } = useAppContext();
+    const { addToast } = useNotifier();
+
+    const recipientId = searchParams.get('recipientId');
+
+    const [allRecipients, setAllRecipients] = useState<Recipient[]>([]);
+    const [loadingRecipients, setLoadingRecipients] = useState(true);
+    const [isSending, setIsSending] = useState(false);
+
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
+
+     useEffect(() => {
+        const fetchUsers = async () => {
+            if (!supabase) return;
+            setLoadingRecipients(true);
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, fellowship_position, avatar_url');
+            
+            if (error) {
+                console.error("Error fetching users for messaging:", error);
+                addToast('Failed to load recipients', 'error');
+            } else if (data) {
+                const categorizedUsers = data.map(p => {
+                    let category: Recipient['category'] = 'Members';
+                    const position = p.fellowship_position?.toLowerCase();
+                    if (position?.includes('president') || position?.includes('coordinator')) {
+                        category = 'Executives';
+                    } else if (position?.includes('alumni')) {
+                        category = 'Alumni';
+                    } else if (position?.includes('pastor')) {
+                        category = 'Pastors';
+                    } else if (position?.includes('worker')) {
+                        category = 'Workers';
+                    }
+
+                    return {
+                        id: p.id,
+                        name: p.full_name || p.email,
+                        role: p.fellowship_position || 'Member',
+                        category: category,
+                        avatar: p.avatar_url || ''
+                    };
+                });
+                setAllRecipients(categorizedUsers);
+            }
+            setLoadingRecipients(false);
+        };
+        fetchUsers();
+    }, [addToast]);
+
+    useEffect(() => {
+        if (recipientId && allRecipients.length > 0) {
+            const recipient = allRecipients.find(r => r.id === recipientId);
+            if (recipient) {
+                setSelectedRecipients(new Set([recipientId]));
+                setSearchTerm(recipient.name);
+            }
+        }
+    }, [recipientId, allRecipients]);
+
+
+    const handleSendMessage = async () => {
+        if (!supabase || !currentUser || selectedRecipients.size === 0 || !subject || !message) {
+            addToast('Please select recipients and fill out the subject and message.', 'error');
+            return;
+        }
+
+        setIsSending(true);
+
+        const messagesToInsert = Array.from(selectedRecipients).map(recipientId => ({
+            sender_id: currentUser.id,
+            receiver_id: recipientId,
+            text: `Subject: ${subject}\n\n${message}`
+        }));
+        
+        const notificationsToInsert = Array.from(selectedRecipients).map(recipientId => ({
+            user_id: recipientId,
+            type: 'comment', // Using 'comment' type as it's generic enough for a message
+            message: `You have a new message from ${currentUser.full_name || currentUser.email}.`,
+            link: '/messages'
+        }));
+
+        const { error: msgError } = await supabase.from('messages').insert(messagesToInsert);
+        if (msgError) {
+            addToast('Failed to send message: ' + msgError.message, 'error');
+            setIsSending(false);
+            return;
+        }
+        
+        const { error: notifError } = await supabase.from('notifications').insert(notificationsToInsert);
+        if (notifError) {
+            addToast(`Message sent, but failed to create notification: ${notifError.message}`, 'error');
+        } else {
+            addToast(`Message sent to ${selectedRecipients.size} recipient(s).`, 'success');
+        }
+
+        setSelectedRecipients(new Set());
+        setSubject('');
+        setMessage('');
+        setSearchTerm('');
+        setIsSending(false);
+    };
+
 
     const filteredRecipients = useMemo(() => {
         let recipients = allRecipients;
@@ -53,7 +150,7 @@ const Messages: React.FC = () => {
             );
         }
         return recipients;
-    }, [selectedCategories, searchTerm]);
+    }, [selectedCategories, searchTerm, allRecipients]);
 
     const handleCategoryToggle = (category: string) => {
         setSelectedCategories(prev =>
@@ -135,41 +232,47 @@ const Messages: React.FC = () => {
                     </div>
                     
                     <div className="flex-1 overflow-y-auto">
-                        {filteredRecipients.length > 0 && (
-                             <div className="p-4 border-b dark:border-gray-700">
-                                <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={isAllVisibleSelected}
-                                        onChange={handleSelectAllVisible}
-                                        className="rounded text-primary-600 focus:ring-primary-500"
-                                    />
-                                    <span>Select All Visible</span>
-                                </label>
-                            </div>
-                        )}
-                        <ul className="divide-y dark:divide-gray-700">
-                            {filteredRecipients.map(user => (
-                                <li key={user.id}>
-                                    <label className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer space-x-3">
+                        {loadingRecipients ? (
+                            <p className="p-4 text-center text-gray-500">Loading recipients...</p>
+                        ) : (
+                          <>
+                            {filteredRecipients.length > 0 && (
+                                <div className="p-4 border-b dark:border-gray-700">
+                                    <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={selectedRecipients.has(user.id)}
-                                            onChange={() => handleRecipientToggle(user.id)}
+                                            checked={isAllVisibleSelected}
+                                            onChange={handleSelectAllVisible}
                                             className="rounded text-primary-600 focus:ring-primary-500"
                                         />
-                                        <Avatar src={user.avatar} alt={user.name} size="md" />
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-sm">{user.name}</p>
-                                            <p className="text-xs text-gray-500">{user.role}</p>
-                                        </div>
+                                        <span>Select All Visible</span>
                                     </label>
-                                </li>
-                            ))}
-                             {filteredRecipients.length === 0 && (
-                                <p className="p-4 text-center text-gray-500">No recipients found.</p>
-                             )}
-                        </ul>
+                                </div>
+                            )}
+                            <ul className="divide-y dark:divide-gray-700">
+                                {filteredRecipients.map(user => (
+                                    <li key={user.id}>
+                                        <label className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer space-x-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedRecipients.has(user.id)}
+                                                onChange={() => handleRecipientToggle(user.id)}
+                                                className="rounded text-primary-600 focus:ring-primary-500"
+                                            />
+                                            <Avatar src={user.avatar} alt={user.name} size="md" />
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-sm">{user.name}</p>
+                                                <p className="text-xs text-gray-500">{user.role}</p>
+                                            </div>
+                                        </label>
+                                    </li>
+                                ))}
+                                {filteredRecipients.length === 0 && (
+                                    <p className="p-4 text-center text-gray-500">No recipients found.</p>
+                                )}
+                            </ul>
+                          </>
+                        )}
                     </div>
                 </Card>
 
@@ -204,9 +307,9 @@ const Messages: React.FC = () => {
                         </div>
 
                         <div className="p-4 border-t dark:border-gray-700 flex justify-end">
-                            <Button size="lg" disabled={selectedRecipients.size === 0 || !subject || !message}>
+                            <Button size="lg" disabled={isSending || selectedRecipients.size === 0 || !subject || !message} onClick={handleSendMessage}>
                                 <PaperAirplaneIcon className="w-5 h-5 mr-2" />
-                                Send Message
+                                {isSending ? 'Sending...' : 'Send Message'}
                             </Button>
                         </div>
                     </Card>
