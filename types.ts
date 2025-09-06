@@ -60,11 +60,12 @@ export interface WeeklyParticipant {
 export interface CoinTransaction {
   id: string;
   user_id: string;
-  source_type: 'task' | 'challenge';
+  source_type: 'task' | 'challenge' | 'admin_adjustment';
   source_id: string;
   coin_amount: number;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  reason?: string | null;
   tasks?: { title: string };
   weekly_challenges?: { title: string };
   profiles?: { full_name: string | null; avatar_url?: string | null };

@@ -117,11 +117,12 @@ if (!supabase) {
  *    CREATE TABLE IF NOT EXISTS public.coin_transactions (
  *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
  *      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *      source_type text NOT NULL, -- 'task' or 'challenge'
+ *      source_type text NOT NULL, -- 'task', 'challenge', or 'admin_adjustment'
  *      source_id uuid NOT NULL,
  *      coin_amount integer NOT NULL,
  *      status text NOT NULL DEFAULT 'pending'::text CHECK (status IN ('pending', 'approved', 'rejected')),
- *      created_at timestamp with time zone DEFAULT now()
+ *      created_at timestamp with time zone DEFAULT now(),
+ *      reason text -- For admin adjustments
  *    );
  *    COMMENT ON TABLE public.coin_transactions IS 'Logs every coin transaction for auditing and history.';
  *
@@ -338,5 +339,84 @@ if (!supabase) {
  *    create policy "Allow user to see own notifications" on public.notifications for select using (auth.uid() = user_id);
  *    -- 4. Policy: Users can update their own notifications (e.g., mark as read)
  *    create policy "Allow user to update own notifications" on public.notifications for update using (auth.uid() = user_id);
+ *    ```
+ * 
+ * 8. User Management Functions (RPC for Admins)
+ *    - These functions are for admins to manage users.
+ * 
+ *    ```sql
+ *    -- Function to allow an admin to delete a user. This is highly destructive.
+ *    -- This function MUST be created by a SUPERUSER, as it modifies the auth schema.
+ *    -- It may be preferable to implement this as a Supabase Edge Function using the service_role key.
+ *    create or replace function public.delete_user_account(target_user_id uuid)
+ *    returns void
+ *    language plpgsql
+ *    security definer set search_path = public
+ *    as $$
+ *    begin
+ *      if not is_admin() then
+ *        raise exception 'Only admins can delete users.';
+ *      end if;
+ *      
+ *      delete from auth.users where id = target_user_id;
+ *    end;
+ *    $$;
+ * 
+ *    -- Function to allow an admin to update a user's role.
+ *    create or replace function public.update_user_role(target_user_id uuid, new_role text)
+ *    returns void
+ *    language plpgsql
+ *    security definer set search_path = public
+ *    as $$
+ *    begin
+ *      if not is_admin() then
+ *        raise exception 'Only admins can change roles.';
+ *      end if;
+ *
+ *      update public.user_roles
+ *      set role = new_role
+ *      where user_id = target_user_id;
+ *    end;
+ *    $$;
+ *
+ *    -- Function for an admin to adjust a user's coin balance.
+ *    create or replace function public.admin_adjust_coins(target_user_id uuid, amount integer, reason text)
+ *    returns void
+ *    language plpgsql
+ *    security definer set search_path = public
+ *    as $$
+ *    declare
+ *      transaction_source_id uuid;
+ *    begin
+ *      if not is_admin() then
+ *        raise exception 'Only admins can adjust coins.';
+ *      end if;
+ *
+ *      -- Use admin's own user_id as the source_id for the transaction log for audit purposes.
+ *      transaction_source_id := auth.uid();
+ *
+ *      -- Update the profiles table
+ *      update public.profiles
+ *      set coins = coins + amount
+ *      where id = target_user_id;
+ *
+ *      -- Log the transaction
+ *      insert into public.coin_transactions(user_id, source_type, source_id, coin_amount, status, reason)
+ *      values (target_user_id, 'admin_adjustment', transaction_source_id, amount, 'approved', reason);
+ *    end;
+ *    $$;
+ *    ```
+ * 
+ * 9. Update RLS policies for user_roles
+ *    - Admins need to be able to read and write to this table.
+ *
+ *    ```sql
+ *    -- USER_ROLES TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.user_roles enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to roles" on public.user_roles for all using (is_admin());
+ *    -- 3. Policy: Users can see their own role
+ *    create policy "Allow users to see their own role" on public.user_roles for select using (auth.uid() = user_id);
  *    ```
  */

@@ -16,6 +16,7 @@ import Analytics from './pages/Analytics';
 import DeveloperSettings from './pages/DeveloperSettings';
 import Store from './pages/Store';
 import ChatHistory from './pages/ChatHistory';
+import UserManagement from './pages/UserManagement';
 
 function App(): React.ReactNode {
   return (
@@ -46,6 +47,14 @@ function App(): React.ReactNode {
                 element={
                   <ProtectedRoute adminOnly={true}>
                     <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/user-management"
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <UserManagement />
                   </ProtectedRoute>
                 }
               />

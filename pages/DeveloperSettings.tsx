@@ -47,9 +47,9 @@ const CoinApprovalManager: React.FC = () => {
         if (challengesResponse.error) console.error("Error fetching challenge details for admin:", challengesResponse.error);
 
         // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
-        const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }) => [t.id, t.title]));
+        const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }): [string, string] => [t.id, t.title]));
         // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
-        const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }) => [c.id, c.title]));
+        const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }): [string, string] => [c.id, c.title]));
 
         const enrichedTransactions = txData.map(tx => {
             if (tx.source_type === 'task') {

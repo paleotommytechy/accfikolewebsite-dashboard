@@ -61,9 +61,9 @@ const Store: React.FC = () => {
             if (challengesResponse.error) console.error("Error fetching challenge details:", challengesResponse.error);
 
             // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
-            const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }) => [t.id, t.title]));
+            const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }): [string, string] => [t.id, t.title]));
             // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
-            const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }) => [c.id, c.title]));
+            const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }): [string, string] => [c.id, c.title]));
 
             // Step 4: Combine data
             const enrichedTransactions = txData.map(tx => {

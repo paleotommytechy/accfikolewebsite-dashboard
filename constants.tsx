@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, PencilAltIcon } from './components/ui/Icons';
+import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, PencilAltIcon, UsersIcon } from './components/ui/Icons';
 
 export const NAV_LINKS = [
   { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
@@ -15,5 +15,6 @@ export const NAV_LINKS = [
 
 export const ADMIN_LINKS = [
   { name: 'Leader Analytics', href: '/analytics', icon: <ChartBarIcon /> },
+  { name: 'User Management', href: '/user-management', icon: <UsersIcon /> },
   { name: 'Developer Settings', href: '/developer-settings', icon: <CodeIcon /> },
 ];
