@@ -125,6 +125,17 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.coin_transactions IS 'Logs every coin transaction for auditing and history.';
  *
+ *    -- Create notifications table
+ *    CREATE TABLE IF NOT EXISTS public.notifications (
+ *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+ *      type text NOT NULL, -- 'coin_approval', 'new_event', etc.
+ *      message text NOT NULL,
+ *      link text, -- optional link to navigate to
+ *      read boolean DEFAULT false,
+ *      created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.notifications IS 'Stores user-specific notifications.';
  *    ```
  * 
  * 3. Create Profile on Signup (Database Trigger):
@@ -317,5 +328,15 @@ if (!supabase) {
  *    create policy "Allow user to see own transactions" on public.coin_transactions for select using (auth.uid() = user_id);
  *    -- 4. Policy: Users can create their own transactions
  *    create policy "Allow user to create own transactions" on public.coin_transactions for insert with check (auth.uid() = user_id);
+ * 
+ *    -- NOTIFICATIONS TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.notifications enable row level security;
+ *    -- 2. Policy: Admins can create notifications
+ *    create policy "Allow admin to create notifications" on public.notifications for insert with check (is_admin());
+ *    -- 3. Policy: Users can see their own notifications
+ *    create policy "Allow user to see own notifications" on public.notifications for select using (auth.uid() = user_id);
+ *    -- 4. Policy: Users can update their own notifications (e.g., mark as read)
+ *    create policy "Allow user to update own notifications" on public.notifications for update using (auth.uid() = user_id);
  *    ```
  */

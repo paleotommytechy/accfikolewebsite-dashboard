@@ -6,12 +6,15 @@ import { useAppContext } from '../context/AppContext';
 import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant } from '../types';
 import { TrophyIcon } from '../components/ui/Icons';
 
+type TxStatus = 'pending' | 'approved' | 'rejected' | null;
+
 const WeeklyGroupChallenge: React.FC<{
     challenge: WeeklyChallenge | null,
     participant: WeeklyParticipant | null,
+    txStatus: TxStatus,
     onJoin: () => void,
     onProgress: () => void,
-}> = ({ challenge, participant, onJoin, onProgress }) => {
+}> = ({ challenge, participant, txStatus, onJoin, onProgress }) => {
     
     if (!challenge) {
         return (
@@ -74,8 +77,14 @@ const WeeklyGroupChallenge: React.FC<{
                             </div>
                              <div className="mt-4">
                                 {isCompleted ? (
-                                    <div className="text-center font-semibold bg-white/20 py-3 px-4 rounded-lg">
-                                        Challenge completed! Your reward is pending approval.
+                                    <div className={`text-center font-semibold py-3 px-4 rounded-lg ${
+                                        txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
+                                        txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
+                                    }`}>
+                                        {txStatus === 'approved' && "Challenge approved! Your reward has been sent."}
+                                        {txStatus === 'rejected' && "Your submission has been rejected."}
+                                        {txStatus === 'pending' && "Challenge completed! Your reward is pending approval."}
+                                        {!txStatus && "Challenge completed! Processing reward..."}
                                     </div>
                                 ) : (
                                     <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
@@ -137,6 +146,7 @@ const Tasks: React.FC = () => {
     const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
     const [participant, setParticipant] = useState<WeeklyParticipant | null>(null);
     const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
+    const [challengeTxStatus, setChallengeTxStatus] = useState<TxStatus>(null);
 
     const fetchData = async () => {
         if (!supabase || !currentUser) return;
@@ -163,6 +173,25 @@ const Tasks: React.FC = () => {
                 .maybeSingle();
             if (participantError) console.error("Error fetching participation", participantError);
             else setParticipant(participantData);
+
+             // Fetch transaction status for the challenge
+            const { data: txData, error: txError } = await supabase
+                .from('coin_transactions')
+                .select('status')
+                .eq('user_id', currentUser.id)
+                .eq('source_type', 'challenge')
+                .eq('source_id', challengeData.id)
+                .maybeSingle();
+            
+            if (txError) console.error("Error fetching challenge transaction status", txError);
+            else if (txData) {
+                setChallengeTxStatus(txData.status as TxStatus);
+            } else {
+                setChallengeTxStatus(null);
+            }
+        } else {
+            setParticipant(null);
+            setChallengeTxStatus(null);
         }
 
         // Fetch daily task assignments for today
@@ -301,7 +330,13 @@ const Tasks: React.FC = () => {
   return (
     <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Tasks & Challenges</h1>
-        <WeeklyGroupChallenge challenge={challenge} participant={participant} onJoin={handleJoinChallenge} onProgress={handleChallengeProgress} />
+        <WeeklyGroupChallenge 
+            challenge={challenge} 
+            participant={participant} 
+            txStatus={challengeTxStatus}
+            onJoin={handleJoinChallenge} 
+            onProgress={handleChallengeProgress} 
+        />
         <MyDailyTasks tasks={assignments} onToggle={handleToggleTask} />
     </div>
   );

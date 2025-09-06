@@ -1,4 +1,5 @@
 
+
 export interface UserProfile {
   id: string;
   full_name: string | null;
@@ -71,10 +72,12 @@ export interface CoinTransaction {
 
 export interface Notification {
   id: string;
-  type: 'new_post' | 'comment' | 'custom' | 'task';
+  user_id: string;
+  type: 'new_post' | 'comment' | 'custom' | 'task' | 'coin_approval';
   message: string;
   created_at: string;
   read: boolean;
+  link?: string;
 }
 
 export interface Event {

@@ -65,14 +65,40 @@ const CoinApprovalManager: React.FC = () => {
         fetchTransactions();
     }, [fetchTransactions]);
 
+    const getSourceName = (tx: CoinTransaction): string => {
+        if (tx.source_type === 'task' && tx.tasks) {
+            return tx.tasks.title;
+        } else if (tx.source_type === 'challenge' && tx.weekly_challenges) {
+            return tx.weekly_challenges.title;
+        }
+        return 'an activity';
+    };
+
     const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
         if (!supabase) return;
 
         if (status === 'approved') {
             setApprovingTxnId(id);
             try {
-                const { error } = await supabase.rpc('approve_coin_transaction', { transaction_id: id });
-                if (error) throw error;
+                const { error: rpcError } = await supabase.rpc('approve_coin_transaction', { transaction_id: id });
+                if (rpcError) throw rpcError;
+
+                const txInfo = transactions.find(t => t.id === id);
+                if (txInfo) {
+                    const notificationMessage = `Your reward of ${txInfo.coin_amount} coins for completing "${getSourceName(txInfo)}" has been approved!`;
+                    
+                    const { error: notificationError } = await supabase.from('notifications').insert({
+                        user_id: txInfo.user_id,
+                        type: 'coin_approval',
+                        message: notificationMessage,
+                        link: '/store'
+                    });
+
+                    if (notificationError) {
+                        console.error("Failed to create notification:", notificationError);
+                    }
+                }
+
                 alert('Transaction approved and coins awarded.');
                 fetchTransactions();
             } catch (error: any) {
