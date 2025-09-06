@@ -5,11 +5,13 @@ import Button from '../components/ui/Button';
 import type { WeeklyChallenge, Task, CoinTransaction } from '../types';
 import Avatar from '../components/auth/Avatar';
 import { CheckIcon } from '../components/ui/Icons';
+import { useNotifier } from '../context/NotificationContext';
 
 const CoinApprovalManager: React.FC = () => {
     const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [approvingTxnId, setApprovingTxnId] = useState<string | null>(null);
+    const { addToast } = useNotifier();
 
     const fetchTransactions = useCallback(async () => {
         if (!supabase) return;
@@ -44,8 +46,10 @@ const CoinApprovalManager: React.FC = () => {
         if (tasksResponse.error) console.error("Error fetching task details for admin:", tasksResponse.error);
         if (challengesResponse.error) console.error("Error fetching challenge details for admin:", challengesResponse.error);
 
-        const tasksMap = new Map(tasksResponse.data?.map(t => [t.id, t.title]));
-        const challengesMap = new Map(challengesResponse.data?.map(c => [c.id, c.title]));
+        // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
+        const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }) => [t.id, t.title]));
+        // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
+        const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }) => [c.id, c.title]));
 
         const enrichedTransactions = txData.map(tx => {
             if (tx.source_type === 'task') {
@@ -99,19 +103,19 @@ const CoinApprovalManager: React.FC = () => {
                     }
                 }
 
-                alert('Transaction approved and coins awarded.');
+                addToast('Transaction approved and coins awarded.', 'success');
                 fetchTransactions();
             } catch (error: any) {
-                alert('Error approving transaction: ' + error.message);
+                addToast('Error approving transaction: ' + error.message, 'error');
             } finally {
                 setApprovingTxnId(null);
             }
         } else { // 'rejected'
             const { error } = await supabase.from('coin_transactions').update({ status }).eq('id', id);
             if (error) {
-                alert('Error updating status: ' + error.message);
+                addToast('Error updating status: ' + error.message, 'error');
             } else {
-                alert(`Transaction ${status}.`);
+                addToast(`Transaction ${status}.`, 'info');
                 fetchTransactions();
             }
         }
@@ -174,6 +178,7 @@ const CoinApprovalManager: React.FC = () => {
 const ChallengeManager: React.FC = () => {
     const [challenges, setChallenges] = useState<WeeklyChallenge[]>([]);
     const [editingChallenge, setEditingChallenge] = useState<Partial<WeeklyChallenge> | null>(null);
+    const { addToast, showConfirm } = useNotifier();
 
     const fetchChallenges = useCallback(async () => {
         if (!supabase) return;
@@ -193,22 +198,27 @@ const ChallengeManager: React.FC = () => {
         const challengeData = { ...editingChallenge };
         const { error } = await supabase.from('weekly_challenges').upsert(challengeData);
 
-        if (error) alert('Error saving challenge: ' + error.message);
+        if (error) addToast('Error saving challenge: ' + error.message, 'error');
         else {
-            alert(`Challenge ${editingChallenge.id ? 'updated' : 'created'} successfully!`);
+            addToast(`Challenge ${editingChallenge.id ? 'updated' : 'created'} successfully!`, 'success');
             setEditingChallenge(null);
             fetchChallenges();
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!supabase || !window.confirm('Are you sure you want to delete this challenge?')) return;
-        const { error } = await supabase.from('weekly_challenges').delete().eq('id', id);
-        if (error) alert('Error deleting challenge: ' + error.message);
-        else {
-            alert('Challenge deleted.');
-            fetchChallenges();
-        }
+    const handleDelete = (id: string) => {
+        if (!supabase) return;
+        
+        const confirmedDelete = async () => {
+            const { error } = await supabase.from('weekly_challenges').delete().eq('id', id);
+            if (error) addToast('Error deleting challenge: ' + error.message, 'error');
+            else {
+                addToast('Challenge deleted.', 'success');
+                fetchChallenges();
+            }
+        };
+
+        showConfirm('Are you sure you want to delete this challenge?', confirmedDelete);
     };
     
     return (
@@ -254,6 +264,7 @@ const TaskManager: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
     const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
+    const { addToast, showConfirm } = useNotifier();
 
     const fetchTasks = useCallback(async () => {
         if (!supabase) return;
@@ -270,43 +281,46 @@ const TaskManager: React.FC = () => {
         e.preventDefault();
         if (!supabase || !editingTask) return;
         const { error } = await supabase.from('tasks').upsert(editingTask);
-        if (error) alert('Error saving task: ' + error.message);
+        if (error) addToast('Error saving task: ' + error.message, 'error');
         else {
-            alert(`Task ${editingTask.id ? 'updated' : 'created'} successfully!`);
+            addToast(`Task ${editingTask.id ? 'updated' : 'created'} successfully!`, 'success');
             setEditingTask(null);
             fetchTasks();
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!supabase || !window.confirm('Are you sure? This will delete the task and all its assignments.')) return;
-        const { error } = await supabase.from('tasks').delete().eq('id', id);
-        if (error) alert('Error deleting task: ' + error.message);
-        else {
-            alert('Task deleted.');
-            fetchTasks();
-        }
+    const handleDelete = (id: string) => {
+        if (!supabase) return;
+
+        const confirmedDelete = async () => {
+            const { error } = await supabase.from('tasks').delete().eq('id', id);
+            if (error) addToast('Error deleting task: ' + error.message, 'error');
+            else {
+                addToast('Task deleted.', 'success');
+                fetchTasks();
+            }
+        };
+
+        showConfirm('Are you sure? This will delete the task and all its assignments.', confirmedDelete);
     };
 
-    const handleAssignDaily = async (id: string) => {
-        setAssigningTaskId(id);
-        if (!supabase || !window.confirm('This will assign this task to all users for today. This action cannot be undone. Continue?')) {
-            setAssigningTaskId(null);
-            return;
-        }
+    const handleAssignDaily = (id: string) => {
+        if (!supabase) return;
 
-        try {
-            // FIX: Removed incorrect generic type argument from rpc call and corrected logic.
-            // The RPC function returns void, so success is determined by the absence of an error.
-            const { error } = await supabase.rpc('assign_task_to_all_users', { task_id_to_assign: id });
-            if (error) throw error;
-
-            alert('Task assigned successfully to all users for today.');
-        } catch (error: any) {
-            alert('Error assigning task: ' + error.message);
-        } finally {
-            setAssigningTaskId(null);
-        }
+        const assignTask = async () => {
+            setAssigningTaskId(id);
+            try {
+                const { error } = await supabase.rpc('assign_task_to_all_users', { task_id_to_assign: id });
+                if (error) throw error;
+                addToast('Task assigned successfully to all users for today.', 'success');
+            } catch (error: any) {
+                addToast('Error assigning task: ' + error.message, 'error');
+            } finally {
+                setAssigningTaskId(null);
+            }
+        };
+        
+        showConfirm('This will assign this task to all users for today. This action cannot be undone. Continue?', assignTask);
     };
     
     return (

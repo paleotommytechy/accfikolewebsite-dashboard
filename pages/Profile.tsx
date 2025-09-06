@@ -1,6 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { useNotifier } from '../context/NotificationContext';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
@@ -50,6 +50,7 @@ const SelectField: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & {lab
 
 const Profile: React.FC = () => {
   const { currentUser, isLoading, refreshCurrentUser } = useAppContext();
+  const { addToast } = useNotifier();
   const [profile, setProfile] = useState<UserProfile | null>(currentUser);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -87,11 +88,11 @@ const Profile: React.FC = () => {
         
         if (error) throw error;
         
-        alert('Profile saved successfully!');
+        addToast('Profile saved successfully!', 'success');
         await refreshCurrentUser();
         setIsEditing(false);
     } catch (error: any) {
-        alert('Error updating profile: ' + error.message);
+        addToast('Error updating profile: ' + error.message, 'error');
     }
   }
 
@@ -122,10 +123,10 @@ const Profile: React.FC = () => {
 
         if (updateError) throw updateError;
         
-        alert('Avatar updated successfully!');
+        addToast('Avatar updated successfully!', 'success');
         await refreshCurrentUser();
     } catch (error: any) {
-        alert('Error uploading avatar: ' + error.message);
+        addToast('Error uploading avatar: ' + error.message, 'error');
     } finally {
         setIsUploading(false);
     }

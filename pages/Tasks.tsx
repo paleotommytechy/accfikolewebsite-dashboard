@@ -3,6 +3,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
+import { useNotifier } from '../context/NotificationContext';
 import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant } from '../types';
 import { TrophyIcon } from '../components/ui/Icons';
 
@@ -143,6 +144,7 @@ const MyDailyTasks: React.FC<{
 
 const Tasks: React.FC = () => {
     const { currentUser } = useAppContext();
+    const { addToast } = useNotifier();
     const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
     const [participant, setParticipant] = useState<WeeklyParticipant | null>(null);
     const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
@@ -249,7 +251,7 @@ const Tasks: React.FC = () => {
         // .single() throws an error if no row is found (PGRST116), which is expected.
         // We only care about other errors.
         if (checkError && checkError.code !== 'PGRST116') {
-             alert('Error checking for existing transaction: ' + checkError.message);
+             addToast('Error checking for existing transaction: ' + checkError.message, 'error');
              return;
         }
         if (existingTx) {
@@ -266,12 +268,12 @@ const Tasks: React.FC = () => {
         });
 
         if (txError) {
-            alert("Error creating coin transaction: " + txError.message);
+            addToast("Error creating coin transaction: " + txError.message, 'error');
         } else {
             const message = sourceType === 'task' 
                 ? "Task complete! Reward is pending approval." 
                 : "Challenge complete! Reward is pending approval.";
-            alert(message);
+            addToast(message, 'success');
         }
     };
 
@@ -281,9 +283,9 @@ const Tasks: React.FC = () => {
             challenge_id: challenge.id,
             user_id: currentUser.id,
         });
-        if (error) alert("Error joining challenge: " + error.message);
+        if (error) addToast("Error joining challenge: " + error.message, 'error');
         else {
-            alert("Successfully joined the challenge!");
+            addToast("Successfully joined the challenge!", 'success');
             fetchData();
         }
     };
@@ -297,7 +299,7 @@ const Tasks: React.FC = () => {
             .eq('id', participant.id);
         
         if (error) {
-            alert("Error updating progress: " + error.message);
+            addToast("Error updating progress: " + error.message, 'error');
         } else {
             // If progress reaches 100 and it's the first time, create transaction
             if (newProgress >= 100 && participant.progress < 100 && challenge) {
@@ -317,7 +319,7 @@ const Tasks: React.FC = () => {
             .eq('id', assignment.id);
             
         if (error) {
-            alert("Error updating task: " + error.message);
+            addToast("Error updating task: " + error.message, 'error');
         } else {
             // Create a pending coin transaction if task is completed
             if (newStatus === 'done' && assignment.tasks) {
