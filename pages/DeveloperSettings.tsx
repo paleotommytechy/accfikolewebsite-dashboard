@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
@@ -11,13 +10,56 @@ const CoinApprovalManager: React.FC = () => {
 
     const fetchTransactions = useCallback(async () => {
         if (!supabase) return;
-        const { data, error } = await supabase
+        
+        // Step 1: Fetch transactions with profile info, but without broken joins
+        const { data: txData, error: txError } = await supabase
             .from('coin_transactions')
-            .select('*, profiles(full_name), tasks(title), weekly_challenges(title)')
+            .select('*, profiles(full_name)')
             .eq('status', 'pending')
             .order('created_at', { ascending: true });
-        if (error) console.error('Error fetching transactions', error);
-        else setTransactions(data as CoinTransaction[] || []);
+        
+        if (txError) {
+            console.error('Error fetching transactions', txError);
+            return;
+        }
+        
+        if (!txData || txData.length === 0) {
+            setTransactions([]);
+            return;
+        }
+
+        // Step 2: Group source IDs by type
+        const taskIds = txData
+            .filter(tx => tx.source_type === 'task')
+            .map(tx => tx.source_id);
+        const challengeIds = txData
+            .filter(tx => tx.source_type === 'challenge')
+            .map(tx => tx.source_id);
+
+        // Step 3: Fetch source details in parallel
+        const [tasksResponse, challengesResponse] = await Promise.all([
+            taskIds.length > 0 ? supabase.from('tasks').select('id, title').in('id', taskIds) : Promise.resolve({ data: [], error: null }),
+            challengeIds.length > 0 ? supabase.from('weekly_challenges').select('id, title').in('id', challengeIds) : Promise.resolve({ data: [], error: null })
+        ]);
+
+        if (tasksResponse.error) console.error("Error fetching task details for admin:", tasksResponse.error);
+        if (challengesResponse.error) console.error("Error fetching challenge details for admin:", challengesResponse.error);
+
+        const tasksMap = new Map(tasksResponse.data?.map(t => [t.id, t.title]));
+        const challengesMap = new Map(challengesResponse.data?.map(c => [c.id, c.title]));
+
+        // Step 4: Combine data
+        const enrichedTransactions = txData.map(tx => {
+            if (tx.source_type === 'task') {
+                return { ...tx, tasks: { title: tasksMap.get(tx.source_id) || 'Unknown Task' } };
+            }
+            if (tx.source_type === 'challenge') {
+                return { ...tx, weekly_challenges: { title: challengesMap.get(tx.source_id) || 'Unknown Challenge' } };
+            }
+            return tx;
+        });
+
+        setTransactions(enrichedTransactions as CoinTransaction[] || []);
     }, []);
 
     useEffect(() => {
