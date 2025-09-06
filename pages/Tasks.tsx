@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -188,6 +187,65 @@ const Tasks: React.FC = () => {
         fetchData();
     }, [currentUser]);
 
+    const createCoinTransaction = async (
+        sourceType: 'task' | 'challenge',
+        sourceId: string,
+        coinAmount: number | null | undefined
+    ) => {
+        if (!supabase || !currentUser) {
+            console.error("User or Supabase client not available.");
+            return;
+        }
+
+        // Strict validation
+        if (typeof coinAmount !== 'number' || coinAmount <= 0) {
+            console.log(`No coin reward for this ${sourceType} or amount is invalid.`);
+            return;
+        }
+        if (!sourceId) {
+            console.error(`Missing source ID for ${sourceType} transaction.`);
+            return;
+        }
+
+        // Check if a transaction for this source already exists to prevent duplicates.
+        const { data: existingTx, error: checkError } = await supabase
+            .from('coin_transactions')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('source_type', sourceType)
+            .eq('source_id', sourceId)
+            .limit(1)
+            .single();
+
+        // .single() throws an error if no row is found (PGRST116), which is expected.
+        // We only care about other errors.
+        if (checkError && checkError.code !== 'PGRST116') {
+             alert('Error checking for existing transaction: ' + checkError.message);
+             return;
+        }
+        if (existingTx) {
+            console.log(`Transaction for this ${sourceType} already exists.`);
+            return; // Silently exit if transaction exists
+        }
+        
+        const { error: txError } = await supabase.from('coin_transactions').insert({
+            user_id: currentUser.id,
+            source_type: sourceType,
+            source_id: sourceId,
+            coin_amount: coinAmount,
+            status: 'pending',
+        });
+
+        if (txError) {
+            alert("Error creating coin transaction: " + txError.message);
+        } else {
+            const message = sourceType === 'task' 
+                ? "Task complete! Reward is pending approval." 
+                : "Challenge complete! Reward is pending approval.";
+            alert(message);
+        }
+    };
+
     const handleJoinChallenge = async () => {
         if (!supabase || !currentUser || !challenge) return;
         const { error } = await supabase.from('weekly_participants').insert({
@@ -209,24 +267,12 @@ const Tasks: React.FC = () => {
             .update({ progress: newProgress })
             .eq('id', participant.id);
         
-        if (error) alert("Error updating progress: " + error.message);
-        else {
-            // If progress reaches 100 and it's the first time
+        if (error) {
+            alert("Error updating progress: " + error.message);
+        } else {
+            // If progress reaches 100 and it's the first time, create transaction
             if (newProgress >= 100 && participant.progress < 100 && challenge) {
-                // Check if a transaction already exists to prevent duplicates
-                const { data: existingTx } = await supabase.from('coin_transactions').select('id').eq('user_id', currentUser.id).eq('source_type', 'challenge').eq('source_id', challenge.id).limit(1).single();
-
-                if (!existingTx) {
-                    const { error: txError } = await supabase.from('coin_transactions').insert({
-                        user_id: currentUser.id,
-                        source_type: 'challenge',
-                        source_id: challenge.id,
-                        coin_amount: challenge.coin_reward,
-                        status: 'pending',
-                    });
-                    if (txError) alert("Error creating coin transaction: " + txError.message);
-                    else alert("Challenge complete! Reward is pending approval.");
-                }
+                await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
             }
             fetchData();
         }
@@ -241,19 +287,12 @@ const Tasks: React.FC = () => {
             .update({ status: newStatus, completed_at: newStatus === 'done' ? new Date().toISOString() : null })
             .eq('id', assignment.id);
             
-        if (error) alert("Error updating task: " + error.message);
-        else {
-            // Create a pending coin transaction if task is completed and has a reward
-            if (newStatus === 'done' && assignment.tasks && assignment.tasks.coin_reward > 0) {
-                 const { error: txError } = await supabase.from('coin_transactions').insert({
-                    user_id: currentUser.id,
-                    source_type: 'task',
-                    source_id: assignment.task_id,
-                    coin_amount: assignment.tasks.coin_reward,
-                    status: 'pending',
-                 });
-                 if (txError) alert("Error creating coin transaction: " + txError.message);
-                 else alert("Task complete! Reward is pending approval.");
+        if (error) {
+            alert("Error updating task: " + error.message);
+        } else {
+            // Create a pending coin transaction if task is completed
+            if (newStatus === 'done' && assignment.tasks) {
+                 await createCoinTransaction('task', assignment.task_id, assignment.tasks.coin_reward);
             }
             fetchData();
         }
