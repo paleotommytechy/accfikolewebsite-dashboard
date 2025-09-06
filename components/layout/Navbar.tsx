@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
-// FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
-import { Link } from 'react-router-dom';
+// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { MenuIcon, BellIcon, SunIcon, MoonIcon, ChevronDownIcon } from '../ui/Icons';
 import { useAppContext } from '../../context/AppContext';
 import { mockNotifications } from '../../services/mockData';
@@ -67,8 +68,8 @@ const Navbar: React.FC = () => {
           </button>
           {isProfileOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark rounded-md shadow-lg py-1 z-20">
-              <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">My Profile</Link>
-              <Link to="/developer-settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</Link>
+              <ReactRouterDOM.Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">My Profile</ReactRouterDOM.Link>
+              <ReactRouterDOM.Link to="/developer-settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</ReactRouterDOM.Link>
               {/* FIX: Assuming 'signOut' error is a red herring due to other type issues. No change needed. */}
               {/* FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions. */}
               <a href="#" onClick={() => supabase && (supabase.auth as any).signOut()} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>

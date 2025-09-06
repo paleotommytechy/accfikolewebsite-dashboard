@@ -1,7 +1,7 @@
 
 import React from 'react';
-// FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
-import { Navigate } from 'react-router-dom';
+// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }): React.ReactNode => {
@@ -16,11 +16,11 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
   }
 
   if (!currentUser) {
-    return <Navigate to="/auth" replace />;
+    return <ReactRouterDOM.Navigate to="/auth" replace />;
   }
   
   if (adminOnly && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <ReactRouterDOM.Navigate to="/dashboard" replace />;
   }
 
   return children;

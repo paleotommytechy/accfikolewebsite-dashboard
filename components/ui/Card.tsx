@@ -4,7 +4,8 @@ import React from 'react';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  title?: string;
+  // FIX: Changed title prop type from string to React.ReactNode to allow JSX components.
+  title?: React.ReactNode;
   action?: React.ReactNode;
 }
 

@@ -1,7 +1,6 @@
-
 import React from 'react';
-// FIX: Switched from a namespace import to named imports for react-router-dom to resolve type errors.
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import DashboardLayout from './components/ui/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -20,27 +19,27 @@ import ChatHistory from './pages/ChatHistory';
 function App(): React.ReactNode {
   return (
     <AppProvider>
-      <HashRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
+      <ReactRouterDOM.HashRouter>
+        <ReactRouterDOM.Routes>
+          <ReactRouterDOM.Route path="/auth" element={<Auth />} />
           
           {/* Protected Routes using Layout Route pattern */}
-          <Route 
+          <ReactRouterDOM.Route 
             element={
               <ProtectedRoute>
                 <DashboardLayout />
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/messages" element={<ChatHistory />} />
-            <Route path="/compose" element={<Messages />} />
-            <Route path="/store" element={<Store />} />
-            <Route
+            <ReactRouterDOM.Route path="/dashboard" element={<Dashboard />} />
+            <ReactRouterDOM.Route path="/profile" element={<Profile />} />
+            <ReactRouterDOM.Route path="/tasks" element={<Tasks />} />
+            <ReactRouterDOM.Route path="/leaderboard" element={<Leaderboard />} />
+            <ReactRouterDOM.Route path="/events" element={<Events />} />
+            <ReactRouterDOM.Route path="/messages" element={<ChatHistory />} />
+            <ReactRouterDOM.Route path="/compose" element={<Messages />} />
+            <ReactRouterDOM.Route path="/store" element={<Store />} />
+            <ReactRouterDOM.Route
               path="/analytics"
               element={
                 <ProtectedRoute adminOnly={true}>
@@ -48,7 +47,7 @@ function App(): React.ReactNode {
                 </ProtectedRoute>
               }
             />
-            <Route
+            <ReactRouterDOM.Route
               path="/developer-settings"
               element={
                 <ProtectedRoute adminOnly={true}>
@@ -58,11 +57,11 @@ function App(): React.ReactNode {
             />
             
             {/* Redirect from root and any other unmatched protected route to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Route>
-        </Routes>
-      </HashRouter>
+            <ReactRouterDOM.Route path="/" element={<ReactRouterDOM.Navigate to="/dashboard" replace />} />
+            <ReactRouterDOM.Route path="*" element={<ReactRouterDOM.Navigate to="/dashboard" replace />} />
+          </ReactRouterDOM.Route>
+        </ReactRouterDOM.Routes>
+      </ReactRouterDOM.HashRouter>
     </AppProvider>
   );
 }

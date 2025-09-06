@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-// FIX: Switched from a namespace import to a named import for react-router-dom to resolve type errors.
-import { Link } from 'react-router-dom';
+// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon } from '../components/ui/Icons';
 
 const ScriptureOfTheDay: React.FC = () => {
     // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
@@ -23,21 +23,69 @@ const ScriptureOfTheDay: React.FC = () => {
     );
 }
 
-const DailyTasks: React.FC<{tasks: TaskAssignment[]}> = ({tasks}) => (
-    <Card title="Today's Tasks">
-        <ul className="space-y-3">
-            {tasks.map(assignment => (
-                <li key={assignment.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div>
-                        <p className={`font-medium ${assignment.status === 'done' ? 'line-through text-gray-500' : ''}`}>{assignment.tasks?.title}</p>
+const DailyTasks: React.FC<{ tasks: TaskAssignment[] }> = ({ tasks }) => {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'done').length;
+    // If there are no tasks, progress is 100% (or complete)
+    const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 100;
+
+    const cardTitle = (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Today's Tasks</h3>
+            {totalTasks > 0 && (
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1 sm:mt-0">
+                    {completedTasks} of {totalTasks} completed
+                </span>
+            )}
+        </div>
+    );
+
+    return (
+        <Card
+            title={cardTitle}
+            action={<ReactRouterDOM.Link to="/tasks" className="text-sm font-semibold text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}
+        >
+            <div className="space-y-3">
+                {tasks.length > 0 && tasks.map(assignment => (
+                    <div key={assignment.id} className="flex items-center gap-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-dark/50">
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${assignment.status === 'done' ? 'bg-green-100 dark:bg-green-900/50' : 'bg-primary-100 dark:bg-primary-900/50'}`}>
+                            <ClipboardListIcon className={`w-5 h-5 ${assignment.status === 'done' ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className={`font-semibold text-gray-800 dark:text-gray-200 truncate ${assignment.status === 'done' ? 'line-through text-gray-500' : ''}`}>
+                                {assignment.tasks?.title}
+                            </p>
+                            <p className="text-xs text-yellow-600 dark:text-yellow-500 font-medium flex items-center gap-1 mt-1">
+                                <CoinIcon className="w-3 h-3" /> {assignment.tasks?.coin_reward || 0} Coins
+                            </p>
+                        </div>
+                        <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all ${assignment.status === 'done' ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                            {assignment.status === 'done' && <CheckIcon className="w-4 h-4 text-white" />}
+                        </div>
                     </div>
-                    <input type="checkbox" defaultChecked={assignment.status === 'done'} className="h-5 w-5 rounded text-primary-600 focus:ring-primary-500 border-gray-300" disabled/>
-                </li>
-            ))}
-        </ul>
-        {tasks.length === 0 && <p className="text-gray-500">No tasks for today. Check back later!</p>}
-    </Card>
-);
+                ))}
+            </div>
+
+            {totalTasks > 0 && (
+                <div className="mt-5">
+                    <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                        <div className="bg-primary-600 h-2 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
+                    </div>
+                </div>
+            )}
+
+            {tasks.length === 0 && (
+                <div className="text-center py-6">
+                    <div className="mx-auto w-16 h-16 flex items-center justify-center bg-green-100 dark:bg-green-900/50 rounded-full">
+                        <CheckIcon className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h4 className="mt-4 font-semibold text-gray-800 dark:text-gray-200">All Done for Today!</h4>
+                    <p className="text-sm text-gray-500 mt-1">You've completed all your tasks. Great job!</p>
+                </div>
+            )}
+        </Card>
+    );
+};
 
 const MyProgressCard: React.FC<{ user: UserProfile }> = ({ user }) => {
   // Mock XP calculation for visual representation
@@ -150,7 +198,7 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
     };
 
     return (
-        <Card title="Leaderboard" action={<Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</Link>}>
+        <Card title="Leaderboard" action={<ReactRouterDOM.Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}>
             <ul className="space-y-2">
                 {leaderboard.map((user, index) => {
                     const style = rankStyles[index];
