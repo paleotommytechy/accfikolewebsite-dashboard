@@ -1,6 +1,3 @@
-
-
-
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // --- IMPORTANT ---
@@ -184,6 +181,15 @@ if (!supabase) {
  *            '/compose?recipientId=' || new.id
  *        );
  *      end loop;
+ *
+ *      -- Create a welcome notification for the new user
+ *      insert into public.notifications (user_id, type, message, link)
+ *      values (
+ *          new.id,
+ *          'custom',
+ *          'Welcome to ACCF Ikole! We''re so glad you''ve joined our community. Explore your dashboard to get started.',
+ *          '/dashboard'
+ *      );
  *
  *      return new;
  *    end;

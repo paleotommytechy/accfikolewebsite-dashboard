@@ -74,7 +74,7 @@ export interface CoinTransaction {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'new_post' | 'comment' | 'custom' | 'task' | 'coin_approval';
+  type: 'new_post' | 'comment' | 'custom' | 'task' | 'coin_approval' | 'new_user';
   message: string;
   created_at: string;
   read: boolean;
