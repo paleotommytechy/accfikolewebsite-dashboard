@@ -181,49 +181,106 @@ const UserManagement: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead className="bg-gray-50 dark:bg-gray-800">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coins</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
-                            {loading ? (
-                                <tr><td colSpan={5} className="text-center p-4">Loading users...</td></tr>
-                            ) : filteredUsers.map(user => (
-                                <tr key={user.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
+                {loading ? (
+                    <p className="text-center p-4">Loading users...</p>
+                ) : filteredUsers.length === 0 ? (
+                    <p className="text-center p-4 text-gray-500">No users found.</p>
+                ) : (
+                    <>
+                        {/* --- DESKTOP TABLE VIEW --- */}
+                        <div className="overflow-x-auto hidden md:block">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coins</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                        <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
+                                    {filteredUsers.map(user => (
+                                        <tr key={user.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <Avatar src={user.avatar_url} alt={user.full_name || user.email} size="md" />
+                                                    <div className="ml-4 min-w-0">
+                                                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.full_name}</div>
+                                                        <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.user_roles?.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
+                                                    {user.user_roles?.role || 'member'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-yellow-600 dark:text-yellow-400">{user.coins}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.department || 'N/A'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <div className="flex items-center justify-end space-x-2">
+                                                    <Button aria-label={`Edit ${user.full_name}`} variant="ghost" size="sm" onClick={() => openEditModal(user)}><PencilAltIcon className="w-5 h-5"/></Button>
+                                                    <Button aria-label={`Delete ${user.full_name}`} variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"><TrashIcon className="w-5 h-5"/></Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* --- MOBILE CARD VIEW --- */}
+                        <div className="block md:hidden">
+                             <div className="space-y-4">
+                                {filteredUsers.map(user => (
+                                    <div key={user.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                        {/* User Info */}
+                                        <div className="flex items-center gap-4">
                                             <Avatar src={user.avatar_url} alt={user.full_name || user.email} size="md" />
-                                            <div className="ml-4 min-w-0">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.full_name}</div>
-                                                <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.full_name}</p>
+                                                <p className="text-sm text-gray-500 truncate">{user.email}</p>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.user_roles?.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
-                                            {user.user_roles?.role || 'member'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-yellow-600 dark:text-yellow-400">{user.coins}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.department || 'N/A'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <div className="flex items-center justify-end space-x-2">
-                                            <Button aria-label={`Edit ${user.full_name}`} variant="ghost" size="sm" onClick={() => openEditModal(user)}><PencilAltIcon className="w-5 h-5"/></Button>
-                                            <Button aria-label={`Delete ${user.full_name}`} variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"><TrashIcon className="w-5 h-5"/></Button>
+
+                                        <hr className="my-3 border-gray-200 dark:border-gray-700" />
+                                        
+                                        {/* Details */}
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-500 font-medium">Role:</span>
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.user_roles?.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
+                                                    {user.user_roles?.role || 'member'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500 font-medium">Coins:</span>
+                                                <span className="font-medium text-yellow-600 dark:text-yellow-400">{user.coins}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500 font-medium">Department:</span>
+                                                <span className="text-gray-500">{user.department || 'N/A'}</span>
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        
+                                        <hr className="my-3 border-gray-200 dark:border-gray-700" />
+                                        
+                                        {/* Actions */}
+                                        <div className="flex items-center justify-end space-x-2">
+                                            <Button aria-label={`Edit ${user.full_name}`} variant="ghost" size="sm" onClick={() => openEditModal(user)}>
+                                                <PencilAltIcon className="w-5 h-5 mr-1" /> Edit
+                                            </Button>
+                                            <Button aria-label={`Delete ${user.full_name}`} variant="ghost" size="sm" onClick={() => handleDeleteUser(user)} className="text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30">
+                                                <TrashIcon className="w-5 h-5 mr-1" /> Delete
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </Card>
 
             {/* Edit User Modal */}

@@ -152,7 +152,8 @@ if (!supabase) {
  *    - This function automatically creates a profile, role, and coin record for new users.
  * 
  *    ```sql
- *    -- Function to create a new profile and role for a new user
+ *    -- Function to create a new profile and notifications for a new user.
+ *    -- This version intelligently extracts a user's name for better notifications.
  *    create or replace function public.handle_new_user()
  *    returns trigger
  *    language plpgsql
@@ -160,24 +161,44 @@ if (!supabase) {
  *    as $$
  *    declare
  *      admin_user_id uuid;
+ *      -- Declare a variable to hold the new user's name
+ *      new_user_name text;
  *    begin
- *      -- Create a profile
- *      insert into public.profiles (id, email, coins)
- *      values (new.id, new.email, 0);
+ *      -- Try to get the full name from OAuth provider metadata,
+ *      -- then fallback to the part of the email before the @.
+ *      new_user_name := coalesce(
+ *          new.raw_user_meta_data ->> 'full_name',
+ *          new.raw_user_meta_data ->> 'name',
+ *          split_part(new.email, '@', 1) -- Use email prefix as a fallback name
+ *      );
+ *
+ *      -- Create a profile, populating name and avatar from OAuth if available.
+ *      -- For email signups, full_name will be null, which is correct as they need to set it.
+ *      insert into public.profiles (id, email, full_name, avatar_url, coins)
+ *      values (
+ *        new.id,
+ *        new.email,
+ *        coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'),
+ *        new.raw_user_meta_data ->> 'avatar_url',
+ *        0
+ *      );
+ *      
  *      -- Assign a default role
  *      insert into public.user_roles (user_id, role)
  *      values (new.id, 'member');
+ *      
  *      -- Create a coin record
  *      insert into public.user_coins (user_id, total_coins)
  *      values (new.id, 0);
  *      
- *      -- Notify all admins about the new user
+ *      -- Notify all admins about the new user using the extracted name
  *      for admin_user_id in select user_id from public.user_roles where role = 'admin' loop
  *        insert into public.notifications (user_id, type, message, link)
  *        values (
  *            admin_user_id,
  *            'new_user',
- *            'New member ' || coalesce(new.email, 'with unknown email') || ' has joined. Click to send a welcome message!',
+ *            -- Use the derived name for a friendlier notification message
+ *            'New member "' || new_user_name || '" has joined the fellowship!',
  *            '/compose?recipientId=' || new.id
  *        );
  *      end loop;
