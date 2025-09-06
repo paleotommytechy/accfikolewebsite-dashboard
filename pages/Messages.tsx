@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
@@ -111,8 +109,8 @@ const Messages: React.FC = () => {
         
         const notificationsToInsert = Array.from(selectedRecipients).map(recipientId => ({
             user_id: recipientId,
-            type: 'comment', // Using 'comment' type as it's generic enough for a message
-            message: `You have a new message from ${currentUser.full_name || currentUser.email}.`,
+            type: 'new_message',
+            message: `New message from ${currentUser.full_name || currentUser.email}: "${subject}"`,
             link: '/messages'
         }));
 

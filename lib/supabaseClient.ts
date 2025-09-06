@@ -457,4 +457,73 @@ if (!supabase) {
  *    -- 3. Policy: Users can see their own role
  *    create policy "Allow users to see their own role" on public.user_roles for select using (auth.uid() = user_id);
  *    ```
+ * 
+ * 10. Chat History Function (RPC)
+ *     - Efficiently fetches a user's conversation list with last message and unread counts.
+ * 
+ *    ```sql
+ *    create or replace function public.get_chat_history(p_user_id uuid)
+ *    returns table (
+ *        other_user_id uuid,
+ *        other_user_name text,
+ *        other_user_avatar text,
+ *        last_message_text text,
+ *        last_message_at timestamp with time zone,
+ *        unread_count bigint
+ *    )
+ *    language sql
+ *    security definer
+ *    as $$
+ *        with message_partners as (
+ *            select distinct
+ *                case
+ *                    when sender_id = p_user_id then receiver_id
+ *                    else sender_id
+ *                end as other_user_id
+ *            from public.messages
+ *            where sender_id = p_user_id or receiver_id = p_user_id
+ *        ),
+ *        ranked_messages as (
+ *            select
+ *                m.text,
+ *                m.created_at,
+ *                case
+ *                    when m.sender_id = p_user_id then m.receiver_id
+ *                    else m.sender_id
+ *                end as other_user_id,
+ *                row_number() over(
+ *                    partition by (
+ *                        case
+ *                            when m.sender_id = p_user_id then m.receiver_id
+ *                            else m.sender_id
+ *                        end
+ *                    )
+ *                    order by m.created_at desc
+ *                ) as rn
+ *            from public.messages m
+ *            where (m.sender_id = p_user_id and m.receiver_id in (select other_user_id from message_partners))
+ *               or (m.receiver_id = p_user_id and m.sender_id in (select other_user_id from message_partners))
+ *        ),
+ *        unread_counts as (
+ *            select
+ *                sender_id as other_user_id,
+ *                count(*) as unread_count
+ *            from public.messages
+ *            where receiver_id = p_user_id and read = false
+ *            group by sender_id
+ *        )
+ *        select
+ *            mp.other_user_id,
+ *            p.full_name as other_user_name,
+ *            p.avatar_url as other_user_avatar,
+ *            rm.text as last_message_text,
+ *            rm.created_at as last_message_at,
+ *            coalesce(uc.unread_count, 0) as unread_count
+ *        from message_partners mp
+ *        join public.profiles p on p.id = mp.other_user_id
+ *        left join ranked_messages rm on rm.other_user_id = mp.other_user_id and rm.rn = 1
+ *        left join unread_counts uc on uc.other_user_id = mp.other_user_id
+ *        order by rm.created_at desc nulls last;
+ *    $$;
+ *    ```
  */
