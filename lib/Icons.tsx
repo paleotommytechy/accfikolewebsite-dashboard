@@ -106,8 +106,8 @@ export const ChevronDownIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) 
 export const TrophyIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" transform="scale(1.2)" style={{transformOrigin: 'center'}}/>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 11l3-3m0 0l3 3m-3-3v8m0-13a9 9 0 110 18 9 9 0 010-18z" transform="scale(1.2)" style={{transformOrigin: 'center'}}/>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15V9" />
     </svg>
@@ -172,16 +172,16 @@ export const LockClosedIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) =
 );
 
 export const EyeIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-        <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
-        <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.18l3.25-3.25a1.651 1.651 0 012.334 0L10 9.333l3.752-3.752a1.651 1.651 0 012.334 0l3.25 3.25a1.651 1.651 0 010 1.18l-3.25 3.25a1.651 1.651 0 01-2.334 0L10 10.667l-3.752 3.752a1.651 1.651 0 01-2.334 0l-3.25-3.25z" clipRule="evenodd" />
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+      <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
     </svg>
 );
 
 export const EyeSlashIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 00-1.06 1.06l14.5 14.5a.75.75 0 101.06-1.06l-1.745-1.745a10.029 10.029 0 003.3-4.38c-1.294-2.426-3.785-4.42-6.8-4.42-1.226 0-2.39.313-3.44.867L6.878 6.878a.75.75 0 00-1.06-1.06L3.28 2.22zM7.58 8.026a2.5 2.5 0 013.394 3.394l-3.394-3.394zM10 12.5a2.5 2.5 0 01-2.5-2.5 2.5 2.5 0 01.36-1.32l3.46 3.46a2.5 2.5 0 01-1.32.36z" clipRule="evenodd" />
-        <path d="M12.982 8.903a4.015 4.015 0 01-4.015 4.015 4.015 4.015 0 01-1.328-.24L4.85 15.54a11.516 11.516 0 0010.3 0l-2.02-2.02a4.013 4.013 0 01-1.148-.617z" />
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <path d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588M5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z"/>
+      <path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12z"/>
     </svg>
 );
 

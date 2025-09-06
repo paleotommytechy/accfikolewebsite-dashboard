@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
@@ -16,37 +17,37 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
       podiumHeight: string;
       bgColor: string;
       textColor: string;
-      avatarSize: 'sm' | 'md' | 'lg' | 'xl';
+      avatarResponsiveClass: string;
       rankTextSize: string;
       borderColor: string;
   }} = {
     1: {
-      podiumHeight: 'h-32 md:h-40',
+      podiumHeight: 'h-28 sm:h-32 md:h-40',
       bgColor: 'bg-yellow-400',
       textColor: 'text-white',
-      avatarSize: 'xl',
-      rankTextSize: 'text-5xl',
+      avatarResponsiveClass: 'w-20 h-20 md:w-24 md:h-24',
+      rankTextSize: 'text-4xl md:text-5xl',
       borderColor: 'border-yellow-400'
     },
     2: {
-      podiumHeight: 'h-24 md:h-32',
+      podiumHeight: 'h-20 sm:h-24 md:h-32',
       bgColor: 'bg-slate-400',
       textColor: 'text-slate-100',
-      avatarSize: 'lg',
-      rankTextSize: 'text-4xl',
+      avatarResponsiveClass: 'w-16 h-16 md:w-20 md:h-20',
+      rankTextSize: 'text-3xl md:text-4xl',
       borderColor: 'border-slate-400'
     },
     3: {
-      podiumHeight: 'h-16 md:h-24',
+      podiumHeight: 'h-16 sm:h-20 md:h-24',
       bgColor: 'bg-amber-600',
       textColor: 'text-amber-100',
-      avatarSize: 'lg',
-      rankTextSize: 'text-3xl',
+      avatarResponsiveClass: 'w-14 h-14 md:w-16 md:h-16',
+      rankTextSize: 'text-2xl md:text-3xl',
       borderColor: 'border-amber-600'
     }
   };
 
-  const { podiumHeight, bgColor, textColor, avatarSize, rankTextSize, borderColor } = styles[rank];
+  const { podiumHeight, bgColor, textColor, avatarResponsiveClass, rankTextSize, borderColor } = styles[rank];
 
   const animationDelays = { 1: '0ms', 2: '100ms', 3: '200ms' };
 
@@ -56,9 +57,9 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
         {rank === 1 && (
           <CrownIcon className="w-8 h-8 text-yellow-400 absolute -top-4 left-1/2 -translate-x-1/2 z-10" />
         )}
-        <Avatar src={user.avatar_url} alt={user.full_name || ''} size={avatarSize} className={`border-4 ${borderColor} shadow-lg`} />
+        <Avatar src={user.avatar_url} alt={user.full_name || ''} className={`border-4 ${borderColor} shadow-lg ${avatarResponsiveClass}`} />
       </div>
-      <h3 className="font-bold text-center text-sm md:text-base truncate w-full px-1">{user.full_name}</h3>
+      <h3 className="font-bold text-center text-xs sm:text-sm md:text-base truncate w-full px-1">{user.full_name}</h3>
       <p className="text-yellow-500 dark:text-yellow-400 font-semibold text-xs md:text-sm">{user.coins} coins</p>
       <div className={`mt-2 w-full ${podiumHeight} ${bgColor} rounded-t-lg flex items-center justify-center`}>
         <span className={`${rankTextSize} font-black ${textColor}`}>{rank}</span>
@@ -111,22 +112,22 @@ const Leaderboard: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coins</th>
+                <th scope="col" className="px-2 py-3 sm:px-6 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                <th scope="col" className="px-2 py-3 sm:px-6 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
+                <th scope="col" className="px-2 py-3 sm:px-6 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Level</th>
+                <th scope="col" className="px-2 py-3 sm:px-6 sm:py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coins</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
               {rest.map((person, index) => (
                 <tr key={person.id} className={`${person.id === currentUser?.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
                     <div className="text-sm font-bold text-gray-500">{index + 4}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <Avatar src={person.avatar_url} alt={person.full_name || ''} />
+                        <Avatar src={person.avatar_url} alt={person.full_name || ''} size="sm" />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -135,12 +136,12 @@ const Leaderboard: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3 sm:px-6 sm:py-4 whitespace-nowrap hidden sm:table-cell">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
                         Level {person.level}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                  <td className="px-2 py-3 sm:px-6 sm:py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
                     {person.coins}
                   </td>
                 </tr>
