@@ -3,40 +3,39 @@ import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import type { WeeklyChallenge, Task, CoinTransaction } from '../types';
+import Avatar from '../components/auth/Avatar';
+import { CheckIcon } from '../components/ui/Icons';
 
 const CoinApprovalManager: React.FC = () => {
     const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
+    const [loading, setLoading] = useState(true);
     const [approvingTxnId, setApprovingTxnId] = useState<string | null>(null);
 
     const fetchTransactions = useCallback(async () => {
         if (!supabase) return;
+        setLoading(true);
         
-        // Step 1: Fetch transactions with profile info, but without broken joins
         const { data: txData, error: txError } = await supabase
             .from('coin_transactions')
-            .select('*, profiles(full_name)')
+            .select('*, profiles(full_name, avatar_url)')
             .eq('status', 'pending')
             .order('created_at', { ascending: true });
         
         if (txError) {
             console.error('Error fetching transactions', txError);
+            setLoading(false);
             return;
         }
         
         if (!txData || txData.length === 0) {
             setTransactions([]);
+            setLoading(false);
             return;
         }
 
-        // Step 2: Group source IDs by type
-        const taskIds = txData
-            .filter(tx => tx.source_type === 'task')
-            .map(tx => tx.source_id);
-        const challengeIds = txData
-            .filter(tx => tx.source_type === 'challenge')
-            .map(tx => tx.source_id);
+        const taskIds = txData.filter(tx => tx.source_type === 'task').map(tx => tx.source_id);
+        const challengeIds = txData.filter(tx => tx.source_type === 'challenge').map(tx => tx.source_id);
 
-        // Step 3: Fetch source details in parallel
         const [tasksResponse, challengesResponse] = await Promise.all([
             taskIds.length > 0 ? supabase.from('tasks').select('id, title').in('id', taskIds) : Promise.resolve({ data: [], error: null }),
             challengeIds.length > 0 ? supabase.from('weekly_challenges').select('id, title').in('id', challengeIds) : Promise.resolve({ data: [], error: null })
@@ -48,7 +47,6 @@ const CoinApprovalManager: React.FC = () => {
         const tasksMap = new Map(tasksResponse.data?.map(t => [t.id, t.title]));
         const challengesMap = new Map(challengesResponse.data?.map(c => [c.id, c.title]));
 
-        // Step 4: Combine data
         const enrichedTransactions = txData.map(tx => {
             if (tx.source_type === 'task') {
                 return { ...tx, tasks: { title: tasksMap.get(tx.source_id) || 'Unknown Task' } };
@@ -60,6 +58,7 @@ const CoinApprovalManager: React.FC = () => {
         });
 
         setTransactions(enrichedTransactions as CoinTransaction[] || []);
+        setLoading(false);
     }, []);
 
     useEffect(() => {
@@ -72,68 +71,75 @@ const CoinApprovalManager: React.FC = () => {
         if (status === 'approved') {
             setApprovingTxnId(id);
             try {
-                // FIX: Removed incorrect generic type argument from rpc call and corrected logic.
-                // The RPC function returns void, so success is determined by the absence of an error.
                 const { error } = await supabase.rpc('approve_coin_transaction', { transaction_id: id });
                 if (error) throw error;
-
                 alert('Transaction approved and coins awarded.');
-                // Refetch to update the list, which will remove the approved item.
                 fetchTransactions();
             } catch (error: any) {
                 alert('Error approving transaction: ' + error.message);
             } finally {
                 setApprovingTxnId(null);
             }
-
         } else { // 'rejected'
             const { error } = await supabase.from('coin_transactions').update({ status }).eq('id', id);
             if (error) {
                 alert('Error updating status: ' + error.message);
             } else {
                 alert(`Transaction ${status}.`);
-                fetchTransactions(); // refetch on reject as well
+                fetchTransactions();
             }
         }
     };
     
-    const getSourceName = (tx: CoinTransaction): string => {
-        if (tx.source_type === 'task' && tx.tasks) return tx.tasks.title;
-        if (tx.source_type === 'challenge' && tx.weekly_challenges) return tx.weekly_challenges.title;
-        return tx.source_id;
+    const getSourceDescription = (tx: CoinTransaction): string => {
+        const type = tx.source_type.charAt(0).toUpperCase() + tx.source_type.slice(1);
+        let title = 'Unknown Activity';
+
+        if (tx.source_type === 'task' && tx.tasks) {
+            title = tx.tasks.title;
+        } else if (tx.source_type === 'challenge' && tx.weekly_challenges) {
+            title = tx.weekly_challenges.title;
+        }
+        return `${type}: ${title}`;
     };
 
     return (
         <Card title="Pending Coin Transactions">
-            {transactions.length > 0 ? (
-                <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
+            {loading ? (
+                <p className="text-gray-500 p-4">Loading pending transactions...</p>
+            ) : transactions.length > 0 ? (
+                <ul className="space-y-4">
                     {transactions.map(tx => (
-                        <tr key={tx.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{tx.profiles?.full_name || tx.user_id}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getSourceName(tx)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tx.coin_amount}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                <Button size="sm" onClick={() => handleUpdateStatus(tx.id, 'approved')} disabled={approvingTxnId === tx.id}>
-                                    {approvingTxnId === tx.id ? 'Approving...' : 'Approve'}
-                                </Button>
-                                <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(tx.id, 'rejected')}>Reject</Button>
-                            </td>
-                        </tr>
+                        <li key={tx.id} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <Avatar src={tx.profiles?.avatar_url} alt={tx.profiles?.full_name || 'User'} size="md" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-900 dark:text-white truncate">{tx.profiles?.full_name || 'Unknown User'}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{getSourceDescription(tx)}</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{new Date(tx.created_at).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
+                                <div className="text-lg font-bold text-yellow-500 flex-shrink-0">
+                                    +{tx.coin_amount}
+                                </div>
+                                <div className="flex gap-2 ml-auto">
+                                    <Button size="sm" onClick={() => handleUpdateStatus(tx.id, 'approved')} disabled={approvingTxnId === tx.id}>
+                                        {approvingTxnId === tx.id ? 'Approving...' : 'Approve'}
+                                    </Button>
+                                    <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(tx.id, 'rejected')}>Reject</Button>
+                                </div>
+                            </div>
+                        </li>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : <p className="text-gray-500">No pending transactions.</p>}
+                </ul>
+            ) : (
+                <div className="text-center py-10">
+                    <CheckIcon className="w-16 h-16 mx-auto text-green-400 dark:text-green-500" />
+                    <h3 className="text-lg font-semibold mt-4">All Caught Up!</h3>
+                    <p className="text-gray-500 mt-2">There are no pending coin transactions to review.</p>
+                </div>
+            )}
         </Card>
     );
 };

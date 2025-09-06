@@ -66,7 +66,7 @@ export interface CoinTransaction {
   created_at: string;
   tasks?: { title: string };
   weekly_challenges?: { title: string };
-  profiles?: { full_name: string | null };
+  profiles?: { full_name: string | null; avatar_url?: string | null };
 }
 
 export interface Notification {
