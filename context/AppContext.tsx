@@ -8,6 +8,7 @@ interface AppContextType {
   currentUser: UserProfile | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isProfileComplete: boolean;
   refreshCurrentUser: () => Promise<void>;
 }
 
@@ -18,6 +19,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
 
   const fetchCurrentUser = async () => {
     if (!supabase) {
@@ -55,6 +57,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (profile) {
           setCurrentUser({ ...(profile as any), role: userRole });
+          // Check for profile completion
+          if (profile.full_name && profile.department && profile.whatsapp) {
+            setIsProfileComplete(true);
+          } else {
+            setIsProfileComplete(false);
+          }
         } else {
           // If profile doesn't exist yet, create a temporary one.
           const temporaryProfile: UserProfile = {
@@ -73,6 +81,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               role: userRole,
           };
           setCurrentUser(temporaryProfile);
+          setIsProfileComplete(false);
         }
 
         setIsAdmin(isAdminStatus);
@@ -80,6 +89,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // No user session, clear all user-related state
         setCurrentUser(null);
         setIsAdmin(false);
+        setIsProfileComplete(false);
       }
     } catch (e) {
       const error = e as Error;
@@ -89,6 +99,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setCurrentUser(null);
       setIsAdmin(false);
+      setIsProfileComplete(false);
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +135,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentUser,
     isLoading,
     isAdmin,
+    isProfileComplete,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, currentUser, isLoading, isAdmin]);
+  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isProfileComplete]);
 
   return (
     <AppContext.Provider value={value}>

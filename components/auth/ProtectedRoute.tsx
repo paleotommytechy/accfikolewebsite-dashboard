@@ -1,11 +1,11 @@
-
 import React from 'react';
-// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom to resolve module export errors.
+import { useLocation, Navigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }): React.ReactNode => {
-  const { currentUser, isAdmin, isLoading } = useAppContext();
+  const { currentUser, isAdmin, isLoading, isProfileComplete } = useAppContext();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -16,11 +16,17 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
   }
 
   if (!currentUser) {
-    return <ReactRouterDOM.Navigate to="/auth" replace />;
+    return <Navigate to="/auth" replace />;
+  }
+
+  // If profile is not complete, only allow access to dashboard and profile page
+  const isAllowedPath = location.pathname === '/dashboard' || location.pathname === '/profile';
+  if (!isProfileComplete && !isAllowedPath) {
+    return <Navigate to="/profile" replace />;
   }
   
   if (adminOnly && !isAdmin) {
-    return <ReactRouterDOM.Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

@@ -1,12 +1,11 @@
-
 import React, { useEffect } from 'react';
-// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom to resolve module export errors.
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from './AppContext';
 
 const AuthCallback: React.FC = () => {
   const { currentUser, isLoading } = useAppContext();
-  const navigate = ReactRouterDOM.useNavigate();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // The AppContext's onAuthStateChange listener is the primary mechanism

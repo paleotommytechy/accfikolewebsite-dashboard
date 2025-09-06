@@ -1,7 +1,6 @@
-
 import React from 'react';
-// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom to resolve module export errors.
+import { Outlet } from 'react-router-dom';
 import Navbar from '../layout/Navbar';
 import Sidebar from '../layout/Sidebar';
 import { useAppContext } from '../../context/AppContext';
@@ -23,7 +22,7 @@ const DashboardLayout: React.FC = () => {
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
         <Navbar />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          <ReactRouterDOM.Outlet />
+          <Outlet />
         </main>
       </div>
     </div>

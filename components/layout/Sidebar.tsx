@@ -1,15 +1,16 @@
-
 import React from 'react';
-// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom to resolve module export errors.
+import { NavLink } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { NAV_LINKS, ADMIN_LINKS } from '../../constants';
 
 const Sidebar: React.FC = () => {
-  const { isSidebarOpen, isAdmin } = useAppContext();
+  const { isSidebarOpen, isAdmin, isProfileComplete } = useAppContext();
 
-  const linkClasses = "flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-primary-700 hover:text-white";
+  const linkClasses = "flex items-center py-2.5 px-4 rounded transition duration-200";
   const activeLinkClasses = "bg-primary-700 text-white";
+  const hoverClasses = "hover:bg-primary-700 hover:text-white";
+  const disabledClasses = "opacity-50 cursor-not-allowed pointer-events-none";
 
   return (
     <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-40 w-64
@@ -23,39 +24,45 @@ const Sidebar: React.FC = () => {
       </div>
 
       <nav className="flex flex-col p-4 space-y-2 flex-grow overflow-y-auto">
-        {NAV_LINKS.map((link) => (
-          // FIX: Updated NavLink to use v6 props: className function and `end` prop.
-          <ReactRouterDOM.NavLink
-            key={link.name}
-            to={link.href}
-            className={({ isActive }) =>
-              isActive ? `${linkClasses} ${activeLinkClasses}` : linkClasses
-            }
-            title={link.name}
-            end={link.href === '/dashboard'}
-          >
-            <div className="w-6 h-6 flex-shrink-0">{link.icon}</div>
-            {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-          </ReactRouterDOM.NavLink>
-        ))}
+        {NAV_LINKS.map((link) => {
+          const isDisabled = !isProfileComplete && link.href !== '/dashboard' && link.href !== '/profile';
+          return (
+            <div key={link.name} title={isDisabled ? "Please complete your profile to access this page" : ""}>
+              <NavLink
+                to={link.href}
+                className={({ isActive }) =>
+                  `${linkClasses} ${isActive ? activeLinkClasses : hoverClasses} ${isDisabled ? disabledClasses : ''}`
+                }
+                title={link.name}
+                end={link.href === '/dashboard'}
+              >
+                <div className="w-6 h-6 flex-shrink-0">{link.icon}</div>
+                {isSidebarOpen && <span className="ml-4">{link.name}</span>}
+              </NavLink>
+            </div>
+          );
+        })}
         
         {isAdmin && (
           <>
             <hr className="my-4 border-gray-700" />
-            {ADMIN_LINKS.map((link) => (
-              // FIX: Updated NavLink to use v6 props: className function.
-              <ReactRouterDOM.NavLink
-                key={link.name}
-                to={link.href}
-                className={({ isActive }) =>
-                  isActive ? `${linkClasses} ${activeLinkClasses}` : linkClasses
-                }
-                title={link.name}
-              >
-                <div className="w-6 h-6 flex-shrink-0">{link.icon}</div>
-                {isSidebarOpen && <span className="ml-4">{link.name}</span>}
-              </ReactRouterDOM.NavLink>
-            ))}
+            {ADMIN_LINKS.map((link) => {
+              const isDisabled = !isProfileComplete;
+              return (
+                <div key={link.name} title={isDisabled ? "Please complete your profile to access this page" : ""}>
+                  <NavLink
+                    to={link.href}
+                    className={({ isActive }) =>
+                      `${linkClasses} ${isActive ? activeLinkClasses : hoverClasses} ${isDisabled ? disabledClasses : ''}`
+                    }
+                    title={link.name}
+                  >
+                    <div className="w-6 h-6 flex-shrink-0">{link.icon}</div>
+                    {isSidebarOpen && <span className="ml-4">{link.name}</span>}
+                  </NavLink>
+                </div>
+              );
+            })}
           </>
         )}
       </nav>

@@ -1,14 +1,34 @@
-
 import React, { useState, useEffect } from 'react';
-// FIX: Reverted to namespace import for react-router-dom to resolve module export errors.
-import * as ReactRouterDOM from 'react-router-dom';
+// FIX: Use named imports for react-router-dom to resolve module export errors.
+import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon } from '../components/ui/Icons';
+
+const CompleteProfileCard: React.FC = () => (
+    <Card className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
+                <UserIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1">
+                <h3 className="text-lg font-bold text-red-800 dark:text-red-200">Complete Your Profile</h3>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    Please update your personal information to get full access to the dashboard and community features.
+                </p>
+            </div>
+            <div className="flex-shrink-0 mt-3 sm:mt-0">
+                <Button to="/profile" className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-500">
+                    Update Profile Now
+                </Button>
+            </div>
+        </div>
+    </Card>
+);
 
 const ScriptureOfTheDay: React.FC = () => {
     // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
@@ -43,7 +63,7 @@ const DailyTasks: React.FC<{ tasks: TaskAssignment[] }> = ({ tasks }) => {
     return (
         <Card
             title={cardTitle}
-            action={<ReactRouterDOM.Link to="/tasks" className="text-sm font-semibold text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}
+            action={<Link to="/tasks" className="text-sm font-semibold text-primary-600 hover:underline">View All</Link>}
         >
             <div className="space-y-3">
                 {tasks.length > 0 && tasks.map(assignment => (
@@ -198,7 +218,7 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
     };
 
     return (
-        <Card title="Leaderboard" action={<ReactRouterDOM.Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</ReactRouterDOM.Link>}>
+        <Card title="Leaderboard" action={<Link to="/leaderboard" className="text-sm font-semibold text-primary-600 hover:underline">View All</Link>}>
             <ul className="space-y-2">
                 {leaderboard.map((user, index) => {
                     const style = rankStyles[index];
@@ -235,7 +255,7 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
 };
 
 const Dashboard: React.FC = () => {
-  const { currentUser, isLoading } = useAppContext();
+  const { currentUser, isLoading, isProfileComplete } = useAppContext();
   const [taskAssignments, setTaskAssignments] = useState<TaskAssignment[]>([]);
   const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
   const [leaderboard, setLeaderboard] = useState<Partial<UserProfile>[]>([]);
@@ -301,18 +321,22 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main Content Column */}
-      <div className="lg:col-span-2 space-y-6">
-        <ScriptureOfTheDay />
-        <DailyTasks tasks={taskAssignments} />
-      </div>
+    <div className="space-y-6">
+      {!isProfileComplete && <CompleteProfileCard />}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content Column */}
+        <div className="lg:col-span-2 space-y-6">
+          <ScriptureOfTheDay />
+          <DailyTasks tasks={taskAssignments} />
+        </div>
 
-      {/* Sidebar Column */}
-      <div className="lg:col-span-1 space-y-6">
-        <MyProgressCard user={currentUser} />
-        <WeeklyChallengeCard challenge={challenge} />
-        <MiniLeaderboard leaderboard={leaderboard} />
+        {/* Sidebar Column */}
+        <div className="lg:col-span-1 space-y-6">
+          <MyProgressCard user={currentUser} />
+          <WeeklyChallengeCard challenge={challenge} />
+          <MiniLeaderboard leaderboard={leaderboard} />
+        </div>
       </div>
     </div>
   );
