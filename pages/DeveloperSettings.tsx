@@ -2,10 +2,101 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { WeeklyChallenge, Task, CoinTransaction } from '../types';
+import type { WeeklyChallenge, Task, CoinTransaction, Scripture } from '../types';
 import Avatar from '../components/auth/Avatar';
 import { CheckIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
+import { useAppContext } from '../context/AppContext';
+
+const ScriptureManager: React.FC = () => {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [reference, setReference] = useState('');
+    const [text, setText] = useState('');
+    const { addToast } = useNotifier();
+    const { currentUser } = useAppContext();
+
+    useEffect(() => {
+        const fetchScripture = async () => {
+            if (!supabase || !date) return;
+            
+            // Clear previous state when date changes
+            setReference('');
+            setText('');
+
+            const { data, error } = await supabase
+                .from('scripture_of_the_day')
+                .select('*')
+                .eq('date_for', date)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Error fetching scripture for date:", error);
+            } else if (data) {
+                setReference(data.verse_reference);
+                setText(data.verse_text);
+            }
+        };
+        fetchScripture();
+    }, [date]);
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!supabase || !currentUser || !date || !reference || !text) {
+            addToast("Please fill all fields.", 'error');
+            return;
+        }
+
+        const upsertData = {
+            date_for: date,
+            verse_reference: reference,
+            verse_text: text,
+            set_by: currentUser.id,
+        };
+        
+        const { error } = await supabase
+            .from('scripture_of_the_day')
+            .upsert(upsertData, { onConflict: 'date_for' });
+        
+        if (error) {
+            addToast('Error saving scripture: ' + error.message, 'error');
+        } else {
+            addToast('Scripture of the day saved successfully!', 'success');
+        }
+    };
+
+    return (
+        <Card title="Scripture of the Day Manager">
+            <form onSubmit={handleSave} className="space-y-4">
+                <p className="text-sm text-gray-500">Select a date to view or set the scripture for that day. If a scripture already exists for the date, it will be updated.</p>
+                <InputField 
+                    label="Date" 
+                    type="date" 
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    required 
+                />
+                <InputField 
+                    label="Verse Reference" 
+                    placeholder="e.g., Jeremiah 29:11"
+                    value={reference}
+                    onChange={e => setReference(e.target.value)}
+                    required
+                />
+                 <TextAreaField
+                    label="Verse Text"
+                    placeholder="Enter the scripture text..."
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    rows={4}
+                    required
+                />
+                <div className="flex justify-end">
+                    <Button type="submit">Save Scripture</Button>
+                </div>
+            </form>
+        </Card>
+    );
+};
 
 const CoinApprovalManager: React.FC = () => {
     const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
@@ -378,6 +469,7 @@ const DeveloperSettings: React.FC = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Developer Settings</h1>
+            <ScriptureManager />
             <CoinApprovalManager />
             <ChallengeManager />
             <TaskManager />

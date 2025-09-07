@@ -109,6 +109,15 @@ export interface StoreItem {
   icon: string;
 }
 
+export interface Scripture {
+  id: string;
+  verse_reference: string;
+  verse_text: string;
+  date_for: string; // YYYY-MM-DD
+  set_by?: string;
+  created_at: string;
+}
+
 // FIX: Add missing PrayerRequest interface.
 export interface PrayerRequest {
   id: string;

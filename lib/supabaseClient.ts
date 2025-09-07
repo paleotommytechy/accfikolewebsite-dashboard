@@ -146,6 +146,17 @@ if (!supabase) {
  *        read boolean DEFAULT false
  *    );
  *    COMMENT ON TABLE public.messages IS 'Stores private messages between users.';
+ *
+ *    -- Create scripture_of_the_day table
+ *    CREATE TABLE IF NOT EXISTS public.scripture_of_the_day (
+ *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *        verse_reference text NOT NULL,
+ *        verse_text text NOT NULL,
+ *        date_for date NOT NULL UNIQUE,
+ *        created_at timestamp with time zone DEFAULT now(),
+ *        set_by uuid REFERENCES auth.users(id) ON DELETE SET NULL
+ *    );
+ *    COMMENT ON TABLE public.scripture_of_the_day IS 'Stores the scripture of the day set by an admin.';
  *    ```
  * 
  * 3. Create Profile on Signup (Database Trigger):
@@ -398,6 +409,14 @@ if (!supabase) {
  *    alter table public.messages enable row level security;
  *    -- 2. Policy: Users can manage their own messages (send, receive, read)
  *    create policy "Allow users to manage their own messages" on public.messages for all using (auth.uid() = sender_id or auth.uid() = receiver_id);
+ *
+ *    -- SCRIPTURE_OF_THE_DAY TABLE
+ *    -- 1. Enable RLS
+ *    alter table public.scripture_of_the_day enable row level security;
+ *    -- 2. Policy: Admins can do anything
+ *    create policy "Allow admin full access to scriptures" on public.scripture_of_the_day for all using (is_admin());
+ *    -- 3. Policy: Authenticated users can read scriptures
+ *    create policy "Allow users to read scriptures" on public.scripture_of_the_day for select using (auth.role() = 'authenticated');
  *    ```
  * 
  * 8. User Management Functions (RPC for Admins)

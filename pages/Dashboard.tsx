@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
-import { TaskAssignment, WeeklyChallenge, UserProfile } from '../types';
+import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture } from '../types';
 import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon } from '../components/ui/Icons';
 
 const CompleteProfileCard: React.FC = () => (
@@ -31,14 +31,56 @@ const CompleteProfileCard: React.FC = () => (
 );
 
 const ScriptureOfTheDay: React.FC = () => {
-    // In a real app, you'd fetch this from a 'scripture_of_the_day' table.
-    // We'll keep it static for this example to focus on user-specific data.
-    return (
-        <Card title="Scripture of the Day" className="bg-primary-600 text-white">
+    const [scripture, setScripture] = useState<Partial<Scripture> | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchScripture = async () => {
+            if (!supabase) {
+                setLoading(false);
+                return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            const { data, error } = await supabase
+                .from('scripture_of_the_day')
+                .select('verse_reference, verse_text')
+                .eq('date_for', today)
+                .maybeSingle();
+            
+            if (error) {
+                console.error("Error fetching scripture of the day:", error);
+            } else {
+                setScripture(data);
+            }
+            setLoading(false);
+        };
+        fetchScripture();
+    }, []);
+
+    const content = () => {
+        if (loading) {
+            return <p className="text-center italic">Loading scripture...</p>;
+        }
+        if (scripture) {
+            return (
+                <blockquote className="text-center">
+                    <p className="text-lg italic">"{scripture.verse_text}"</p>
+                    <footer className="mt-2 text-right font-semibold">{scripture.verse_reference}</footer>
+                </blockquote>
+            );
+        }
+        // Fallback content if nothing is set for the day
+        return (
             <blockquote className="text-center">
                 <p className="text-lg italic">"For I know the plans I have for you,” declares the LORD, “plans to prosper you and not to harm you, plans to give you hope and a future."</p>
                 <footer className="mt-2 text-right font-semibold">Jeremiah 29:11</footer>
             </blockquote>
+        );
+    };
+
+    return (
+        <Card title="Scripture of the Day" className="bg-primary-600 text-white">
+            {content()}
         </Card>
     );
 }
