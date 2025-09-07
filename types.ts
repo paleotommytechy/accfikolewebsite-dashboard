@@ -81,6 +81,22 @@ export interface Notification {
   link?: string;
 }
 
+export interface DetailedNotification {
+    id: string;
+    type: 'follow' | 'comment' | 'like' | 'invite' | 'system';
+    user: {
+        name: string;
+        avatarUrl: string;
+    }
+    time: string;
+    ago: string;
+    isRead: boolean;
+    postTitle?: string;
+    comment?: string;
+    dashboardName?: string;
+    category: 'all' | 'mentions' | 'followers' | 'invites';
+}
+
 export interface Event {
   id:string;
   title: string;

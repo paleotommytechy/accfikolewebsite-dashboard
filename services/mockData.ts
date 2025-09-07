@@ -1,5 +1,5 @@
 // FIX: Import StudyProgress type
-import type { UserProfile, Notification, Event, Message, StoreItem, StudyProgress, ChatHistoryItem } from '../types';
+import type { UserProfile, Notification, Event, Message, StoreItem, StudyProgress, ChatHistoryItem, DetailedNotification } from '../types';
 
 export const mockUserProfile: UserProfile = {
   id: 'user-123',
@@ -33,6 +33,66 @@ export const mockNotifications: Notification[] = [
   { id: 'notif-3', user_id: 'user-123', type: 'comment', message: 'Sarah commented on your prayer request.', created_at: '2024-07-27T14:30:00Z', read: true },
   { id: 'notif-4', user_id: 'user-123', type: 'custom', message: 'Reminder: Small group meeting tonight at 7 PM.', created_at: '2024-07-26T09:00:00Z', read: true },
 ];
+
+export const mockDetailedNotifications: DetailedNotification[] = [
+  {
+    id: '1', type: 'system',
+    user: { name: 'ACCF Ikole', avatarUrl: 'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg' },
+    time: 'Thursday 4:21pm', ago: '1 hour ago', isRead: false,
+    comment: 'Welcome to the ACCF Ikole family! We are glad to have you here.',
+    category: 'all',
+  },
+  {
+    id: '2', type: 'follow',
+    user: { name: 'frankiesullivan', avatarUrl: 'https://i.pravatar.cc/150?u=frankie' },
+    time: 'Thursday 4:20pm', ago: '2 hours ago', isRead: false,
+    category: 'followers',
+  },
+  {
+    id: '3', type: 'system',
+    user: { name: 'System', avatarUrl: 'https://cdn-icons-png.flaticon.com/512/818/818434.png' },
+    time: 'Thursday 3:15pm', ago: '3 hours ago', isRead: false,
+    comment: 'Congratulations! 100 coins has been added to your coin store. You are on your way to level 2 properly winning a giveaway.',
+    category: 'all',
+  },
+  {
+    id: '4', type: 'comment',
+    user: { name: 'eleanor_mac', avatarUrl: 'https://i.pravatar.cc/150?u=eleanor' },
+    postTitle: 'your post',
+    time: 'Thursday 3:12pm', ago: '3 hours ago', isRead: false,
+    comment: 'Love the background on this! Would love to learn how you created the mesh gradient effect.',
+    category: 'mentions',
+  },
+  {
+    id: '5', type: 'like',
+    user: { name: 'eleanor_mac', avatarUrl: 'https://i.pravatar.cc/150?u=eleanor' },
+    postTitle: 'your post',
+    time: 'Thursday 3:11pm', ago: '3 hours ago', isRead: true,
+    category: 'mentions',
+  },
+  {
+    id: '6', type: 'system',
+    user: { name: 'System', avatarUrl: 'https://cdn-icons-png.flaticon.com/512/2928/2928853.png' },
+    time: 'Thursday 3:00pm', ago: '3 hours ago', isRead: true,
+    comment: 'Your weekly challenges have been assigned. Check them out now!',
+    category: 'all',
+  },
+  {
+    id: '7', type: 'invite',
+    user: { name: 'ollie_diggs', avatarUrl: 'https://i.pravatar.cc/150?u=ollie' },
+    dashboardName: 'Sisyphus Dashboard',
+    time: 'Thursday 2:44pm', ago: '4 hours ago', isRead: true,
+    category: 'invites',
+  },
+   {
+    id: '8', type: 'system',
+    user: { name: 'System', avatarUrl: 'https://cdn-icons-png.flaticon.com/512/3135/3135679.png' },
+    time: 'Thursday 9:00am', ago: '7 hours ago', isRead: true,
+    comment: 'Your daily tasks have been assigned. Keep up the good work!',
+    category: 'all',
+  },
+];
+
 
 export const mockEvents: Event[] = [
   { id: 'event-1', title: 'Worship Night', date: '2024-07-28', time: '7:00 PM', location: 'Main Sanctuary', description: 'Join us for a night of worship and praise.' },

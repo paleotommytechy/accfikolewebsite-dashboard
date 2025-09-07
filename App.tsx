@@ -17,6 +17,7 @@ import Store from './pages/Store';
 import ChatHistory from './pages/ChatHistory';
 import UserManagement from './pages/UserManagement';
 import ChatConversation from './pages/ChatConversation';
+import Notifications from './pages/Notifications';
 
 function App(): React.ReactNode {
   return (
@@ -42,6 +43,7 @@ function App(): React.ReactNode {
               <Route path="/messages" element={<ChatHistory />} />
               <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route
                 path="/analytics"
                 element={
