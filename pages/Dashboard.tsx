@@ -7,6 +7,7 @@ import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture } from '../types';
+// FIX: Import missing icons to resolve module export errors.
 import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon } from '../components/ui/Icons';
 
 const CompleteProfileCard: React.FC = () => (

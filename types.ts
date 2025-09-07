@@ -99,6 +99,7 @@ export interface Message {
   created_at: string;
   sender_name?: string;
   sender_avatar?: string;
+  read?: boolean;
 }
 
 export interface StoreItem {

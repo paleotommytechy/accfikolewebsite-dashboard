@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';
 import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant } from '../types';
+// FIX: Import TrophyIcon to resolve module export error.
 import { TrophyIcon } from '../components/ui/Icons';
 
 type TxStatus = 'pending' | 'approved' | 'rejected' | null;

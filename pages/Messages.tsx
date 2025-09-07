@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
+// FIX: Import missing icons to resolve module export errors.
 import {
     BoldIcon,
     ItalicIcon,

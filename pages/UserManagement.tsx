@@ -5,6 +5,7 @@ import type { UserProfile } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
+// FIX: Import missing icons to resolve module export errors.
 import { SearchIcon, PencilAltIcon, TrashIcon, XIcon, CoinIcon } from '../components/ui/Icons';
 
 // Extend UserProfile to include the role from the joined table

@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import type { PrayerRequest } from '../types';
+// FIX: Import missing SparklesIcon to resolve module export error.
 import { SparklesIcon } from '../components/ui/Icons';
 
 const PrayerRequests: React.FC = () => {

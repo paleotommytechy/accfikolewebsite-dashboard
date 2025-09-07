@@ -11,12 +11,12 @@ import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import Leaderboard from './pages/Leaderboard';
 import Events from './pages/Events';
-import Messages from './pages/Messages';
 import Analytics from './pages/Analytics';
 import DeveloperSettings from './pages/DeveloperSettings';
 import Store from './pages/Store';
 import ChatHistory from './pages/ChatHistory';
 import UserManagement from './pages/UserManagement';
+import ChatConversation from './pages/ChatConversation';
 
 function App(): React.ReactNode {
   return (
@@ -40,7 +40,7 @@ function App(): React.ReactNode {
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/events" element={<Events />} />
               <Route path="/messages" element={<ChatHistory />} />
-              <Route path="/compose" element={<Messages />} />
+              <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
               <Route
                 path="/analytics"

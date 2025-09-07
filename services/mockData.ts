@@ -1,5 +1,5 @@
 // FIX: Import StudyProgress type
-import type { UserProfile, Notification, Event, Message, StoreItem, StudyProgress } from '../types';
+import type { UserProfile, Notification, Event, Message, StoreItem, StudyProgress, ChatHistoryItem } from '../types';
 
 export const mockUserProfile: UserProfile = {
   id: 'user-123',
@@ -41,17 +41,23 @@ export const mockEvents: Event[] = [
 ];
 
 export const mockMessages: Message[] = [
-    { id: 'msg-1', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Hey John, are you going to the worship night this Friday?', created_at: '10:30 AM' },
-    { id: 'msg-2', sender_id: 'user-123', receiver_id: 'user-2', sender_name: 'John Doe', sender_avatar: mockUserProfile.avatar_url, text: 'Yeah, I plan to! Looking forward to it. You?', created_at: '10:31 AM' },
-    { id: 'msg-3', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Definitely! See you there.', created_at: '10:32 AM' },
+    { id: 'msg-1', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Hey John, are you going to the worship night this Friday?', created_at: new Date(new Date().setHours(10, 30, 0, 0)).toISOString() },
+    { id: 'msg-2', sender_id: 'user-123', receiver_id: 'user-2', sender_name: 'John Doe', sender_avatar: mockUserProfile.avatar_url, text: 'Yeah, I plan to! Looking forward to it. You?', created_at: new Date(new Date().setHours(10, 31, 0, 0)).toISOString() },
+    { id: 'msg-3', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Definitely! See you there.', created_at: new Date(new Date().setHours(10, 32, 0, 0)).toISOString() },
 ];
 
-export const mockChatHistory = [
-    { id: 'chat-1', name: 'Ifeoluwa (President)', avatar: 'https://picsum.photos/seed/ifeoluwa/100', lastMessage: 'The slides for the presentation are ready.', timestamp: '11:30 AM', unreadCount: 0 },
-    { id: 'chat-2', name: 'Pastor Ariyo', avatar: 'https://picsum.photos/seed/ariyo/100', lastMessage: 'Can we meet tomorrow to discuss the outreach?', timestamp: 'Yesterday', unreadCount: 2 },
-    { id: 'chat-3', name: 'Daniel (Alumni-President)', avatar: 'https://picsum.photos/seed/daniel/100', lastMessage: 'Thanks for sending over the documents!', timestamp: '2 days ago', unreadCount: 0 },
-    { id: 'chat-4', name: 'Gift (Worker)', avatar: 'https://picsum.photos/seed/gift/100', lastMessage: 'I have a question about the task assigned.', timestamp: '2 days ago', unreadCount: 0 },
-    { id: 'chat-5', name: 'Toluwanimi', avatar: 'https://picsum.photos/seed/toluwanimi/100', lastMessage: 'Great job on the evangelism plan.', timestamp: 'Mar 15', unreadCount: 0 },
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+const twoDaysAgo = new Date(today);
+twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+export const mockChatHistory: ChatHistoryItem[] = [
+    { other_user_id: 'user-ifeoluwa', other_user_name: 'Ifeoluwa (President)', other_user_avatar: 'https://picsum.photos/seed/ifeoluwa/100', last_message_text: 'The slides for the presentation are ready.', last_message_at: new Date(new Date().setHours(11, 30, 0, 0)).toISOString(), unread_count: 0 },
+    { other_user_id: 'user-ariyo', other_user_name: 'Pastor Ariyo', other_user_avatar: 'https://picsum.photos/seed/ariyo/100', last_message_text: 'Can we meet tomorrow to discuss the outreach?', last_message_at: yesterday.toISOString(), unread_count: 2 },
+    { other_user_id: 'user-daniel', other_user_name: 'Daniel (Alumni-President)', other_user_avatar: 'https://picsum.photos/seed/daniel/100', last_message_text: 'Thanks for sending over the documents!', last_message_at: twoDaysAgo.toISOString(), unread_count: 0 },
+    { other_user_id: 'user-gift', other_user_name: 'Gift (Worker)', other_user_avatar: 'https://picsum.photos/seed/gift/100', last_message_text: 'I have a question about the task assigned.', last_message_at: twoDaysAgo.toISOString(), unread_count: 0 },
+    { other_user_id: 'user-toluwanimi', other_user_name: 'Toluwanimi', other_user_avatar: 'https://picsum.photos/seed/toluwanimi/100', last_message_text: 'Great job on the evangelism plan.', last_message_at: new Date('2024-03-15T10:00:00Z').toISOString(), unread_count: 0 },
 ];
 
 
