@@ -1,6 +1,8 @@
+
 import React from 'react';
-// FIX: Use named imports for react-router-dom to resolve module export errors.
-import { NavLink } from 'react-router-dom';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { NavLink } = ReactRouterDOM;
 import { useAppContext } from '../../context/AppContext';
 import { NAV_LINKS, ADMIN_LINKS } from '../../constants';
 

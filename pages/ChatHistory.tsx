@@ -1,7 +1,10 @@
+
 import React, { useMemo, useState, useEffect } from 'react';
 import Avatar from '../components/auth/Avatar';
-import { SearchIcon, UserIcon, UsersIcon, ChatIcon } from '../components/ui/Icons';
-import { Link } from 'react-router-dom';
+import { SearchIcon, UserIcon, UsersIcon, ChatIcon, MenuIcon } from '../components/ui/Icons';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { Link } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import type { ChatHistoryItem } from '../types';
 import { mockChatHistory } from '../services/mockData';
@@ -20,7 +23,7 @@ const formatTimestamp = (timestamp: string | null): string => {
 };
 
 const ChatHistory: React.FC = () => {
-    const { currentUser } = useAppContext();
+    const { currentUser, toggleSidebar } = useAppContext();
     const [searchTerm, setSearchTerm] = useState('');
     const [conversations, setConversations] = useState<ChatHistoryItem[]>(mockChatHistory);
     const [loading, setLoading] = useState(false);
@@ -33,24 +36,28 @@ const ChatHistory: React.FC = () => {
     }, [searchTerm, conversations]);
 
     return (
-        <div className="bg-chat-light-bg text-chat-light-text-primary flex flex-col -m-4 sm:-m-6 lg:-m-8 h-[calc(100vh_-_4rem)]">
+        <div className="bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary flex flex-col h-full">
             {/* Header */}
-            <header className="flex items-center justify-between p-4 flex-shrink-0 border-b border-gray-200">
+             <header className="flex items-center justify-between p-4 bg-chat-light-panel dark:bg-chat-panel shadow-sm flex-shrink-0 z-10">
+                <div className="flex items-center">
+                    <button onClick={toggleSidebar} className="text-chat-light-text-secondary dark:text-chat-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
+                        <MenuIcon />
+                    </button>
+                    <h1 className="text-xl font-bold ml-4">Chats</h1>
+                </div>
                 <Avatar src={currentUser?.avatar_url} alt={currentUser?.full_name || 'User'} size="md" />
-                <h1 className="text-2xl font-bold flex-1 text-center">Chats</h1>
-                <div className="w-10 h-10"></div> {/* Placeholder to keep title centered */}
             </header>
 
             {/* Search */}
             <div className="px-4 py-4 flex-shrink-0">
                 <div className="relative">
-                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-chat-light-text-secondary" />
+                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-chat-light-text-secondary dark:text-chat-text-secondary" />
                     <input
                         type="text"
                         placeholder="Search"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-chat-light-bg text-chat-light-text-primary placeholder-chat-light-text-secondary border-none rounded-full pl-11 pr-4 py-3 shadow-neumorphic-light-inset focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        className="w-full bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none rounded-full pl-11 pr-4 py-3 shadow-neumorphic-light-inset dark:shadow-neumorphic-inset focus:ring-2 focus:ring-primary-500 focus:outline-none"
                     />
                 </div>
             </div>
@@ -58,25 +65,25 @@ const ChatHistory: React.FC = () => {
             {/* Chat List */}
             <div className="flex-grow overflow-y-auto">
                 {loading ? (
-                    <div className="text-center py-10 text-chat-light-text-secondary">Loading conversations...</div>
+                    <div className="text-center py-10 text-chat-light-text-secondary dark:text-chat-text-secondary">Loading conversations...</div>
                 ) : (
                     <ul className="px-2">
                         {filteredChats.length > 0 ? (
                             filteredChats.map(chat => (
                                 <li key={chat.other_user_id}>
-                                    <Link to={`/messages/${chat.other_user_id}`} className="flex items-center p-3 my-2 hover:bg-white rounded-xl space-x-4 transition-colors duration-200">
+                                    <Link to={`/messages/${chat.other_user_id}`} className="flex items-center p-3 my-2 hover:bg-white dark:hover:bg-chat-panel rounded-xl space-x-4 transition-colors duration-200">
                                         <div className="relative">
                                             <Avatar src={chat.other_user_avatar} alt={chat.other_user_name || 'User'} size="lg" className="!w-14 !h-14"/>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-center">
-                                                <p className="font-semibold text-base truncate text-chat-light-text-primary">{chat.other_user_name}</p>
-                                                <p className="text-xs text-chat-light-text-secondary flex-shrink-0">
+                                                <p className="font-semibold text-base truncate text-chat-light-text-primary dark:text-chat-text-primary">{chat.other_user_name}</p>
+                                                <p className="text-xs text-chat-light-text-secondary dark:text-chat-text-secondary flex-shrink-0">
                                                     {formatTimestamp(chat.last_message_at)}
                                                 </p>
                                             </div>
                                             <div className="flex justify-between items-start mt-1">
-                                                <p className="text-sm text-chat-light-text-secondary truncate pr-4">
+                                                <p className="text-sm text-chat-light-text-secondary dark:text-chat-text-secondary truncate pr-4">
                                                     {chat.last_message_text}
                                                 </p>
                                                 {chat.unread_count > 0 && (
@@ -91,9 +98,9 @@ const ChatHistory: React.FC = () => {
                             ))
                         ) : (
                              <div className="text-center py-20 px-4">
-                                <ChatIcon className="w-16 h-16 mx-auto text-gray-300" />
-                                <h3 className="text-lg font-semibold mt-4 text-chat-light-text-primary">No Messages Yet</h3>
-                                <p className="text-chat-light-text-secondary mt-2">Start a new conversation to see it here.</p>
+                                <ChatIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
+                                <h3 className="text-lg font-semibold mt-4 text-chat-light-text-primary dark:text-chat-text-primary">No Messages Yet</h3>
+                                <p className="text-chat-light-text-secondary dark:text-chat-text-secondary mt-2">Start a new conversation to see it here.</p>
                             </div>
                         )}
                     </ul>
@@ -102,10 +109,10 @@ const ChatHistory: React.FC = () => {
 
             {/* Bottom Navigation (Mobile Only) */}
             <nav className="flex-shrink-0 p-3 md:hidden">
-                 <div className="flex justify-around items-center bg-chat-light-bg p-2 rounded-full shadow-neumorphic-light-raised">
+                 <div className="flex justify-around items-center bg-chat-light-bg dark:bg-chat-bg p-2 rounded-full shadow-neumorphic-light-raised dark:shadow-neumorphic-raised">
                     <button className="p-3 text-primary-500"><ChatIcon className="w-7 h-7" /></button>
-                    <button className="p-3 text-chat-light-text-secondary"><UserIcon className="w-7 h-7" /></button>
-                    <button className="p-3 text-chat-light-text-secondary"><UsersIcon className="w-7 h-7" /></button>
+                    <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary"><UserIcon className="w-7 h-7" /></button>
+                    <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary"><UsersIcon className="w-7 h-7" /></button>
                  </div>
             </nav>
         </div>

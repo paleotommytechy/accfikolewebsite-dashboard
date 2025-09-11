@@ -1,6 +1,8 @@
+
 import React from 'react';
-// FIX: Use named imports for react-router-dom to resolve module export errors.
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { HashRouter, Routes, Route, Navigate } = ReactRouterDOM;
 import { AppProvider } from './context/AppContext';
 import { NotificationProvider } from './context/NotificationContext';
 import DashboardLayout from './components/ui/DashboardLayout';

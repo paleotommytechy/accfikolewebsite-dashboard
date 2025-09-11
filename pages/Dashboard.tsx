@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
-// FIX: Use named imports for react-router-dom to resolve module export errors.
-import { Link } from 'react-router-dom';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { Link } = ReactRouterDOM;
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';

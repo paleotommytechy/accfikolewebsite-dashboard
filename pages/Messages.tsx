@@ -11,7 +11,9 @@ import {
     PaperAirplaneIcon,
     SearchIcon,
 } from '../components/ui/Icons';
-import { useSearchParams } from 'react-router-dom';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useSearchParams } = ReactRouterDOM;
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';

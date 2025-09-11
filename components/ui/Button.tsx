@@ -1,6 +1,8 @@
+
 import React from 'react';
-// FIX: Use named imports for react-router-dom to resolve module export errors.
-import { Link } from 'react-router-dom';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { Link } = ReactRouterDOM;
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;

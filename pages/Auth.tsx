@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
-// FIX: Use named imports for react-router-dom to resolve module export errors.
-import { useNavigate } from 'react-router-dom';
+// FIX: Use wildcard import for react-router-dom to resolve module export errors.
+import * as ReactRouterDOM from 'react-router-dom';
+const { useNavigate } = ReactRouterDOM;
 import { supabase } from '../lib/supabaseClient';
 // FIX: Corrected import path for AppContext
 import { useAppContext } from '../context/AppContext';
