@@ -1,11 +1,13 @@
 
+
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useLocation, Navigate } = ReactRouterDOM;
 import { useAppContext } from '../../context/AppContext';
 
-const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }): React.ReactNode => {
+// FIX: Made children prop optional to resolve TypeScript error in App.tsx.
+const ProtectedRoute = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }): React.ReactNode => {
   const { currentUser, isAdmin, isLoading, isProfileComplete } = useAppContext();
   const location = useLocation();
 

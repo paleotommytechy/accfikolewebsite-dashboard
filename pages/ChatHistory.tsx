@@ -1,13 +1,12 @@
-
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Avatar from '../components/auth/Avatar';
-import { SearchIcon, UserIcon, UsersIcon, ChatIcon, MenuIcon } from '../components/ui/Icons';
+import { SearchIcon, ChatIcon, MenuIcon, PlusIcon, XIcon } from '../components/ui/Icons';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { Link } = ReactRouterDOM;
+const { Link, useParams } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
-import type { ChatHistoryItem } from '../types';
-import { mockChatHistory } from '../services/mockData';
+import type { ChatHistoryItem, UserProfile } from '../types';
+import { supabase } from '../lib/supabaseClient';
 
 const formatTimestamp = (timestamp: string | null): string => {
     if (!timestamp) return '';
@@ -24,9 +23,54 @@ const formatTimestamp = (timestamp: string | null): string => {
 
 const ChatHistory: React.FC = () => {
     const { currentUser, toggleSidebar } = useAppContext();
+    const { userId: activeUserId } = useParams();
     const [searchTerm, setSearchTerm] = useState('');
-    const [conversations, setConversations] = useState<ChatHistoryItem[]>(mockChatHistory);
-    const [loading, setLoading] = useState(false);
+    const [conversations, setConversations] = useState<ChatHistoryItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    
+    // State for the "New Chat" modal
+    const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+    const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [modalSearchTerm, setModalSearchTerm] = useState('');
+
+
+    const fetchConversations = useCallback(async () => {
+        if (!supabase) return;
+        setLoading(true);
+        const { data, error } = await supabase.rpc('get_chat_history');
+        if (error) {
+            console.error('Error fetching chat history:', error);
+        } else {
+            setConversations((data as ChatHistoryItem[]) || []);
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        fetchConversations();
+    }, [fetchConversations]);
+
+    useEffect(() => {
+        if (!supabase || !currentUser) return;
+
+        const channel = supabase
+            .channel('public:messages')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'messages',
+            }, 
+            (payload) => {
+                // Refetch the whole list to get updated counts and last messages
+                fetchConversations();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [supabase, currentUser, fetchConversations]);
 
     const filteredChats = useMemo(() => {
         if (!searchTerm) return conversations;
@@ -35,86 +79,190 @@ const ChatHistory: React.FC = () => {
         );
     }, [searchTerm, conversations]);
 
+    const handleOpenNewChatModal = async () => {
+        setIsNewChatModalOpen(true);
+        // Fetch users only once
+        if (allUsers.length === 0) { 
+            setLoadingUsers(true);
+            if (!supabase || !currentUser) return;
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .neq('id', currentUser.id); // Exclude the current user from the list
+            
+            if (error) {
+                console.error("Error fetching users for new chat:", error);
+            } else {
+                setAllUsers((data as UserProfile[]) || []);
+            }
+            setLoadingUsers(false);
+        }
+    };
+
+    const handleCloseNewChatModal = () => {
+        setIsNewChatModalOpen(false);
+        setModalSearchTerm(''); // Reset search on close
+    };
+
+    const filteredUsersForModal = useMemo(() => {
+        if (!modalSearchTerm) return allUsers;
+        return allUsers.filter(user =>
+            user.full_name?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
+            user.email?.toLowerCase().includes(modalSearchTerm.toLowerCase())
+        );
+    }, [modalSearchTerm, allUsers]);
+
+
     return (
-        <div className="bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary flex flex-col h-full">
-            {/* Header */}
-             <header className="flex items-center justify-between p-4 bg-chat-light-panel dark:bg-chat-panel shadow-sm flex-shrink-0 z-10">
-                <div className="flex items-center">
-                    <button onClick={toggleSidebar} className="text-chat-light-text-secondary dark:text-chat-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
-                        <MenuIcon />
-                    </button>
-                    <h1 className="text-xl font-bold ml-4">Chats</h1>
-                </div>
-                <Avatar src={currentUser?.avatar_url} alt={currentUser?.full_name || 'User'} size="md" />
-            </header>
+        <div className="bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary flex flex-col h-full relative">
+            {/* Main Layout */}
+            <div className="flex flex-col h-full">
+                {/* Header */}
+                <header className="flex items-center justify-between p-4 bg-chat-light-panel dark:bg-chat-panel shadow-sm flex-shrink-0 z-10">
+                    <div className="flex items-center">
+                        <button onClick={toggleSidebar} className="text-chat-light-text-secondary dark:text-chat-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
+                            <MenuIcon />
+                        </button>
+                        <h1 className="text-xl font-bold ml-4">Chats</h1>
+                    </div>
+                    <Avatar src={currentUser?.avatar_url} alt={currentUser?.full_name || 'User'} size="md" />
+                </header>
 
-            {/* Search */}
-            <div className="px-4 py-4 flex-shrink-0">
-                <div className="relative">
-                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-chat-light-text-secondary dark:text-chat-text-secondary" />
-                    <input
-                        type="text"
-                        placeholder="Search"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none rounded-full pl-11 pr-4 py-3 shadow-neumorphic-light-inset dark:shadow-neumorphic-inset focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                    />
+                {/* Search */}
+                <div className="px-4 py-4 flex-shrink-0">
+                    <div className="relative">
+                        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-chat-light-text-secondary dark:text-chat-text-secondary" />
+                        <input
+                            type="text"
+                            placeholder="Search"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-chat-light-panel dark:bg-chat-panel text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border border-gray-200 dark:border-gray-700/50 rounded-full pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        />
+                    </div>
+                </div>
+
+                {/* Chat List */}
+                <div className="flex-grow overflow-y-auto">
+                    {loading ? (
+                        <div className="text-center py-10 text-chat-light-text-secondary dark:text-chat-text-secondary">Loading conversations...</div>
+                    ) : (
+                        <ul className="px-2">
+                            {filteredChats.length > 0 ? (
+                                filteredChats.map(chat => (
+                                    <li key={chat.other_user_id}>
+                                        <Link 
+                                            to={`/messages/${chat.other_user_id}`} 
+                                            className={`flex items-center p-3 my-1 rounded-xl space-x-4 transition-colors duration-200 ${activeUserId === chat.other_user_id ? 'bg-primary-50 dark:bg-primary-900/40' : 'hover:bg-gray-200/50 dark:hover:bg-chat-panel/60'}`}
+                                            aria-current={activeUserId === chat.other_user_id ? 'page' : undefined}
+                                        >
+                                            <div className="relative">
+                                                <Avatar src={chat.other_user_avatar} alt={chat.other_user_name || 'User'} size="lg" className="!w-14 !h-14"/>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="font-semibold text-base truncate text-chat-light-text-primary dark:text-chat-text-primary">{chat.other_user_name}</p>
+                                                    <p className="text-xs text-chat-light-text-secondary dark:text-chat-text-secondary flex-shrink-0">
+                                                        {formatTimestamp(chat.last_message_at)}
+                                                    </p>
+                                                </div>
+                                                <div className="flex justify-between items-start mt-1">
+                                                    <p className="text-sm text-chat-light-text-secondary dark:text-chat-text-secondary truncate pr-4">
+                                                        {chat.last_message_text}
+                                                    </p>
+                                                    {chat.unread_count > 0 && (
+                                                        <span className="flex-shrink-0 bg-primary-500 text-white text-xs font-bold rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">
+                                                            {chat.unread_count > 99 ? '99+' : chat.unread_count}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    </li>
+                                ))
+                            ) : (
+                                <div className="text-center py-20 px-4">
+                                    <ChatIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
+                                    <h3 className="text-lg font-semibold mt-4 text-chat-light-text-primary dark:text-chat-text-primary">No Messages Yet</h3>
+                                    <p className="text-chat-light-text-secondary dark:text-chat-text-secondary mt-2">Tap the '+' button to start a new conversation.</p>
+                                </div>
+                            )}
+                        </ul>
+                    )}
                 </div>
             </div>
 
-            {/* Chat List */}
-            <div className="flex-grow overflow-y-auto">
-                {loading ? (
-                    <div className="text-center py-10 text-chat-light-text-secondary dark:text-chat-text-secondary">Loading conversations...</div>
-                ) : (
-                    <ul className="px-2">
-                        {filteredChats.length > 0 ? (
-                            filteredChats.map(chat => (
-                                <li key={chat.other_user_id}>
-                                    <Link to={`/messages/${chat.other_user_id}`} className="flex items-center p-3 my-2 hover:bg-white dark:hover:bg-chat-panel rounded-xl space-x-4 transition-colors duration-200">
-                                        <div className="relative">
-                                            <Avatar src={chat.other_user_avatar} alt={chat.other_user_name || 'User'} size="lg" className="!w-14 !h-14"/>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-center">
-                                                <p className="font-semibold text-base truncate text-chat-light-text-primary dark:text-chat-text-primary">{chat.other_user_name}</p>
-                                                <p className="text-xs text-chat-light-text-secondary dark:text-chat-text-secondary flex-shrink-0">
-                                                    {formatTimestamp(chat.last_message_at)}
-                                                </p>
-                                            </div>
-                                            <div className="flex justify-between items-start mt-1">
-                                                <p className="text-sm text-chat-light-text-secondary dark:text-chat-text-secondary truncate pr-4">
-                                                    {chat.last_message_text}
-                                                </p>
-                                                {chat.unread_count > 0 && (
-                                                    <span className="flex-shrink-0 bg-primary-500 text-white text-xs font-bold rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">
-                                                        {chat.unread_count > 99 ? '99+' : chat.unread_count}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </Link>
-                                </li>
-                            ))
-                        ) : (
-                             <div className="text-center py-20 px-4">
-                                <ChatIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
-                                <h3 className="text-lg font-semibold mt-4 text-chat-light-text-primary dark:text-chat-text-primary">No Messages Yet</h3>
-                                <p className="text-chat-light-text-secondary dark:text-chat-text-secondary mt-2">Start a new conversation to see it here.</p>
+            {/* Floating Action Button */}
+            <button
+                onClick={handleOpenNewChatModal}
+                className="fixed bottom-6 right-6 bg-primary-600 text-white rounded-full p-4 shadow-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-transform hover:scale-110"
+                aria-label="Start new chat"
+            >
+                <PlusIcon className="w-6 h-6" />
+            </button>
+
+            {/* New Chat Modal */}
+            {isNewChatModalOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 dark:bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in-up"
+                    style={{ animationDuration: '200ms' }}
+                    onClick={handleCloseNewChatModal}
+                >
+                    <div 
+                        className="bg-chat-light-panel dark:bg-chat-panel rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] flex flex-col" 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700/50 flex-shrink-0">
+                            <h2 className="text-xl font-bold">Start a New Chat</h2>
+                            <button onClick={handleCloseNewChatModal} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                                <XIcon className="w-5 h-5"/>
+                            </button>
+                        </div>
+                        {/* Modal Search */}
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700/50 flex-shrink-0">
+                             <div className="relative">
+                                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-chat-light-text-secondary dark:text-chat-text-secondary" />
+                                <input
+                                    type="text"
+                                    placeholder="Search for a member..."
+                                    value={modalSearchTerm}
+                                    onChange={e => setModalSearchTerm(e.target.value)}
+                                    className="w-full bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border border-gray-200 dark:border-gray-700/50 rounded-full pl-11 pr-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                                />
                             </div>
-                        )}
-                    </ul>
-                )}
-            </div>
-
-            {/* Bottom Navigation (Mobile Only) */}
-            <nav className="flex-shrink-0 p-3 md:hidden">
-                 <div className="flex justify-around items-center bg-chat-light-bg dark:bg-chat-bg p-2 rounded-full shadow-neumorphic-light-raised dark:shadow-neumorphic-raised">
-                    <button className="p-3 text-primary-500"><ChatIcon className="w-7 h-7" /></button>
-                    <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary"><UserIcon className="w-7 h-7" /></button>
-                    <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary"><UsersIcon className="w-7 h-7" /></button>
-                 </div>
-            </nav>
+                        </div>
+                        {/* Modal User List */}
+                        <div className="flex-1 overflow-y-auto">
+                            {loadingUsers ? (
+                                <p className="text-center p-8 text-chat-light-text-secondary dark:text-chat-text-secondary">Loading members...</p>
+                            ) : (
+                                <ul>
+                                    {filteredUsersForModal.length > 0 ? (
+                                        filteredUsersForModal.map(user => (
+                                            <li key={user.id}>
+                                                <Link 
+                                                    to={`/messages/${user.id}`} 
+                                                    onClick={handleCloseNewChatModal} 
+                                                    className="flex items-center p-3 hover:bg-gray-200/50 dark:hover:bg-chat-bg/60 space-x-4 transition-colors"
+                                                >
+                                                    <Avatar src={user.avatar_url} alt={user.full_name || user.email} size="md" />
+                                                    <div className="flex-1">
+                                                        <p className="font-semibold text-sm">{user.full_name}</p>
+                                                        <p className="text-xs text-chat-light-text-secondary dark:text-chat-text-secondary">{user.fellowship_position || 'Member'}</p>
+                                                    </div>
+                                                </Link>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <p className="text-center p-8 text-chat-light-text-secondary dark:text-chat-text-secondary">No members found.</p>
+                                    )}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

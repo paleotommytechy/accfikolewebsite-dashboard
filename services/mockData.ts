@@ -101,9 +101,12 @@ export const mockEvents: Event[] = [
 ];
 
 export const mockMessages: Message[] = [
-    { id: 'msg-1', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Hey John, are you going to the worship night this Friday?', created_at: new Date(new Date().setHours(10, 30, 0, 0)).toISOString() },
-    { id: 'msg-2', sender_id: 'user-123', receiver_id: 'user-2', sender_name: 'John Doe', sender_avatar: mockUserProfile.avatar_url, text: 'Yeah, I plan to! Looking forward to it. You?', created_at: new Date(new Date().setHours(10, 31, 0, 0)).toISOString() },
-    { id: 'msg-3', sender_id: 'user-2', receiver_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Definitely! See you there.', created_at: new Date(new Date().setHours(10, 32, 0, 0)).toISOString() },
+    // FIX: Changed 'receiver_id' to 'recipient_id' to match the Message interface.
+    { id: 'msg-1', sender_id: 'user-2', recipient_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Hey John, are you going to the worship night this Friday?', created_at: new Date(new Date().setHours(10, 30, 0, 0)).toISOString() },
+    // FIX: Changed 'receiver_id' to 'recipient_id' to match the Message interface.
+    { id: 'msg-2', sender_id: 'user-123', recipient_id: 'user-2', sender_name: 'John Doe', sender_avatar: mockUserProfile.avatar_url, text: 'Yeah, I plan to! Looking forward to it. You?', created_at: new Date(new Date().setHours(10, 31, 0, 0)).toISOString() },
+    // FIX: Changed 'receiver_id' to 'recipient_id' to match the Message interface.
+    { id: 'msg-3', sender_id: 'user-2', recipient_id: 'user-123', sender_name: 'Michael Chen', sender_avatar: 'https://picsum.photos/seed/michael/100', text: 'Definitely! See you there.', created_at: new Date(new Date().setHours(10, 32, 0, 0)).toISOString() },
 ];
 
 const today = new Date();

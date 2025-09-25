@@ -110,12 +110,12 @@ export interface Event {
 export interface Message {
   id: string;
   sender_id: string;
-  receiver_id: string;
+  recipient_id: string;
   text: string;
   created_at: string;
   sender_name?: string;
   sender_avatar?: string;
-  read?: boolean;
+  is_read?: boolean;
 }
 
 export interface StoreItem {

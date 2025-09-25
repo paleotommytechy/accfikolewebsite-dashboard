@@ -29,541 +29,129 @@ if (!supabase) {
  *      to create the necessary tables for the application features.
  * 
  *    ```sql
- *    -- Create profiles table (if not already created by handle_new_user)
- *    CREATE TABLE IF NOT EXISTS public.profiles (
- *        id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
- *        full_name text,
- *        avatar_url text,
- *        fellowship_position text,
- *        level integer DEFAULT 1,
- *        department text,
- *        gender text,
- *        dob text,
- *        whatsapp text,
- *        hotline text,
- *        email text,
- *        coins integer DEFAULT 0
- *    );
- *    COMMENT ON TABLE public.profiles IS 'Stores user-specific public data.';
+ *    -- (Keep your existing tables for profiles, user_roles, etc.)
  *
- *    -- Create user_roles table for role-based access control
- *    CREATE TABLE IF NOT EXISTS public.user_roles (
- *      user_id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
- *      role text NOT NULL
- *    );
- *    COMMENT ON TABLE public.user_roles IS 'Assigns roles (e.g., admin) to users.';
- * 
- *    -- Create weekly_challenges table
- *    CREATE TABLE IF NOT EXISTS public.weekly_challenges (
- *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *        title text NOT NULL,
- *        details text,
- *        start_date date,
- *        due_date date,
- *        rules text,
- *        created_at timestamp with time zone DEFAULT now(),
- *        coin_reward integer NOT NULL DEFAULT 0
- *    );
- *    COMMENT ON TABLE public.weekly_challenges IS 'Stores weekly group challenges for all users.';
+ *    -- NOTE: The 'get_chat_history' function joins with the 'profiles' table.
+ *    -- Make sure you have a Row Level Security policy that allows authenticated
+ *    -- users to read profiles. For example:
+ *    -- CREATE POLICY "Authenticated users can view profiles"
+ *    -- ON public.profiles FOR SELECT
+ *    -- TO authenticated
+ *    -- USING (true);
  *
- *    -- Create weekly_participants table for tracking challenge progress
- *    CREATE TABLE IF NOT EXISTS public.weekly_participants (
- *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *      challenge_id uuid NOT NULL REFERENCES public.weekly_challenges(id) ON DELETE CASCADE,
- *      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *      progress integer DEFAULT 0,
- *      streak integer DEFAULT 0,
- *      joined_at timestamp with time zone DEFAULT now(),
- *      UNIQUE(challenge_id, user_id)
- *    );
- *    COMMENT ON TABLE public.weekly_participants IS 'Tracks which users have joined a challenge and their progress.';
- *
- *    -- Create tasks table for master tasks
- *    CREATE TABLE IF NOT EXISTS public.tasks (
- *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *        title text NOT NULL,
- *        frequency text NOT NULL CHECK (frequency IN ('daily', 'once', 'weekly')),
- *        details text,
- *        due_date date,
- *        created_at timestamp with time zone DEFAULT now(),
- *        updated_at timestamp with time zone,
- *        coin_reward integer NOT NULL DEFAULT 0
- *    );
- *    COMMENT ON TABLE public.tasks IS 'Stores master tasks that can be assigned.';
- *
- *    -- Create tasks_assignments table to link tasks to users
- *    CREATE TABLE IF NOT EXISTS public.tasks_assignments (
- *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *      task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
- *      assignee_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *      status text NOT NULL DEFAULT 'assigned'::text CHECK (status IN ('assigned', 'done')),
- *      completed_at timestamp with time zone,
- *      created_at timestamp with time zone DEFAULT now()
- *    );
- *    COMMENT ON TABLE public.tasks_assignments IS 'Assigns tasks to specific users and tracks completion.';
- *
- *    -- Create user_coins table to hold the official coin balance
- *    CREATE TABLE IF NOT EXISTS public.user_coins (
- *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *      user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
- *      total_coins integer NOT NULL DEFAULT 0,
- *      updated_at timestamp with time zone DEFAULT now()
- *    );
- *    COMMENT ON TABLE public.user_coins IS 'Stores the official total coin count for each user.';
- *
- *    -- Create coin_transactions table to log all coin movements
- *    CREATE TABLE IF NOT EXISTS public.coin_transactions (
- *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *      source_type text NOT NULL, -- 'task', 'challenge', or 'admin_adjustment'
- *      source_id uuid NOT NULL,
- *      coin_amount integer NOT NULL,
- *      status text NOT NULL DEFAULT 'pending'::text CHECK (status IN ('pending', 'approved', 'rejected')),
- *      created_at timestamp with time zone DEFAULT now(),
- *      reason text -- For admin adjustments
- *    );
- *    COMMENT ON TABLE public.coin_transactions IS 'Logs every coin transaction for auditing and history.';
- *
- *    -- Create notifications table
- *    CREATE TABLE IF NOT EXISTS public.notifications (
- *      id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *      user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *      type text NOT NULL, -- 'coin_approval', 'new_event', etc.
- *      message text NOT NULL,
- *      link text, -- optional link to navigate to
- *      read boolean DEFAULT false,
- *      created_at timestamp with time zone DEFAULT now()
- *    );
- *    COMMENT ON TABLE public.notifications IS 'Stores user-specific notifications.';
- * 
  *    -- Create messages table
  *    CREATE TABLE IF NOT EXISTS public.messages (
  *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
  *        sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *        receiver_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+ *        recipient_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
  *        text text NOT NULL,
  *        created_at timestamp with time zone DEFAULT now(),
- *        read boolean DEFAULT false
+ *        is_read boolean DEFAULT false
  *    );
  *    COMMENT ON TABLE public.messages IS 'Stores private messages between users.';
  *
- *    -- Create scripture_of_the_day table
- *    CREATE TABLE IF NOT EXISTS public.scripture_of_the_day (
- *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
- *        verse_reference text NOT NULL,
- *        verse_text text NOT NULL,
- *        date_for date NOT NULL UNIQUE,
- *        created_at timestamp with time zone DEFAULT now(),
- *        set_by uuid REFERENCES auth.users(id) ON DELETE SET NULL
- *    );
- *    COMMENT ON TABLE public.scripture_of_the_day IS 'Stores the scripture of the day set by an admin.';
- *    ```
+ *    -- Enable Row Level Security for the messages table
+ *    ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
  * 
- * 3. Create Profile on Signup (Database Trigger):
- *    - This function automatically creates a profile, role, and coin record for new users.
+ *    -- Drop any old, less specific policies if they exist
+ *    DROP POLICY IF EXISTS "Allow users to manage their own messages" ON public.messages;
  * 
- *    ```sql
- *    -- Function to create a new profile and notifications for a new user.
- *    -- This version intelligently extracts a user's name for better notifications.
- *    create or replace function public.handle_new_user()
- *    returns trigger
- *    language plpgsql
- *    security definer set search_path = public
- *    as $$
- *    declare
- *      admin_user_id uuid;
- *      -- Declare a variable to hold the new user's name
- *      new_user_name text;
- *    begin
- *      -- Try to get the full name from OAuth provider metadata,
- *      -- then fallback to the part of the email before the @.
- *      new_user_name := coalesce(
- *          new.raw_user_meta_data ->> 'full_name',
- *          new.raw_user_meta_data ->> 'name',
- *          split_part(new.email, '@', 1) -- Use email prefix as a fallback name
- *      );
+ *    -- Create policies for the messages table
+ *    CREATE POLICY "Allow users to read their own messages"
+ *    ON public.messages FOR SELECT
+ *    USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
+ * 
+ *    CREATE POLICY "Allow users to send messages"
+ *    ON public.messages FOR INSERT
+ *    WITH CHECK (auth.uid() = sender_id);
+ * 
+ *    CREATE POLICY "Allow users to mark received messages as read"
+ *    ON public.messages FOR UPDATE
+ *    USING (auth.uid() = recipient_id)
+ *    WITH CHECK (auth.uid() = recipient_id);
+ * 
+ *    CREATE POLICY "Allow users to delete their own sent messages"
+ *    ON public.messages FOR DELETE
+ *    USING (auth.uid() = sender_id);
  *
- *      -- Create a profile, populating name and avatar from OAuth if available.
- *      -- For email signups, full_name will be null, which is correct as they need to set it.
- *      insert into public.profiles (id, email, full_name, avatar_url, coins)
- *      values (
- *        new.id,
- *        new.email,
- *        coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'),
- *        new.raw_user_meta_data ->> 'avatar_url',
- *        0
- *      );
- *      
- *      -- Assign a default role
- *      insert into public.user_roles (user_id, role)
- *      values (new.id, 'member');
- *      
- *      -- Create a coin record
- *      insert into public.user_coins (user_id, total_coins)
- *      values (new.id, 0);
- *      
- *      -- Notify all admins about the new user using the extracted name
- *      for admin_user_id in select user_id from public.user_roles where role = 'admin' loop
- *        insert into public.notifications (user_id, type, message, link)
- *        values (
- *            admin_user_id,
- *            'new_user',
- *            -- Use the derived name for a friendlier notification message
- *            'New member "' || new_user_name || '" has joined the fellowship!',
- *            '/compose?recipientId=' || new.id
- *        );
- *      end loop;
- *
- *      -- Create a welcome notification for the new user
- *      insert into public.notifications (user_id, type, message, link)
- *      values (
- *          new.id,
- *          'custom',
- *          'Welcome to ACCF Ikole! We''re so glad you''ve joined our community. Explore your dashboard to get started.',
- *          '/dashboard'
- *      );
- *
- *      return new;
- *    end;
+ *    -- Create function to mark messages as read
+ *    CREATE OR REPLACE FUNCTION public.mark_messages_as_read(p_sender_id uuid)
+ *    RETURNS VOID
+ *    LANGUAGE plpgsql
+ *    SECURITY DEFINER
+ *    AS $$
+ *    BEGIN
+ *      UPDATE public.messages
+ *      SET is_read = true
+ *      WHERE recipient_id = auth.uid()
+ *        AND sender_id = p_sender_id
+ *        AND is_read = false;
+ *    END;
  *    $$;
  * 
- *    -- Trigger to run the function after a new user is created
- *    create or replace trigger on_auth_user_created
- *      after insert on auth.users
- *      for each row execute procedure public.handle_new_user();
- *    ```
- * 
- * 4. Coin Approval Function (RPC)
- *    - This function securely credits coins to a user's account.
- *
- *    ```sql
- *    create or replace function public.approve_coin_transaction(transaction_id uuid)
- *    returns void
- *    language plpgsql
- *    security definer set search_path = public
- *    as $$
- *    declare
- *      trans_info record;
- *      current_role text;
- *    begin
- *      -- Check if current user is an admin
- *      select role into current_role from public.user_roles where user_id = auth.uid();
- *      if current_role <> 'admin' then
- *        raise exception 'Only admins can approve transactions.';
- *      end if;
- *
- *      -- Get transaction details
- *      select user_id, coin_amount, status into trans_info
- *      from public.coin_transactions where id = transaction_id;
- *
- *      -- Ensure transaction is pending
- *      if trans_info.status <> 'pending' then
- *        raise exception 'Transaction is not pending.';
- *      end if;
- *
- *      -- Update user_coins table
- *      update public.user_coins
- *      set total_coins = total_coins + trans_info.coin_amount
- *      where user_id = trans_info.user_id;
- *
- *      -- For convenience, also update the profiles table if you use it for display
- *      update public.profiles
- *      set coins = coins + trans_info.coin_amount
- *      where id = trans_info.user_id;
- *
- *      -- Mark transaction as approved
- *      update public.coin_transactions
- *      set status = 'approved'
- *      where id = transaction_id;
- *
- *    end;
- *    $$;
- *    ```
- * 
- * 5. Task Assignment Function (RPC)
- *    - This function assigns a daily task to all users for the current day.
- *
- *    ```sql
- *    create or replace function public.assign_task_to_all_users(task_id_to_assign uuid)
- *    returns void
- *    language plpgsql
- *    security definer set search_path = public
- *    as $$
- *    declare
- *      user_record record;
- *      current_role text;
- *    begin
- *      -- Check if current user is an admin
- *      select role into current_role from public.user_roles where user_id = auth.uid();
- *      if current_role <> 'admin' then
- *        raise exception 'Only admins can assign tasks.';
- *      end if;
- *
- *      -- FIX: Iterate over the public 'profiles' table instead of 'auth.users' to avoid potential permission issues
- *      -- with accessing the 'auth' schema directly from a SECURITY DEFINER function.
- *      -- Every user is expected to have a profile.
- *      for user_record in select id from public.profiles loop
- *        -- Check if an assignment for this task already exists for this user today
- *        if not exists (
- *          select 1
- *          from public.tasks_assignments
- *          where task_id = task_id_to_assign
- *            and assignee_id = user_record.id
- *            and date_trunc('day', created_at) = date_trunc('day', now())
- *        ) then
- *          -- Insert a new assignment
- *          insert into public.tasks_assignments (task_id, assignee_id, status)
- *          values (task_id_to_assign, user_record.id, 'assigned');
- *        end if;
- *      end loop;
- *
- *    end;
- *    $$;
- *    ```
- * 
- * 6. Storage:
- *    - Create a public bucket named `avatars`.
- * 
- * 7. Row Level Security (RLS) Policies:
- *    - It's critical to enable RLS on all tables and create policies
- *      to secure your data. After creating tables, go to the "Authentication" -> "Policies"
- *      section in Supabase Studio for each table and add the following policies.
- * 
- *    ```sql
- *    -- Helper function to check for admin role
- *    create or replace function is_admin()
- *    returns boolean
- *    language sql
- *    security definer
- *    as $$
- *      select exists(
- *        select 1 from public.user_roles
- *        where user_id = auth.uid() and role = 'admin'
- *      );
- *    $$;
- * 
- *    -- PROFILES TABLE
- *    -- 1. Enable RLS
- *    alter table public.profiles enable row level security;
- *    -- 2. Policy: Allow users to see all profiles
- *    create policy "Allow all users to read profiles" on public.profiles for select using (true);
- *    -- 3. Policy: Allow users to update their own profile
- *    create policy "Allow user to update own profile" on public.profiles for update using (auth.uid() = id);
- * 
- *    -- TASKS TABLE
- *    -- 1. Enable RLS
- *    alter table public.tasks enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to tasks" on public.tasks for all using (is_admin());
- *    -- 3. Policy: Authenticated users can read tasks
- *    create policy "Allow users to read tasks" on public.tasks for select using (auth.role() = 'authenticated');
- * 
- *    -- TASKS_ASSIGNMENTS TABLE
- *    -- 1. Enable RLS
- *    alter table public.tasks_assignments enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to assignments" on public.tasks_assignments for all using (is_admin());
- *    -- 3. Policy: Users can see their own assignments
- *    create policy "Allow user to see own assignments" on public.tasks_assignments for select using (auth.uid() = assignee_id);
- *    -- 4. Policy: Users can update their own assignments (e.g., mark as done)
- *    create policy "Allow user to update own assignments" on public.tasks_assignments for update using (auth.uid() = assignee_id);
- * 
- *    -- WEEKLY_CHALLENGES TABLE
- *    -- 1. Enable RLS
- *    alter table public.weekly_challenges enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to challenges" on public.weekly_challenges for all using (is_admin());
- *    -- 3. Policy: Authenticated users can read challenges
- *    create policy "Allow users to read challenges" on public.weekly_challenges for select using (auth.role() = 'authenticated');
- * 
- *    -- WEEKLY_PARTICIPANTS TABLE
- *    -- 1. Enable RLS
- *    alter table public.weekly_participants enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to participants" on public.weekly_participants for all using (is_admin());
- *    -- 3. Policy: Users can manage their own participation record
- *    create policy "Allow user to manage own participation" on public.weekly_participants for all using (auth.uid() = user_id);
- * 
- *    -- COIN_TRANSACTIONS TABLE
- *    -- 1. Enable RLS
- *    alter table public.coin_transactions enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to transactions" on public.coin_transactions for all using (is_admin());
- *    -- 3. Policy: Users can see their own transactions
- *    create policy "Allow user to see own transactions" on public.coin_transactions for select using (auth.uid() = user_id);
- *    -- 4. Policy: Users can create their own transactions
- *    create policy "Allow user to create own transactions" on public.coin_transactions for insert with check (auth.uid() = user_id);
- * 
- *    -- NOTIFICATIONS TABLE
- *    -- 1. Enable RLS
- *    alter table public.notifications enable row level security;
- *    -- 2. Policy: Admins can create notifications
- *    create policy "Allow admin to create notifications" on public.notifications for insert with check (is_admin());
- *    -- 3. Policy: Users can see their own notifications
- *    create policy "Allow user to see own notifications" on public.notifications for select using (auth.uid() = user_id);
- *    -- 4. Policy: Users can update their own notifications (e.g., mark as read)
- *    create policy "Allow user to update own notifications" on public.notifications for update using (auth.uid() = user_id);
- *
- *    -- MESSAGES TABLE
- *    -- 1. Enable RLS
- *    alter table public.messages enable row level security;
- *    -- 2. Policy: Users can manage their own messages (send, receive, read)
- *    create policy "Allow users to manage their own messages" on public.messages for all using (auth.uid() = sender_id or auth.uid() = receiver_id);
- *
- *    -- SCRIPTURE_OF_THE_DAY TABLE
- *    -- 1. Enable RLS
- *    alter table public.scripture_of_the_day enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to scriptures" on public.scripture_of_the_day for all using (is_admin());
- *    -- 3. Policy: Authenticated users can read scriptures
- *    create policy "Allow users to read scriptures" on public.scripture_of_the_day for select using (auth.role() = 'authenticated');
- *    ```
- * 
- * 8. User Management Functions (RPC for Admins)
- *    - These functions are for admins to manage users.
- * 
- *    ```sql
- *    -- Function to allow an admin to delete a user. This is highly destructive.
- *    -- This function MUST be created by a SUPERUSER, as it modifies the auth schema.
- *    -- It may be preferable to implement this as a Supabase Edge Function using the service_role key.
- *    create or replace function public.delete_user_account(target_user_id uuid)
- *    returns void
- *    language plpgsql
- *    security definer set search_path = public
- *    as $$
- *    begin
- *      if not is_admin() then
- *        raise exception 'Only admins can delete users.';
- *      end if;
- *      
- *      delete from auth.users where id = target_user_id;
- *    end;
- *    $$;
- * 
- *    -- Function to allow an admin to update a user's role.
- *    create or replace function public.update_user_role(target_user_id uuid, new_role text)
- *    returns void
- *    language plpgsql
- *    security definer set search_path = public
- *    as $$
- *    begin
- *      if not is_admin() then
- *        raise exception 'Only admins can change roles.';
- *      end if;
- *
- *      update public.user_roles
- *      set role = new_role
- *      where user_id = target_user_id;
- *    end;
- *    $$;
- *
- *    -- Function for an admin to adjust a user's coin balance.
- *    create or replace function public.admin_adjust_coins(target_user_id uuid, amount integer, reason text)
- *    returns void
- *    language plpgsql
- *    security definer set search_path = public
- *    as $$
- *    declare
- *      transaction_source_id uuid;
- *    begin
- *      if not is_admin() then
- *        raise exception 'Only admins can adjust coins.';
- *      end if;
- *
- *      -- Use admin's own user_id as the source_id for the transaction log for audit purposes.
- *      transaction_source_id := auth.uid();
- *
- *      -- Update the profiles table
- *      update public.profiles
- *      set coins = coins + amount
- *      where id = target_user_id;
- *
- *      -- Log the transaction
- *      insert into public.coin_transactions(user_id, source_type, source_id, coin_amount, status, reason)
- *      values (target_user_id, 'admin_adjustment', transaction_source_id, amount, 'approved', reason);
- *    end;
- *    $$;
- *    ```
- * 
- * 9. Update RLS policies for user_roles
- *    - Admins need to be able to read and write to this table.
- *
- *    ```sql
- *    -- USER_ROLES TABLE
- *    -- 1. Enable RLS
- *    alter table public.user_roles enable row level security;
- *    -- 2. Policy: Admins can do anything
- *    create policy "Allow admin full access to roles" on public.user_roles for all using (is_admin());
- *    -- 3. Policy: Users can see their own role
- *    create policy "Allow users to see their own role" on public.user_roles for select using (auth.uid() = user_id);
- *    ```
- * 
- * 10. Chat History Function (RPC)
- *     - Efficiently fetches a user's conversation list with last message and unread counts.
- * 
- *    ```sql
- *    create or replace function public.get_chat_history(p_user_id uuid)
+ *    -- Create function to get chat history
+ *    create or replace function get_chat_history()
  *    returns table (
  *        other_user_id uuid,
  *        other_user_name text,
  *        other_user_avatar text,
  *        last_message_text text,
- *        last_message_at timestamp with time zone,
+ *        last_message_at timestamptz,
  *        unread_count bigint
  *    )
- *    language sql
- *    security definer
+ *    language sql security definer
  *    as $$
- *        with message_partners as (
- *            select distinct
- *                case
- *                    when sender_id = p_user_id then receiver_id
- *                    else sender_id
- *                end as other_user_id
- *            from public.messages
- *            where sender_id = p_user_id or receiver_id = p_user_id
- *        ),
- *        ranked_messages as (
- *            select
- *                m.text,
- *                m.created_at,
- *                case
- *                    when m.sender_id = p_user_id then m.receiver_id
- *                    else m.sender_id
- *                end as other_user_id,
- *                row_number() over(
- *                    partition by (
- *                        case
- *                            when m.sender_id = p_user_id then m.receiver_id
- *                            else m.sender_id
- *                        end
- *                    )
- *                    order by m.created_at desc
- *                ) as rn
- *            from public.messages m
- *            where (m.sender_id = p_user_id and m.receiver_id in (select other_user_id from message_partners))
- *               or (m.receiver_id = p_user_id and m.sender_id in (select other_user_id from message_partners))
- *        ),
- *        unread_counts as (
- *            select
- *                sender_id as other_user_id,
- *                count(*) as unread_count
- *            from public.messages
- *            where receiver_id = p_user_id and read = false
- *            group by sender_id
- *        )
+ *    with conversations as (
  *        select
- *            mp.other_user_id,
- *            p.full_name as other_user_name,
- *            p.avatar_url as other_user_avatar,
- *            rm.text as last_message_text,
- *            rm.created_at as last_message_at,
- *            coalesce(uc.unread_count, 0) as unread_count
- *        from message_partners mp
- *        join public.profiles p on p.id = mp.other_user_id
- *        left join ranked_messages rm on rm.other_user_id = mp.other_user_id and rm.rn = 1
- *        left join unread_counts uc on uc.other_user_id = mp.other_user_id
- *        order by rm.created_at desc nulls last;
+ *            case
+ *                when sender_id = auth.uid() then recipient_id
+ *                else sender_id
+ *            end as other_user_id,
+ *            text,
+ *            created_at,
+ *            case
+ *                when recipient_id = auth.uid() and is_read = false then 1
+ *                else 0
+ *            end as is_unread
+ *        from messages
+ *        where sender_id = auth.uid() or recipient_id = auth.uid()
+ *    ),
+ *    ranked_conversations as (
+ *        select
+ *            other_user_id,
+ *            text,
+ *            created_at,
+ *            is_unread,
+ *            row_number() over(partition by other_user_id order by created_at desc) as rn
+ *        from conversations
+ *    ),
+ *    latest_messages as (
+ *        select
+ *            other_user_id,
+ *            text as last_message_text,
+ *            created_at as last_message_at
+ *        from ranked_conversations
+ *        where rn = 1
+ *    ),
+ *    unread_counts as (
+ *        select
+ *            other_user_id,
+ *            sum(is_unread) as unread_count
+ *        from conversations
+ *        group by other_user_id
+ *    )
+ *    select
+ *        u.other_user_id,
+ *        p.full_name as other_user_name,
+ *        p.avatar_url as other_user_avatar,
+ *        l.last_message_text,
+ *        l.last_message_at,
+ *        coalesce(u.unread_count, 0) as unread_count
+ *    from unread_counts u
+ *    join latest_messages l on u.other_user_id = l.other_user_id
+ *    join profiles p on u.other_user_id = p.id
+ *    order by l.last_message_at desc;
  *    $$;
+ * 
  *    ```
  */

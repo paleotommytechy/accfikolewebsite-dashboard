@@ -29,7 +29,21 @@ function App(): React.ReactNode {
           <Routes>
             <Route path="/auth" element={<Auth />} />
             
-            {/* Protected Routes using Layout Route pattern */}
+            {/* FIX: Use a dedicated layout route for admin pages to resolve errors from nested ProtectedRoutes. */}
+            {/* Admin-only protected routes are defined first to ensure they are matched before the general user routes. */}
+            <Route 
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/user-management" element={<UserManagement />} />
+              <Route path="/developer-settings" element={<DeveloperSettings />} />
+            </Route>
+
+            {/* General protected routes for all authenticated users */}
             <Route 
               element={
                 <ProtectedRoute>
@@ -46,30 +60,6 @@ function App(): React.ReactNode {
               <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
               <Route path="/notifications" element={<Notifications />} />
-              <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <Analytics />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/user-management"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <UserManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/developer-settings"
-                element={
-                  <ProtectedRoute adminOnly={true}>
-                    <DeveloperSettings />
-                  </ProtectedRoute>
-                }
-              />
               
               {/* Redirect from root and any other unmatched protected route to dashboard */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
