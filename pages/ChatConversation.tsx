@@ -13,7 +13,7 @@ import { useNotifier } from '../context/NotificationContext';
 const ChatConversation: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
     const { currentUser } = useAppContext();
-    const { addToast } = useNotifier();
+    const { addToast, refreshNotifications } = useNotifier();
     const [otherUser, setOtherUser] = useState<Partial<UserProfile> | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -108,6 +108,8 @@ const ChatConversation: React.FC = () => {
                         return [...prevMessages, newMessagePayload];
                     });
     
+                    refreshNotifications();
+                    
                     // If it's an incoming message, mark it as read
                     if (newMessagePayload.sender_id === userId) {
                         supabase.rpc('mark_messages_as_read', { p_sender_id: userId }).then(({ error }) => {
@@ -121,7 +123,7 @@ const ChatConversation: React.FC = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [userId, currentUser?.id, supabase]);
+    }, [userId, currentUser?.id, supabase, refreshNotifications]);
 
     useEffect(() => {
         // Use timeout to allow images to load before scrolling

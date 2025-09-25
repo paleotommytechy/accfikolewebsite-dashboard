@@ -29,6 +29,7 @@ interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
   loadingNotifications: boolean;
+  refreshNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
 }
@@ -60,7 +61,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     }, 5000); // Auto-dismiss after 5 seconds
   }, []);
 
-  const fetchNotifications = useCallback(async () => {
+  const refreshNotifications = useCallback(async () => {
     if (!supabase || !currentUser) return;
     setLoadingNotifications(true);
     try {
@@ -87,12 +88,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   useEffect(() => {
     if (currentUser) {
-      fetchNotifications();
+      refreshNotifications();
     } else {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [currentUser, fetchNotifications]);
+  }, [currentUser, refreshNotifications]);
 
   const markNotificationAsRead = async (notificationId: string) => {
     const notification = notifications.find(n => n.id === notificationId);
@@ -110,7 +111,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (error) {
       console.error('Error marking notification as read:', error);
       addToast('Failed to update notification.', 'error');
-      fetchNotifications(); // Revert by refetching
+      refreshNotifications(); // Revert by refetching
     }
   };
 
@@ -130,7 +131,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (error) {
       console.error('Error marking all as read:', error);
       addToast('Failed to update notifications.', 'error');
-      fetchNotifications(); // Revert by refetching
+      refreshNotifications(); // Revert by refetching
     }
   };
 
@@ -160,6 +161,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     notifications,
     unreadCount,
     loadingNotifications,
+    refreshNotifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
    };

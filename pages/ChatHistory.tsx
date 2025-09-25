@@ -7,6 +7,7 @@ const { Link, useParams } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import type { ChatHistoryItem, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useNotifier } from '../context/NotificationContext';
 
 const formatTimestamp = (timestamp: string | null): string => {
     if (!timestamp) return '';
@@ -23,6 +24,7 @@ const formatTimestamp = (timestamp: string | null): string => {
 
 const ChatHistory: React.FC = () => {
     const { currentUser, toggleSidebar } = useAppContext();
+    const { refreshNotifications } = useNotifier();
     const { userId: activeUserId } = useParams();
     const [searchTerm, setSearchTerm] = useState('');
     const [conversations, setConversations] = useState<ChatHistoryItem[]>([]);
@@ -64,13 +66,14 @@ const ChatHistory: React.FC = () => {
             (payload) => {
                 // Refetch the whole list to get updated counts and last messages
                 fetchConversations();
+                refreshNotifications();
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [supabase, currentUser, fetchConversations]);
+    }, [supabase, currentUser, fetchConversations, refreshNotifications]);
 
     const filteredChats = useMemo(() => {
         if (!searchTerm) return conversations;
