@@ -7,10 +7,13 @@ import Avatar from '../components/auth/Avatar';
 import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useNotifier } from '../context/NotificationContext';
+
 
 const ChatConversation: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
     const { currentUser } = useAppContext();
+    const { addToast } = useNotifier();
     const [otherUser, setOtherUser] = useState<Partial<UserProfile> | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -29,7 +32,7 @@ const ChatConversation: React.FC = () => {
 
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(() => {
@@ -43,18 +46,26 @@ const ChatConversation: React.FC = () => {
                 .eq('id', userId)
                 .single();
 
-            if (userError) console.error("Error fetching other user:", userError);
-            else setOtherUser(userData);
+            if (userError) {
+                console.error("Error fetching other user:", userError);
+                addToast(`Error fetching user profile: ${userError.message}`, 'error');
+            } else {
+                setOtherUser(userData);
+            }
 
             // 2. Fetch message history
             const { data: messageData, error: messageError } = await supabase
                 .from('messages')
                 .select('*')
-                .or(`(sender_id.eq.${currentUser.id},recipient_id.eq.${userId}),(sender_id.eq.${userId},recipient_id.eq.${currentUser.id})`)
+                .or(`and(sender_id.eq.${currentUser.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${currentUser.id})`)
                 .order('created_at', { ascending: true });
 
-            if (messageError) console.error("Error fetching messages:", messageError);
-            else setMessages(messageData || []);
+            if (messageError) {
+                console.error("Error fetching messages:", messageError);
+                addToast(`Error fetching messages: ${messageError.message}`, 'error');
+            } else {
+                setMessages(messageData || []);
+            }
 
             // 3. Mark messages as read
             const { error: rpcError } = await supabase.rpc('mark_messages_as_read', {
@@ -64,31 +75,53 @@ const ChatConversation: React.FC = () => {
         };
 
         fetchInitialData();
-    }, [userId, currentUser, supabase]);
+    }, [userId, currentUser, addToast]);
 
     useEffect(() => {
         if (!supabase || !currentUser || !userId) return;
-
-        const channel = supabase
-            .channel(`messages_from_${userId}_to_${currentUser.id}`)
-            .on('postgres_changes', {
+    
+        // Create a unique, consistent channel name for the user pair
+        const channelName = `chat_${[currentUser.id, userId].sort().join('_')}`;
+        const channel = supabase.channel(channelName);
+    
+        channel.on(
+            'postgres_changes',
+            {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages',
-                filter: `sender_id=eq.${userId}`
-            }, (payload) => {
-                 const newMessagePayload = payload.new as Message;
-                 // Double check the recipient is the current user
-                 if (newMessagePayload.recipient_id === currentUser.id) {
-                    setMessages(prev => [...prev, newMessagePayload]);
-                 }
-            })
-            .subscribe();
-
+            },
+            (payload) => {
+                const newMessagePayload = payload.new as Message;
+    
+                // Check if the message belongs to this conversation
+                const isRelevant =
+                    (newMessagePayload.sender_id === currentUser.id && newMessagePayload.recipient_id === userId) ||
+                    (newMessagePayload.sender_id === userId && newMessagePayload.recipient_id === currentUser.id);
+    
+                if (isRelevant) {
+                    // Update state, preventing duplicates
+                    setMessages((prevMessages) => {
+                        if (prevMessages.some((m) => m.id === newMessagePayload.id)) {
+                            return prevMessages;
+                        }
+                        return [...prevMessages, newMessagePayload];
+                    });
+    
+                    // If it's an incoming message, mark it as read
+                    if (newMessagePayload.sender_id === userId) {
+                        supabase.rpc('mark_messages_as_read', { p_sender_id: userId }).then(({ error }) => {
+                            if (error) console.error("Error marking new message as read:", error);
+                        });
+                    }
+                }
+            }
+        ).subscribe();
+    
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [userId, currentUser, supabase]);
+    }, [userId, currentUser?.id, supabase]);
 
     useEffect(() => {
         // Use timeout to allow images to load before scrolling
@@ -100,23 +133,33 @@ const ChatConversation: React.FC = () => {
         e.preventDefault();
         if (!newMessage.trim() || !currentUser || !userId || !supabase) return;
 
-        const messageToSend = {
+        const textToSend = newMessage.trim();
+        
+        // Clear input immediately for better UX
+        setNewMessage('');
+
+        const messageToInsert = {
             sender_id: currentUser.id,
             recipient_id: userId,
-            text: newMessage.trim(),
+            text: textToSend,
         };
 
-        const { data, error } = await supabase
+        const { data: insertedMessage, error } = await supabase
             .from('messages')
-            .insert(messageToSend)
-            .select()
-            .single();
+            .insert(messageToInsert)
+            .select() // Ask Supabase to return the inserted row
+            .single(); // We expect only one row back
 
         if (error) {
             console.error("Error sending message:", error);
-        } else if (data) {
-            setMessages(prev => [...prev, data as Message]);
-            setNewMessage('');
+            addToast('Failed to send message.', 'error');
+            // Restore the message in the input box so the user doesn't lose their text
+            setNewMessage(textToSend); 
+        } else if (insertedMessage) {
+            // The message was successfully saved, now add it to local state.
+            // The real-time subscription might also try to add this, but our subscription
+            // handler already checks for duplicates, so this is safe.
+            setMessages(prevMessages => [...prevMessages, insertedMessage]);
         }
     };
     

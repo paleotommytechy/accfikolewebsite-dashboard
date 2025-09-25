@@ -106,7 +106,7 @@ const Messages: React.FC = () => {
 
         const messagesToInsert = Array.from(selectedRecipients).map(recipientId => ({
             sender_id: currentUser.id,
-            receiver_id: recipientId,
+            recipient_id: recipientId,
             text: `Subject: ${subject}\n\n${message}`
         }));
         
