@@ -28,10 +28,14 @@ export const mockLeaderboard: (Omit<UserProfile, 'badges' | 'dob' | 'email' | 'w
 
 // FIX: Added missing user_id to mock notifications to satisfy the Notification interface.
 export const mockNotifications: Notification[] = [
-  { id: 'notif-1', user_id: 'user-123', type: 'new_post', message: 'A new event "Worship Night" has been posted.', created_at: '2024-07-28T10:00:00Z', read: false },
-  { id: 'notif-2', user_id: 'user-123', type: 'task', message: 'Your daily tasks have been assigned.', created_at: '2024-07-28T02:00:00Z', read: false },
-  { id: 'notif-3', user_id: 'user-123', type: 'comment', message: 'Sarah commented on your prayer request.', created_at: '2024-07-27T14:30:00Z', read: true },
-  { id: 'notif-4', user_id: 'user-123', type: 'custom', message: 'Reminder: Small group meeting tonight at 7 PM.', created_at: '2024-07-26T09:00:00Z', read: true },
+  // FIX: Renamed 'read' property to 'is_read' to match Notification interface. 'new_post' type is now valid.
+  { id: 'notif-1', user_id: 'user-123', type: 'new_post', message: 'A new event "Worship Night" has been posted.', created_at: '2024-07-28T10:00:00Z', is_read: false, link: '/events', metadata: { eventId: 'event-1' } },
+  // FIX: Changed 'type' to 'task_assigned' to match valid enum values. Renamed 'read' to 'is_read'.
+  { id: 'notif-2', user_id: 'user-123', type: 'task_assigned', message: 'Your daily tasks have been assigned.', created_at: '2024-07-28T02:00:00Z', is_read: false, link: '/tasks', metadata: null },
+  // FIX: Renamed 'read' property to 'is_read' to match Notification interface. 'comment' type is now valid.
+  { id: 'notif-3', user_id: 'user-123', type: 'comment', message: 'Sarah commented on your prayer request.', created_at: '2024-07-27T14:30:00Z', is_read: true, link: '/prayers', metadata: { prayerId: 'prayer-5' } },
+  // FIX: Renamed 'read' property to 'is_read' to match Notification interface.
+  { id: 'notif-4', user_id: 'user-123', type: 'custom', message: 'Reminder: Small group meeting tonight at 7 PM.', created_at: '2024-07-26T09:00:00Z', is_read: true, link: null, metadata: null },
 ];
 
 export const mockDetailedNotifications: DetailedNotification[] = [

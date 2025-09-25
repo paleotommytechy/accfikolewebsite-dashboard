@@ -71,30 +71,33 @@ export interface CoinTransaction {
   profiles?: { full_name: string | null; avatar_url?: string | null };
 }
 
+// FIX: Add DetailedNotification interface to resolve import error in mockData.ts
+export interface DetailedNotification {
+  id: string;
+  type: 'system' | 'follow' | 'comment' | 'like' | 'invite';
+  user: {
+    name: string;
+    avatarUrl: string;
+  };
+  time: string;
+  ago: string;
+  isRead: boolean;
+  comment?: string;
+  postTitle?: string;
+  dashboardName?: string;
+  category: 'all' | 'followers' | 'mentions' | 'invites';
+}
+
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'new_post' | 'comment' | 'custom' | 'task' | 'coin_approval' | 'new_user' | 'new_message';
+  // FIX: Add 'new_post' and 'comment' to the type union to allow for more notification types used in mock data.
+  type: 'new_user' | 'task_assigned' | 'task_completed' | 'coin_approved' | 'new_message' | 'custom' | 'new_post' | 'comment';
   message: string;
+  metadata: Record<string, any> | null;
+  link: string | null;
+  is_read: boolean;
   created_at: string;
-  read: boolean;
-  link?: string;
-}
-
-export interface DetailedNotification {
-    id: string;
-    type: 'follow' | 'comment' | 'like' | 'invite' | 'system';
-    user: {
-        name: string;
-        avatarUrl: string;
-    }
-    time: string;
-    ago: string;
-    isRead: boolean;
-    postTitle?: string;
-    comment?: string;
-    dashboardName?: string;
-    category: 'all' | 'mentions' | 'followers' | 'invites';
 }
 
 export interface Event {

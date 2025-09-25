@@ -1,6 +1,9 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import Toast from '../components/ui/Toast';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { supabase } from '../lib/supabaseClient';
+import { useAppContext } from './AppContext';
+import type { Notification } from '../types';
 
 // Define types
 export type ToastType = 'success' | 'error' | 'info';
@@ -21,6 +24,13 @@ interface ConfirmDialogState {
 interface NotificationContextType {
   addToast: (message: string, type?: ToastType) => void;
   showConfirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
+
+  // Persistent Notification functionality
+  notifications: Notification[];
+  unreadCount: number;
+  loadingNotifications: boolean;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
 }
 
 // Create Context
@@ -28,6 +38,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 // Provider Component
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { currentUser } = useAppContext();
   const [toasts, setToasts] = useState<ToastProps[]>([]);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
     isOpen: false,
@@ -36,10 +47,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     onCancel: () => {},
   });
 
-  const removeToast = (id: number) => {
-    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-  };
-  
+  // State for persistent notifications
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(true);
+
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = Date.now();
     setToasts(prevToasts => [...prevToasts, { id, message, type }]);
@@ -47,6 +59,85 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       removeToast(id);
     }, 5000); // Auto-dismiss after 5 seconds
   }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!supabase || !currentUser) return;
+    setLoadingNotifications(true);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      
+      setNotifications(data || []);
+      const unread = data?.filter(n => !n.is_read).length || 0;
+      setUnreadCount(unread);
+
+    } catch (error: any) {
+      console.error("Error fetching notifications:", error);
+      addToast('Could not fetch notifications.', 'error');
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [currentUser, addToast]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifications();
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, [currentUser, fetchNotifications]);
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    const notification = notifications.find(n => n.id === notificationId);
+    if (!notification || notification.is_read) return;
+
+    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+    
+    if (error) {
+      console.error('Error marking notification as read:', error);
+      addToast('Failed to update notification.', 'error');
+      fetchNotifications(); // Revert by refetching
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (unreadCount === 0) return;
+
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+    
+    if (!supabase || !currentUser) return;
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+      
+    if (error) {
+      console.error('Error marking all as read:', error);
+      addToast('Failed to update notifications.', 'error');
+      fetchNotifications(); // Revert by refetching
+    }
+  };
+
+
+  const removeToast = (id: number) => {
+    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+  };
 
   const showConfirm = useCallback((message: string, onConfirm: () => void, onCancel?: () => void) => {
     setConfirmDialog({
@@ -63,7 +154,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     });
   }, []);
 
-  const value = { addToast, showConfirm };
+  const value = { 
+    addToast, 
+    showConfirm,
+    notifications,
+    unreadCount,
+    loadingNotifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+   };
 
   return (
     <NotificationContext.Provider value={value}>
