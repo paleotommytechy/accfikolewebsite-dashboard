@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -10,7 +9,7 @@ import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture } from '../types';
 // FIX: Import missing icons to resolve module export errors.
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon } from '../components/ui/Icons';
 
 const CompleteProfileCard: React.FC = () => (
     <Card className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 animate-fade-in-up">
@@ -299,6 +298,33 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
     );
 };
 
+const WebsiteCtaCard: React.FC = () => (
+    <Card className="bg-gradient-to-r from-secondary to-gray-800 text-white animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                <ExternalLinkIcon className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+                <h3 className="text-lg font-bold text-white">Visit Our Main Website</h3>
+                <p className="text-sm text-gray-300 mt-1">
+                    Stay connected with the latest news, sermons, and fellowship-wide events.
+                </p>
+            </div>
+            <div className="flex-shrink-0 mt-3 sm:mt-0">
+                <Button 
+                    href="https://accfikolewebsite.vercel.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-white/90 hover:bg-white text-secondary font-bold focus:ring-white"
+                >
+                    Visit Site
+                </Button>
+            </div>
+        </div>
+    </Card>
+);
+
+
 const Dashboard: React.FC = () => {
   const { currentUser, isLoading, isProfileComplete } = useAppContext();
   const [taskAssignments, setTaskAssignments] = useState<TaskAssignment[]>([]);
@@ -374,6 +400,7 @@ const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <ScriptureOfTheDay />
           <DailyTasks tasks={taskAssignments} />
+          <WebsiteCtaCard />
         </div>
 
         {/* Sidebar Column */}
