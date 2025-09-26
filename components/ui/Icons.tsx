@@ -269,7 +269,7 @@ export const VideoCameraIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) 
 
 export const StopIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
-        <path fillRule="evenodd" d="M4.5 7.5a3 3 0 013-3h9a3 3 0 013 3v9a3 3 0 01-3 3h-9a3 3 0 01-3-3v-9z" clipRule="evenodd" />
+        <path fillRule="evenodd" d="M4.5 7.5a3 3 0 013-3h9a3 3 0 013 3v9a3 3 0 01-3-3h-9a3 3 0 01-3-3v-9z" clipRule="evenodd" />
     </svg>
 );
 
@@ -342,5 +342,11 @@ export const ListIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
 export const SparklesIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M10 2a.75.75 0 01.75.75V3a.75.75 0 01-1.5 0V2.75A.75.75 0 0110 2zM5.385 6.33a.75.75 0 01-1.06-1.06l.75-.75a.75.75 0 011.06 1.06l-.75.75zM15.735 5.27a.75.75 0 010 1.06l-.75.75a.75.75 0 11-1.06-1.06l.75-.75a.75.75 0 011.06 0zM12.25 10a.75.75 0 01-.75.75H8.5a.75.75 0 010-1.5h3a.75.75 0 01.75.75zM4.75 10a.75.75 0 01-.75.75H2.25a.75.75 0 010-1.5H4a.75.75 0 01.75.75zM17.75 10a.75.75 0 01-.75.75h-1.75a.75.75 0 010-1.5h1.75a.75.75 0 01.75.75zM6.135 14.73a.75.75 0 01-1.06-1.06l.75-.75a.75.75 0 011.06 1.06l-.75.75zM14.985 13.67a.75.75 0 010 1.06l-.75.75a.75.75 0 11-1.06-1.06l.75-.75a.75.75 0 011.06 0z" clipRule="evenodd" />
+    </svg>
+);
+
+export const ArrowUpIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
     </svg>
 );
