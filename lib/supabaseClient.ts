@@ -152,6 +152,96 @@ if (!supabase) {
  *    join profiles p on u.other_user_id = p.id
  *    order by l.last_message_at desc;
  *    $$;
+ *
+ *    -- This function aggregates various metrics for the leader analytics dashboard.
+ *    -- It should be called from a secure, admin-only context.
+ *    -- The `security definer` setting allows it to bypass RLS to count across all users.
+ *    create or replace function get_dashboard_analytics()
+ *    returns json
+ *    language plpgsql
+ *    security definer
+ *    as $$
+ *    declare
+ *      total_members_count int;
+ *      new_members_count int;
+ *      active_users_count int;
+ *      avg_completion numeric;
+ *      weekly_completion_data json;
+ *      engagement_data json;
+ *      result json;
+ *    begin
+ *      -- 1. Total members count
+ *      select count(*) into total_members_count from public.profiles;
+ *
+ *      -- 2. New members this month
+ *      select count(*) into new_members_count from public.profiles
+ *      where created_at >= date_trunc('month', now());
+ *
+ *      -- 3. Active users in last 24 hours (based on last sign-in)
+ *      select count(*) into active_users_count from auth.users
+ *      where last_sign_in_at >= now() - interval '24 hours';
+ *
+ *      -- 4. Average task completion rate over the last 4 weeks
+ *      select
+ *        coalesce(
+ *          (count(*) filter (where status = 'done')) * 100.0 / nullif(count(*), 0),
+ *          0
+ *        )
+ *      into avg_completion
+ *      from public.tasks_assignments
+ *      where created_at >= now() - interval '4 weeks';
+ *
+ *      -- 5. Weekly task completion data for the last 4 weeks
+ *      with weeks as (
+ *        select generate_series(
+ *          date_trunc('week', now()) - interval '3 weeks',
+ *          date_trunc('week', now()),
+ *          '1 week'::interval
+ *        ) as week_start
+ *      )
+ *      select json_agg(
+ *        json_build_object(
+ *          'name', 'Week of ' || to_char(w.week_start, 'Mon DD'),
+ *          'assigned', (
+ *            select count(*) from public.tasks_assignments
+ *            where created_at >= w.week_start and created_at < w.week_start + interval '1 week'
+ *          ),
+ *          'completed', (
+ *            select count(*) from public.tasks_assignments
+ *            where status = 'done' and created_at >= w.week_start and created_at < w.week_start + interval '1 week'
+ *          )
+ *        ) order by w.week_start
+ *      )
+ *      into weekly_completion_data
+ *      from weeks w;
+ *
+ *      -- 6. User engagement breakdown
+ *      select json_agg(
+ *        json_build_object('name', activity, 'value', count)
+ *      )
+ *      into engagement_data
+ *      from (
+ *        select 'Tasks' as activity, count(*) from public.tasks_assignments where status = 'done'
+ *        union all
+ *        select 'Challenges' as activity, count(*) from public.weekly_participants
+ *        union all
+ *        select 'Messages' as activity, count(*) from public.messages
+ *        union all
+ *        select 'Prayers' as activity, count(*) from public.prayer_requests
+ *      ) as engagement_counts;
+ *
+ *      -- 7. Combine all results into a single JSON object
+ *      select json_build_object(
+ *        'totalMembers', json_build_object('value', total_members_count, 'change', new_members_count),
+ *        'activeUsers', json_build_object('value', active_users_count, 'total', total_members_count),
+ *        'avgTaskCompletion', avg_completion,
+ *        'taskCompletion', weekly_completion_data,
+ *        'engagement', engagement_data
+ *      ) into result;
+ *
+ *      return result;
+ *    end;
+ *    $$;
  * 
  *    ```
  */

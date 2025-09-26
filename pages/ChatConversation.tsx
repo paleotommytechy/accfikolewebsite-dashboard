@@ -4,7 +4,8 @@ import * as ReactRouterDOM from 'react-router-dom';
 const { useParams, Link } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import Avatar from '../components/auth/Avatar';
-import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon } from '../components/ui/Icons';
+import Button from '../components/ui/Button';
+import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon, XIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
@@ -17,8 +18,10 @@ const ChatConversation: React.FC = () => {
     const [otherUser, setOtherUser] = useState<Partial<UserProfile> | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -165,6 +168,23 @@ const ChatConversation: React.FC = () => {
         }
     };
     
+    // --- Icon Click Handlers ---
+    const handleVoiceCall = () => addToast('Voice call feature is not yet implemented.', 'info');
+    const handleVideoCall = () => addToast('Video call feature is not yet implemented.', 'info');
+    const handleEmoji = () => addToast('Emoji picker coming soon!', 'info');
+    const handleCamera = () => addToast('Camera feature is not yet implemented.', 'info');
+    const handleVoiceNote = () => addToast('Voice note recording is not yet implemented.', 'info');
+    
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            console.log('Selected file:', file.name);
+            addToast(`Attaching ${file.name} is a work in progress.`, 'info');
+            // Reset file input value to allow selecting the same file again
+            e.target.value = '';
+        }
+    };
+
     const formatTime = (timestamp: string) => new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
     // Helper to determine message grouping for styling
@@ -200,13 +220,13 @@ const ChatConversation: React.FC = () => {
                     <h2 className="font-bold text-lg text-chat-light-text-primary dark:text-chat-text-primary">{otherUser?.full_name || '...'}</h2>
                     <p className="text-sm text-green-500">Online</p>
                 </div>
-                <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                <button onClick={handleVoiceCall} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
                     <PhoneIcon className="w-6 h-6" />
                 </button>
-                 <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                 <button onClick={handleVideoCall} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
                     <VideoCameraIcon className="w-6 h-6" />
                 </button>
-                 <button className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                 <button onClick={() => setIsInfoModalOpen(true)} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
                     <InformationCircleIcon className="w-6 h-6" />
                 </button>
             </header>
@@ -239,9 +259,11 @@ const ChatConversation: React.FC = () => {
             {/* Input Area */}
             <footer className="p-2 sm:p-4 flex-shrink-0 bg-chat-light-panel dark:bg-chat-bg border-t border-gray-200 dark:border-transparent">
                 <form onSubmit={handleSendMessage} className="flex items-end gap-2 bg-chat-light-panel dark:bg-chat-panel p-2 rounded-xl">
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
                     <div className="flex items-center gap-0.5">
-                        <button type="button" className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><EmojiIcon className="w-6 h-6" /></button>
-                        <button type="button" className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><PaperclipIcon className="w-6 h-6" /></button>
+                        <button type="button" onClick={handleEmoji} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><EmojiIcon className="w-6 h-6" /></button>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><PaperclipIcon className="w-6 h-6" /></button>
+                        <button type="button" onClick={handleCamera} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><CameraIcon className="w-6 h-6" /></button>
                     </div>
                     <textarea
                         ref={textareaRef}
@@ -257,11 +279,44 @@ const ChatConversation: React.FC = () => {
                             }
                         }}
                     />
-                    <button type="submit" className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
-                        {newMessage.trim() ? <PaperAirplaneIcon className="w-5 h-5" /> : <MicrophoneIcon className="w-6 h-6" />}
-                    </button>
+                     {newMessage.trim() ? (
+                        <button type="submit" className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
+                            <PaperAirplaneIcon className="w-5 h-5" />
+                        </button>
+                    ) : (
+                        <button type="button" onClick={handleVoiceNote} className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
+                            <MicrophoneIcon className="w-6 h-6" />
+                        </button>
+                    )}
                 </form>
             </footer>
+
+             {/* User Info Modal */}
+            {isInfoModalOpen && otherUser && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-up"
+                    style={{ animationDuration: '200ms' }}
+                    onClick={() => setIsInfoModalOpen(false)}
+                >
+                    <div 
+                        className="bg-chat-light-panel dark:bg-chat-panel rounded-2xl shadow-xl max-w-sm w-full p-6 text-center relative" 
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button onClick={() => setIsInfoModalOpen(false)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close user info">
+                            <XIcon className="w-6 h-6" />
+                        </button>
+                        <Avatar src={otherUser.avatar_url} alt={otherUser.full_name || ''} size="xl" className="mx-auto mb-4 border-4 border-white dark:border-dark" />
+                        <h2 className="text-2xl font-bold text-chat-light-text-primary dark:text-chat-text-primary">{otherUser.full_name}</h2>
+                        <p className="text-base text-chat-light-text-secondary dark:text-chat-text-secondary">{otherUser.fellowship_position || 'Member'}</p>
+                        <p className="text-sm text-chat-light-text-secondary dark:text-chat-text-secondary mt-2">{otherUser.email}</p>
+                        <div className="mt-6">
+                            <Button variant="outline" className="w-full" onClick={() => addToast('Viewing full profile is not yet available.', 'info')}>
+                                View Full Profile
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
