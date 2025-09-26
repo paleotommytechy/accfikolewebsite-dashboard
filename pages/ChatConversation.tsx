@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -6,7 +5,7 @@ const { useParams, Link, useNavigate } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
-import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon, XIcon, StopIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon } from '../components/ui/Icons';
+import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, SendIcon, XIcon, StopIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
@@ -481,7 +480,7 @@ const ChatConversation: React.FC = () => {
                     )}
                      {newMessage.trim() ? (
                         <button type="submit" className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
-                            <PaperAirplaneIcon className="w-5 h-5" />
+                            <SendIcon className="w-5 h-5" />
                         </button>
                     ) : (
                         <button type="button" onClick={handleToggleRecording} className={`w-11 h-11 flex items-center justify-center text-white rounded-full shadow-sm transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-primary-500 hover:bg-primary-600'}`}>

@@ -254,6 +254,62 @@ if (!supabase) {
  *      return result;
  *    end;
  *    $$;
+ *
+ *    -- NEW: Function to approve a coin transaction and update user coins
+ *    create or replace function approve_coin_transaction(transaction_id uuid)
+ *    returns void
+ *    language plpgsql
+ *    security definer
+ *    as $$
+ *    declare
+ *      tx_user_id uuid;
+ *      tx_coin_amount int;
+ *    begin
+ *      -- Get user_id and coin_amount from the transaction
+ *      select user_id, coin_amount into tx_user_id, tx_coin_amount
+ *      from public.coin_transactions
+ *      where id = transaction_id and status = 'pending';
+ *
+ *      -- Proceed only if a pending transaction was found
+ *      if found then
+ *        -- Update the transaction status to 'approved'
+ *        update public.coin_transactions
+ *        set status = 'approved'
+ *        where id = transaction_id;
+ *
+ *        -- Atomically update the user's coin balance
+ *        update public.profiles
+ *        set coins = coins + tx_coin_amount
+ *        where id = tx_user_id;
+ *      end if;
+ *    end;
+ *    $$;
+ *
+ *    -- NEW: Function to assign a daily task to all users and create notifications
+ *    create or replace function assign_task_to_all_users(task_id_to_assign uuid)
+ *    returns void
+ *    language plpgsql
+ *    security definer
+ *    as $$
+ *    declare
+ *      user_record record;
+ *      task_title text;
+ *    begin
+ *      -- Get the task title for the notification message
+ *      select title into task_title from public.tasks where id = task_id_to_assign;
+ *
+ *      -- Loop through all users with a profile
+ *      for user_record in select id from public.profiles loop
+ *        -- Insert the task assignment
+ *        insert into public.tasks_assignments(task_id, assignee_id, status)
+ *        values (task_id_to_assign, user_record.id, 'assigned');
+ *
+ *        -- Create a notification for the user
+ *        insert into public.notifications(user_id, type, message, link)
+ *        values (user_record.id, 'task_assigned', 'A new daily task has been assigned: "' || task_title || '"', '/tasks');
+ *      end loop;
+ *    end;
+ *    $$;
  * 
  *    ```
  */

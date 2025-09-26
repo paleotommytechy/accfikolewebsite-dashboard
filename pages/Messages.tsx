@@ -8,7 +8,7 @@ import {
     ItalicIcon,
     UnderlineIcon,
     ListIcon,
-    PaperAirplaneIcon,
+    SendIcon,
     SearchIcon,
 } from '../components/ui/Icons';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
@@ -310,7 +310,7 @@ const Messages: React.FC = () => {
 
                         <div className="p-4 border-t dark:border-gray-700 flex justify-end">
                             <Button size="lg" disabled={isSending || selectedRecipients.size === 0 || !subject || !message} onClick={handleSendMessage}>
-                                <PaperAirplaneIcon className="w-5 h-5 mr-2" />
+                                <SendIcon className="w-5 h-5 mr-2" />
                                 {isSending ? 'Sending...' : 'Send Message'}
                             </Button>
                         </div>

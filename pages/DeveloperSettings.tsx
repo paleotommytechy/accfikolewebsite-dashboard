@@ -184,7 +184,7 @@ const CoinApprovalManager: React.FC = () => {
                     
                     const { error: notificationError } = await supabase.from('notifications').insert({
                         user_id: txInfo.user_id,
-                        type: 'coin_approval',
+                        type: 'coin_approved',
                         message: notificationMessage,
                         link: '/store'
                     });
