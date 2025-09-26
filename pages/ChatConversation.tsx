@@ -1,15 +1,110 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { useParams, Link } = ReactRouterDOM;
+const { useParams, Link, useNavigate } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
-import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon, XIcon, StopIcon } from '../components/ui/Icons';
+import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon, XIcon, StopIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+
+
+// --- User Profile Modal Component ---
+interface UserProfileModalProps {
+    user: Partial<UserProfile> | null;
+    isLoading: boolean;
+    onClose: () => void;
+}
+
+const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, isLoading, onClose }) => {
+    const navigate = useNavigate();
+
+    const handleSendMessage = () => {
+        if (user?.id) {
+            navigate(`/messages/${user.id}`);
+            onClose();
+        }
+    };
+    
+    const handleViewProfile = () => {
+        if (user?.id) {
+            navigate(`/profile/${user.id}`);
+            onClose();
+        }
+    };
+
+    return (
+        <div 
+            className="fixed inset-0 bg-black/60 dark:bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in-up"
+            style={{ animationDuration: '200ms' }}
+            onClick={onClose}
+        >
+            <div 
+                className="bg-light dark:bg-dark rounded-2xl shadow-xl max-w-sm w-full relative" 
+                onClick={e => e.stopPropagation()}
+            >
+                {isLoading || !user ? (
+                    <div className="h-96 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    </div>
+                ) : (
+                    <>
+                        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close user profile modal">
+                            <XIcon className="w-6 h-6" />
+                        </button>
+                        <div className="h-24 bg-primary-500 rounded-t-2xl"></div>
+                        <div className="p-6 text-center -mt-16">
+                            <Avatar src={user.avatar_url} alt={user.full_name || ''} size="xl" className="mx-auto border-4 border-light dark:border-dark" />
+                            <h2 className="text-2xl font-bold text-secondary dark:text-light mt-4">{user.full_name}</h2>
+                            <p className="text-base text-gray-500 dark:text-gray-400">{user.fellowship_position || 'Member'}</p>
+                            
+                            <div className="mt-6 flex justify-around text-center border-t border-b py-4 dark:border-gray-700">
+                                <div>
+                                    <StarIcon className="w-6 h-6 mx-auto text-yellow-500" />
+                                    <p className="font-bold text-lg mt-1">{user.level}</p>
+                                    <p className="text-xs uppercase font-semibold text-gray-500">Level</p>
+                                </div>
+                                <div>
+                                    <CoinIcon className="w-6 h-6 mx-auto text-yellow-500" />
+                                    <p className="font-bold text-lg mt-1">{user.coins}</p>
+                                    <p className="text-xs uppercase font-semibold text-gray-500">Coins</p>
+                                </div>
+                                 {user.department && (
+                                     <div>
+                                         <UsersIcon className="w-6 h-6 mx-auto text-gray-500" />
+                                         <p className="font-bold text-sm mt-1 truncate max-w-[80px]">{user.department}</p>
+                                         <p className="text-xs uppercase font-semibold text-gray-500">Dept</p>
+                                     </div>
+                                 )}
+                            </div>
+
+                            {user.whatsapp && (
+                                <div className="mt-4 text-left">
+                                    <a href={`https://wa.me/${user.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600">
+                                        <PhoneIcon className="w-5 h-5" />
+                                        <span>{user.whatsapp}</span>
+                                    </a>
+                                </div>
+                            )}
+
+                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Button onClick={handleSendMessage} variant="primary" className="w-full">
+                                    <ChatIcon className="w-5 h-5 mr-2" /> Message
+                                </Button>
+                                <Button onClick={handleViewProfile} variant="outline" className="w-full">
+                                    <UserIcon className="w-5 h-5 mr-2" /> View Profile
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
 
 
 const ChatConversation: React.FC = () => {
@@ -158,31 +253,38 @@ const ChatConversation: React.FC = () => {
         setNewMessage('');
         setShowEmojiPicker(false);
 
-        const { error } = await supabase.from('messages').insert({
-            sender_id: currentUser.id,
-            recipient_id: userId,
-            text: textToSend,
-            message_type: 'text',
-        });
+        try {
+            const { error } = await supabase.from('messages').insert({
+                sender_id: currentUser.id,
+                recipient_id: userId,
+                text: textToSend,
+                message_type: 'text',
+            });
 
-        if (error) {
+            if (error) throw error;
+
+        } catch (error: any) {
             console.error("Error sending message:", error);
-            addToast('Failed to send message.', 'error');
+            addToast(`Failed to send message: ${error.message || 'An unknown error occurred.'}`, 'error');
             setNewMessage(textToSend); 
         }
     };
     
     const sendMediaMessage = async (url: string, type: 'audio') => {
         if (!currentUser || !userId || !supabase) return;
-         const { error } = await supabase.from('messages').insert({
-            sender_id: currentUser.id,
-            recipient_id: userId,
-            message_type: type,
-            media_url: url,
-        });
 
-        if (error) {
-            addToast(`Failed to send ${type} message.`, 'error');
+        try {
+            const { error } = await supabase.from('messages').insert({
+                sender_id: currentUser.id,
+                recipient_id: userId,
+                message_type: type,
+                media_url: url,
+            });
+
+            if (error) throw error;
+
+        } catch (error: any) {
+            addToast(`Failed to send ${type} message: ${error.message || 'An unknown error occurred.'}`, 'error');
         }
     };
     
@@ -389,30 +491,12 @@ const ChatConversation: React.FC = () => {
             </footer>
 
              {/* User Info Modal */}
-            {isInfoModalOpen && otherUser && (
-                <div 
-                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-up"
-                    style={{ animationDuration: '200ms' }}
-                    onClick={() => setIsInfoModalOpen(false)}
-                >
-                    <div 
-                        className="bg-chat-light-panel dark:bg-chat-panel rounded-2xl shadow-xl max-w-sm w-full p-6 text-center relative" 
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <button onClick={() => setIsInfoModalOpen(false)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close user info">
-                            <XIcon className="w-6 h-6" />
-                        </button>
-                        <Avatar src={otherUser.avatar_url} alt={otherUser.full_name || ''} size="xl" className="mx-auto mb-4 border-4 border-white dark:border-dark" />
-                        <h2 className="text-2xl font-bold text-chat-light-text-primary dark:text-chat-text-primary">{otherUser.full_name}</h2>
-                        <p className="text-base text-chat-light-text-secondary dark:text-chat-text-secondary">{otherUser.fellowship_position || 'Member'}</p>
-                        <p className="text-sm text-chat-light-text-secondary dark:text-chat-text-secondary mt-2">{otherUser.email}</p>
-                        <div className="mt-6">
-                            <Button variant="outline" className="w-full" onClick={() => addToast('Viewing full profile is not yet available.', 'info')}>
-                                View Full Profile
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+            {isInfoModalOpen && (
+                <UserProfileModal 
+                    user={otherUser} 
+                    isLoading={!otherUser}
+                    onClose={() => setIsInfoModalOpen(false)} 
+                />
             )}
         </div>
     );

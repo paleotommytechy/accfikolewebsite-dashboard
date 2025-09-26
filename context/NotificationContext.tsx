@@ -22,22 +22,18 @@ interface ConfirmDialogState {
 }
 
 interface NotificationContextType {
-  addToast: (message: string, type?: ToastType) => void;
-  showConfirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
-
-  // Persistent Notification functionality
   notifications: Notification[];
   unreadCount: number;
   loadingNotifications: boolean;
-  refreshNotifications: () => Promise<void>;
-  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  addToast: (message: string, type?: ToastType) => void;
+  showConfirm: (message: string, onConfirm: () => void) => void;
+  markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
 }
 
-// Create Context
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-// Provider Component
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser } = useAppContext();
   const [toasts, setToasts] = useState<ToastProps[]>([]);
@@ -47,100 +43,79 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     onConfirm: () => {},
     onCancel: () => {},
   });
-
-  // State for persistent notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Date.now();
-    setToasts(prevToasts => [...prevToasts, { id, message, type }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 5000); // Auto-dismiss after 5 seconds
-  }, []);
-
-  const refreshNotifications = useCallback(async () => {
-    if (!supabase || !currentUser) return;
-    setLoadingNotifications(true);
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-      
-      setNotifications(data || []);
-      const unread = data?.filter(n => !n.is_read).length || 0;
-      setUnreadCount(unread);
-
-    } catch (error: any) {
-      console.error("Error fetching notifications:", error);
-      addToast('Could not fetch notifications.', 'error');
-    } finally {
+  const fetchNotifications = useCallback(async () => {
+    if (!supabase || !currentUser) {
       setLoadingNotifications(false);
+      setNotifications([]);
+      return;
     }
-  }, [currentUser, addToast]);
+    setLoadingNotifications(true);
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching notifications:", error);
+      setNotifications([]);
+    } else {
+      setNotifications(data || []);
+    }
+    setLoadingNotifications(false);
+  }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser) {
-      refreshNotifications();
-    } else {
-      setNotifications([]);
-      setUnreadCount(0);
-    }
-  }, [currentUser, refreshNotifications]);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-  const markNotificationAsRead = async (notificationId: string) => {
-    const notification = notifications.find(n => n.id === notificationId);
-    if (!notification || notification.is_read) return;
-
-    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
-    setUnreadCount(prev => Math.max(0, prev - 1));
-
-    if (!supabase) return;
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId);
-    
-    if (error) {
-      console.error('Error marking notification as read:', error);
-      addToast('Failed to update notification.', 'error');
-      refreshNotifications(); // Revert by refetching
-    }
-  };
-
-  const markAllNotificationsAsRead = async () => {
-    if (unreadCount === 0) return;
-
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    setUnreadCount(0);
-    
+  // --- Real-time subscription for new notifications ---
+  useEffect(() => {
     if (!supabase || !currentUser) return;
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
-      
-    if (error) {
-      console.error('Error marking all as read:', error);
-      addToast('Failed to update notifications.', 'error');
-      refreshNotifications(); // Revert by refetching
-    }
-  };
 
+    const channel = supabase
+      .channel(`public:notifications:user_id=eq.${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification;
+          // Add to state and show a toast
+          setNotifications((prev) => [newNotification, ...prev]);
+          addToast(newNotification.message, 'info');
+        }
+      )
+      .subscribe();
+
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, supabase]);
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const addToast = (message: string, type: ToastType = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 5000);
+  };
 
   const removeToast = (id: number) => {
-    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+    setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  const showConfirm = useCallback((message: string, onConfirm: () => void, onCancel?: () => void) => {
+  const showConfirm = (message: string, onConfirm: () => void) => {
     setConfirmDialog({
       isOpen: true,
       message,
@@ -149,28 +124,47 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
       },
       onCancel: () => {
-        if (onCancel) onCancel();
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
       },
     });
-  }, []);
+  };
 
-  const value = { 
-    addToast, 
-    showConfirm,
+  const markNotificationAsRead = async (id: string) => {
+    if (!supabase || !currentUser) return;
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id).eq('user_id', currentUser.id);
+    if (error) {
+      addToast('Failed to mark notification as read.', 'error');
+      fetchNotifications(); // Revert on error
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (!supabase || !currentUser) return;
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id).eq('is_read', false);
+    if (error) {
+      addToast('Failed to mark all notifications as read.', 'error');
+      fetchNotifications(); // Revert on error
+    }
+  };
+
+  const value = {
     notifications,
     unreadCount,
     loadingNotifications,
-    refreshNotifications,
+    addToast,
+    showConfirm,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-   };
+    refreshNotifications: fetchNotifications,
+  };
 
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      {/* Toast Container */}
-      <div className="fixed top-5 right-5 z-[100] w-full max-w-sm space-y-2">
+      {/* Toast container */}
+      <div className="fixed top-5 right-5 z-50 w-full max-w-sm space-y-2">
         {toasts.map(toast => (
           <Toast key={toast.id} {...toast} onDismiss={() => removeToast(toast.id)} />
         ))}
@@ -181,7 +175,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   );
 };
 
-// Custom Hook
 export const useNotifier = (): NotificationContextType => {
   const context = useContext(NotificationContext);
   if (context === undefined) {

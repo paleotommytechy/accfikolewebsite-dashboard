@@ -44,11 +44,17 @@ if (!supabase) {
  *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
  *        sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
  *        recipient_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
- *        text text NOT NULL,
+ *        text text,
  *        created_at timestamp with time zone DEFAULT now(),
  *        is_read boolean DEFAULT false
  *    );
  *    COMMENT ON TABLE public.messages IS 'Stores private messages between users.';
+ * 
+ *    -- Add media support to messages table (run this block once)
+ *    ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS message_type text DEFAULT 'text'::text NOT NULL;
+ *    ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS media_url text;
+ *    ALTER TABLE public.messages ALTER COLUMN text DROP NOT NULL;
+ *    ALTER TABLE public.messages ADD CONSTRAINT text_or_media_check CHECK (((text IS NOT NULL AND text <> '') OR (media_url IS NOT NULL)));
  *
  *    -- Enable Row Level Security for the messages table
  *    ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -108,6 +114,7 @@ if (!supabase) {
  *                else sender_id
  *            end as other_user_id,
  *            text,
+ *            message_type, -- Added message_type
  *            created_at,
  *            case
  *                when recipient_id = auth.uid() and is_read = false then 1
@@ -120,6 +127,7 @@ if (!supabase) {
  *        select
  *            other_user_id,
  *            text,
+ *            message_type, -- Propagate message_type
  *            created_at,
  *            is_unread,
  *            row_number() over(partition by other_user_id order by created_at desc) as rn
@@ -128,7 +136,11 @@ if (!supabase) {
  *    latest_messages as (
  *        select
  *            other_user_id,
- *            text as last_message_text,
+ *            -- Use a CASE statement to show a placeholder for non-text messages
+ *            case
+ *                when message_type = 'audio' and (text is null or text = '') then 'Sent a voice message'
+ *                else text
+ *            end as last_message_text,
  *            created_at as last_message_at
  *        from ranked_conversations
  *        where rn = 1

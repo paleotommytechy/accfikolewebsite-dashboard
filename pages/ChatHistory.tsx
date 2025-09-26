@@ -1,13 +1,14 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Avatar from '../components/auth/Avatar';
-import { SearchIcon, ChatIcon, MenuIcon, PlusIcon, XIcon } from '../components/ui/Icons';
+import { SearchIcon, ChatIcon, MenuIcon, PlusIcon, XIcon, UserIcon, CoinIcon, StarIcon, PhoneIcon, UsersIcon } from '../components/ui/Icons';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { Link, useParams } = ReactRouterDOM;
+const { Link, useParams, useNavigate } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import type { ChatHistoryItem, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
+import Button from '../components/ui/Button';
 
 const formatTimestamp = (timestamp: string | null): string => {
     if (!timestamp) return '';
@@ -22,10 +23,111 @@ const formatTimestamp = (timestamp: string | null): string => {
     }
 };
 
+// --- User Profile Modal Component ---
+interface UserProfileModalProps {
+    user: UserProfile | null;
+    isLoading: boolean;
+    onClose: () => void;
+}
+
+const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, isLoading, onClose }) => {
+    const navigate = useNavigate();
+    
+    // The presence of the user object (even empty during load) controls visibility
+    if (!user) { 
+        return null;
+    }
+
+    const handleSendMessage = () => {
+        if (user) {
+            navigate(`/messages/${user.id}`);
+            onClose();
+        }
+    };
+    
+    const handleViewProfile = () => {
+        if (user) {
+            navigate(`/profile/${user.id}`);
+            onClose();
+        }
+    };
+
+    return (
+        <div 
+            className="fixed inset-0 bg-black/60 dark:bg-black/70 z-50 flex items-center justify-center p-4 animate-fade-in-up"
+            style={{ animationDuration: '200ms' }}
+            onClick={onClose}
+        >
+            <div 
+                className="bg-light dark:bg-dark rounded-2xl shadow-xl max-w-sm w-full relative" 
+                onClick={e => e.stopPropagation()}
+            >
+                {isLoading ? (
+                    <div className="h-96 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    </div>
+                ) : (
+                    <>
+                        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close user profile modal">
+                            <XIcon className="w-6 h-6" />
+                        </button>
+                        <div className="h-24 bg-primary-500 rounded-t-2xl"></div>
+                        <div className="p-6 text-center -mt-16">
+                            <Avatar src={user.avatar_url} alt={user.full_name || ''} size="xl" className="mx-auto border-4 border-light dark:border-dark" />
+                            <h2 className="text-2xl font-bold text-secondary dark:text-light mt-4">{user.full_name}</h2>
+                            <p className="text-base text-gray-500 dark:text-gray-400">{user.fellowship_position || 'Member'}</p>
+                            
+                            <div className="mt-6 flex justify-around text-center border-t border-b py-4 dark:border-gray-700">
+                                <div>
+                                    <StarIcon className="w-6 h-6 mx-auto text-yellow-500" />
+                                    <p className="font-bold text-lg mt-1">{user.level}</p>
+                                    <p className="text-xs uppercase font-semibold text-gray-500">Level</p>
+                                </div>
+                                <div>
+                                    <CoinIcon className="w-6 h-6 mx-auto text-yellow-500" />
+                                    <p className="font-bold text-lg mt-1">{user.coins}</p>
+                                    <p className="text-xs uppercase font-semibold text-gray-500">Coins</p>
+                                </div>
+                                 {user.department && (
+                                     <div>
+                                         <UsersIcon className="w-6 h-6 mx-auto text-gray-500" />
+                                         <p className="font-bold text-sm mt-1 truncate max-w-[80px]">{user.department}</p>
+                                         <p className="text-xs uppercase font-semibold text-gray-500">Dept</p>
+                                     </div>
+                                 )}
+                            </div>
+
+                            {user.whatsapp && (
+                                <div className="mt-4 text-left">
+                                    <a href={`https://wa.me/${user.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600">
+                                        <PhoneIcon className="w-5 h-5" />
+                                        <span>{user.whatsapp}</span>
+                                    </a>
+                                </div>
+                            )}
+
+                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <Button onClick={handleSendMessage} variant="primary" className="w-full">
+                                    <ChatIcon className="w-5 h-5 mr-2" /> Message
+                                </Button>
+                                <Button onClick={handleViewProfile} variant="outline" className="w-full">
+                                    <UserIcon className="w-5 h-5 mr-2" /> View Profile
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
 const ChatHistory: React.FC = () => {
     const { currentUser, toggleSidebar } = useAppContext();
-    const { refreshNotifications } = useNotifier();
+    const { addToast, refreshNotifications } = useNotifier();
     const { userId: activeUserId } = useParams();
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [conversations, setConversations] = useState<ChatHistoryItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,6 +137,10 @@ const ChatHistory: React.FC = () => {
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [modalSearchTerm, setModalSearchTerm] = useState('');
+
+    // State for the profile modal
+    const [selectedUserForModal, setSelectedUserForModal] = useState<UserProfile | null>(null);
+    const [isModalLoading, setIsModalLoading] = useState(false);
 
 
     const fetchConversations = useCallback(async () => {
@@ -115,6 +221,25 @@ const ChatHistory: React.FC = () => {
         );
     }, [modalSearchTerm, allUsers]);
 
+    const handleAvatarClick = async (userId: string) => {
+        if (!supabase) return;
+        setIsModalLoading(true);
+        setSelectedUserForModal({} as UserProfile); // Open modal with loader
+        
+        try {
+            const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            if (error) throw error;
+            if (data) {
+                setSelectedUserForModal(data as UserProfile);
+            }
+        } catch (error: any) {
+            addToast('Could not load user profile.', 'error');
+            setSelectedUserForModal(null); // Close on error
+        } finally {
+            setIsModalLoading(false);
+        }
+    };
+
 
     return (
         <div className="bg-chat-light-bg dark:bg-chat-bg text-chat-light-text-primary dark:text-chat-text-primary flex flex-col h-full relative">
@@ -154,13 +279,19 @@ const ChatHistory: React.FC = () => {
                             {filteredChats.length > 0 ? (
                                 filteredChats.map(chat => (
                                     <li key={chat.other_user_id}>
-                                        <Link 
-                                            to={`/messages/${chat.other_user_id}`} 
-                                            className={`flex items-center p-3 my-1 rounded-xl space-x-4 transition-colors duration-200 ${activeUserId === chat.other_user_id ? 'bg-primary-50 dark:bg-primary-900/40' : 'hover:bg-gray-200/50 dark:hover:bg-chat-panel/60'}`}
+                                        <div
+                                            onClick={() => navigate(`/messages/${chat.other_user_id}`)}
+                                            className={`flex items-center p-3 my-1 rounded-xl space-x-4 transition-colors duration-200 cursor-pointer ${activeUserId === chat.other_user_id ? 'bg-primary-50 dark:bg-primary-900/40' : 'hover:bg-gray-200/50 dark:hover:bg-chat-panel/60'}`}
                                             aria-current={activeUserId === chat.other_user_id ? 'page' : undefined}
                                         >
-                                            <div className="relative">
-                                                <Avatar src={chat.other_user_avatar} alt={chat.other_user_name || 'User'} size="lg" className="!w-14 !h-14"/>
+                                            <div
+                                                className="relative z-10 group"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAvatarClick(chat.other_user_id);
+                                                }}
+                                            >
+                                                <Avatar src={chat.other_user_avatar} alt={chat.other_user_name || 'User'} size="lg" className="!w-14 !h-14 transition-transform group-hover:scale-110" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center">
@@ -180,7 +311,7 @@ const ChatHistory: React.FC = () => {
                                                     )}
                                                 </div>
                                             </div>
-                                        </Link>
+                                        </div>
                                     </li>
                                 ))
                             ) : (
@@ -266,6 +397,12 @@ const ChatHistory: React.FC = () => {
                     </div>
                 </div>
             )}
+            
+            <UserProfileModal 
+                user={selectedUserForModal} 
+                isLoading={isModalLoading}
+                onClose={() => setSelectedUserForModal(null)} 
+            />
         </div>
     );
 };

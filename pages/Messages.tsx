@@ -107,7 +107,8 @@ const Messages: React.FC = () => {
         const messagesToInsert = Array.from(selectedRecipients).map(recipientId => ({
             sender_id: currentUser.id,
             recipient_id: recipientId,
-            text: `Subject: ${subject}\n\n${message}`
+            text: `Subject: ${subject}\n\n${message}`,
+            message_type: 'text',
         }));
         
         const notificationsToInsert = Array.from(selectedRecipients).map(recipientId => ({
@@ -126,7 +127,7 @@ const Messages: React.FC = () => {
         
         const { error: notifError } = await supabase.from('notifications').insert(notificationsToInsert);
         if (notifError) {
-            addToast(`Message sent, but failed to create notification: ${notifError.message}`, 'error');
+            addToast(`Message sent, but failed to create notification: ${notifError.message}`, 'info');
         } else {
             addToast(`Message sent to ${selectedRecipients.size} recipient(s).`, 'success');
         }

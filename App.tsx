@@ -52,7 +52,7 @@ function App(): React.ReactNode {
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId?" element={<Profile />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/events" element={<Events />} />
