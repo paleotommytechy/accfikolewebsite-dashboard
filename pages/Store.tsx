@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import { supabase } from '../lib/supabaseClient';
@@ -95,9 +96,9 @@ const Store: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Coin Store</h1>
-                <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 text-lg font-bold px-4 py-2 rounded-lg">
+            <div className="flex flex-wrap gap-4 justify-between items-center">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Coin Store</h1>
+                <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 text-base sm:text-lg font-bold px-4 py-2 rounded-lg">
                     {currentUser?.coins} Coins
                 </div>
             </div>
@@ -107,22 +108,24 @@ const Store: React.FC = () => {
                     <p>Loading history...</p>
                 ) : transactions.length > 0 ? (
                     <div className="flow-root">
-                        <ul role="list" className="-my-4 divide-y divide-gray-200 dark:divide-gray-700">
+                        <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
                             {transactions.map(tx => (
-                                <li key={tx.id} className="flex items-center py-4 space-x-4">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-gray-900 truncate dark:text-white">
-                                            {getSourceName(tx)}
-                                        </p>
-                                        <p className="text-sm text-gray-500 truncate dark:text-gray-400">
-                                            {new Date(tx.created_at).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className={`font-semibold ${tx.status === 'approved' ? 'text-green-600' : 'text-gray-500'}`}>
-                                            {tx.status === 'approved' ? '+' : ''}{tx.coin_amount}
-                                        </p>
-                                        <StatusBadge status={tx.status} />
+                                <li key={tx.id} className="py-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-gray-900 truncate dark:text-white">
+                                                {getSourceName(tx)}
+                                            </p>
+                                            <p className="text-sm text-gray-500 truncate dark:text-gray-400">
+                                                {new Date(tx.created_at).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0">
+                                            <p className={`font-semibold ${tx.status === 'approved' ? 'text-green-600' : 'text-gray-500'}`}>
+                                                {tx.status === 'approved' ? '+' : ''}{tx.coin_amount} Coins
+                                            </p>
+                                            <StatusBadge status={tx.status} />
+                                        </div>
                                     </div>
                                 </li>
                             ))}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -397,8 +398,8 @@ const ChatConversation: React.FC = () => {
                     <ArrowLeftIcon className="w-6 h-6" />
                 </Link>
                 <Avatar src={otherUser?.avatar_url} alt={otherUser?.full_name || ''} size="md" className="mx-2" />
-                <div className="flex-1">
-                    <h2 className="font-bold text-lg text-chat-light-text-primary dark:text-chat-text-primary">{otherUser?.full_name || '...'}</h2>
+                <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-lg text-chat-light-text-primary dark:text-chat-text-primary truncate">{otherUser?.full_name || '...'}</h2>
                     <p className="text-sm text-green-500">Online</p>
                 </div>
                 <button onClick={handleVoiceCall} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">

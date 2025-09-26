@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Avatar from '../components/auth/Avatar';
 import { SearchIcon, ChatIcon, MenuIcon, PlusIcon, XIcon, UserIcon, CoinIcon, StarIcon, PhoneIcon, UsersIcon } from '../components/ui/Icons';
@@ -281,7 +282,7 @@ const ChatHistory: React.FC = () => {
                                     <li key={chat.other_user_id}>
                                         <div
                                             onClick={() => navigate(`/messages/${chat.other_user_id}`)}
-                                            className={`flex items-center p-3 my-1 rounded-xl space-x-4 transition-colors duration-200 cursor-pointer ${activeUserId === chat.other_user_id ? 'bg-primary-50 dark:bg-primary-900/40' : 'hover:bg-gray-200/50 dark:hover:bg-chat-panel/60'}`}
+                                            className={`flex items-center p-2 sm:p-3 my-1 rounded-xl space-x-3 sm:space-x-4 transition-colors duration-200 cursor-pointer ${activeUserId === chat.other_user_id ? 'bg-primary-50 dark:bg-primary-900/40' : 'hover:bg-gray-200/50 dark:hover:bg-chat-panel/60'}`}
                                             aria-current={activeUserId === chat.other_user_id ? 'page' : undefined}
                                         >
                                             <div

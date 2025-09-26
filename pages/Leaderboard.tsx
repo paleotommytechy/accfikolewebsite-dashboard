@@ -25,7 +25,7 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
       podiumHeight: 'h-28 sm:h-32 md:h-40',
       bgColor: 'bg-yellow-400',
       textColor: 'text-white',
-      avatarResponsiveClass: 'w-20 h-20 md:w-24 md:h-24',
+      avatarResponsiveClass: 'w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24',
       rankTextSize: 'text-4xl md:text-5xl',
       borderColor: 'border-yellow-400'
     },
@@ -33,7 +33,7 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
       podiumHeight: 'h-20 sm:h-24 md:h-32',
       bgColor: 'bg-slate-400',
       textColor: 'text-slate-100',
-      avatarResponsiveClass: 'w-16 h-16 md:w-20 md:h-20',
+      avatarResponsiveClass: 'w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20',
       rankTextSize: 'text-3xl md:text-4xl',
       borderColor: 'border-slate-400'
     },
@@ -41,7 +41,7 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
       podiumHeight: 'h-16 sm:h-20 md:h-24',
       bgColor: 'bg-amber-600',
       textColor: 'text-amber-100',
-      avatarResponsiveClass: 'w-14 h-14 md:w-16 md:h-16',
+      avatarResponsiveClass: 'w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16',
       rankTextSize: 'text-2xl md:text-3xl',
       borderColor: 'border-amber-600'
     }
