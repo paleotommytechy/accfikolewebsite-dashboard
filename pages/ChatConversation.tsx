@@ -5,10 +5,11 @@ const { useParams, Link } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
-import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon, XIcon } from '../components/ui/Icons';
+import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, PaperAirplaneIcon, XIcon, StopIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 
 const ChatConversation: React.FC = () => {
@@ -19,9 +20,18 @@ const ChatConversation: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    
+    // Voice Note State
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordingIntervalRef = useRef<number | null>(null);
+    
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const emojiPickerRef = useRef<HTMLDivElement>(null);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -32,6 +42,19 @@ const ChatConversation: React.FC = () => {
             textarea.style.height = `${scrollHeight}px`;
         }
     }, [newMessage]);
+    
+    // Close emoji picker on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+                setShowEmojiPicker(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
 
     const scrollToBottom = () => {
@@ -83,7 +106,6 @@ const ChatConversation: React.FC = () => {
     useEffect(() => {
         if (!supabase || !currentUser || !userId) return;
     
-        // Create a unique, consistent channel name for the user pair
         const channelName = `chat_${[currentUser.id, userId].sort().join('_')}`;
         const channel = supabase.channel(channelName);
     
@@ -96,14 +118,11 @@ const ChatConversation: React.FC = () => {
             },
             (payload) => {
                 const newMessagePayload = payload.new as Message;
-    
-                // Check if the message belongs to this conversation
                 const isRelevant =
                     (newMessagePayload.sender_id === currentUser.id && newMessagePayload.recipient_id === userId) ||
                     (newMessagePayload.sender_id === userId && newMessagePayload.recipient_id === currentUser.id);
     
                 if (isRelevant) {
-                    // Update state, preventing duplicates
                     setMessages((prevMessages) => {
                         if (prevMessages.some((m) => m.id === newMessagePayload.id)) {
                             return prevMessages;
@@ -113,7 +132,6 @@ const ChatConversation: React.FC = () => {
     
                     refreshNotifications();
                     
-                    // If it's an incoming message, mark it as read
                     if (newMessagePayload.sender_id === userId) {
                         supabase.rpc('mark_messages_as_read', { p_sender_id: userId }).then(({ error }) => {
                             if (error) console.error("Error marking new message as read:", error);
@@ -129,7 +147,6 @@ const ChatConversation: React.FC = () => {
     }, [userId, currentUser?.id, supabase, refreshNotifications]);
 
     useEffect(() => {
-        // Use timeout to allow images to load before scrolling
         setTimeout(() => scrollToBottom(), 100);
     }, [messages]);
 
@@ -137,57 +154,119 @@ const ChatConversation: React.FC = () => {
     const handleSendMessage = async (e: FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim() || !currentUser || !userId || !supabase) return;
-
         const textToSend = newMessage.trim();
-        
-        // Clear input immediately for better UX
         setNewMessage('');
+        setShowEmojiPicker(false);
 
-        const messageToInsert = {
+        const { error } = await supabase.from('messages').insert({
             sender_id: currentUser.id,
             recipient_id: userId,
             text: textToSend,
-        };
-
-        const { data: insertedMessage, error } = await supabase
-            .from('messages')
-            .insert(messageToInsert)
-            .select() // Ask Supabase to return the inserted row
-            .single(); // We expect only one row back
+            message_type: 'text',
+        });
 
         if (error) {
             console.error("Error sending message:", error);
             addToast('Failed to send message.', 'error');
-            // Restore the message in the input box so the user doesn't lose their text
             setNewMessage(textToSend); 
-        } else if (insertedMessage) {
-            // The message was successfully saved, now add it to local state.
-            // The real-time subscription might also try to add this, but our subscription
-            // handler already checks for duplicates, so this is safe.
-            setMessages(prevMessages => [...prevMessages, insertedMessage]);
+        }
+    };
+    
+    const sendMediaMessage = async (url: string, type: 'audio') => {
+        if (!currentUser || !userId || !supabase) return;
+         const { error } = await supabase.from('messages').insert({
+            sender_id: currentUser.id,
+            recipient_id: userId,
+            message_type: type,
+            media_url: url,
+        });
+
+        if (error) {
+            addToast(`Failed to send ${type} message.`, 'error');
         }
     };
     
     // --- Icon Click Handlers ---
     const handleVoiceCall = () => addToast('Voice call feature is not yet implemented.', 'info');
-    const handleVideoCall = () => addToast('Video call feature is not yet implemented.', 'info');
-    const handleEmoji = () => addToast('Emoji picker coming soon!', 'info');
+    const handleVideoCall = () => addToast('Video call feature coming soon!', 'info');
     const handleCamera = () => addToast('Camera feature is not yet implemented.', 'info');
-    const handleVoiceNote = () => addToast('Voice note recording is not yet implemented.', 'info');
+    
+    const onEmojiClick = (emojiData: EmojiClickData) => {
+        setNewMessage(prev => prev + emojiData.emoji);
+    };
     
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            console.log('Selected file:', file.name);
-            addToast(`Attaching ${file.name} is a work in progress.`, 'info');
-            // Reset file input value to allow selecting the same file again
+            addToast(`Attaching files is a work in progress.`, 'info');
             e.target.value = '';
+        }
+    };
+    
+    const handleToggleRecording = async () => {
+        if (isRecording) {
+            // Stop recording
+            mediaRecorderRef.current?.stop();
+            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+            setIsRecording(false);
+        } else {
+            // Start recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const recorder = new MediaRecorder(stream);
+                mediaRecorderRef.current = recorder;
+                const audioChunks: Blob[] = [];
+
+                recorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                recorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    // Only upload and send if duration is at least 1 second
+                    if (recordingTime >= 1) {
+                         const filePath = `audio/${currentUser?.id}/${Date.now()}.webm`;
+                        
+                        addToast('Uploading voice note...', 'info');
+                        const { error: uploadError } = await supabase.storage
+                            .from('chat_media') // Make sure this bucket exists with public access
+                            .upload(filePath, audioBlob);
+
+                        if (uploadError) {
+                            throw uploadError;
+                        }
+
+                        const { data: { publicUrl } } = supabase.storage.from('chat_media').getPublicUrl(filePath);
+
+                        if(publicUrl) {
+                            await sendMediaMessage(publicUrl, 'audio');
+                        }
+                    }
+                    // Clean up stream tracks
+                    stream.getTracks().forEach(track => track.stop());
+                    setRecordingTime(0);
+                };
+
+                recorder.start();
+                setIsRecording(true);
+                setRecordingTime(0);
+                recordingIntervalRef.current = window.setInterval(() => {
+                    setRecordingTime(prevTime => prevTime + 1);
+                }, 1000);
+
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                addToast('Microphone access denied. Please enable it in your browser settings.', 'error');
+            }
         }
     };
 
     const formatTime = (timestamp: string) => new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const formatRecordingTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
 
-    // Helper to determine message grouping for styling
     const getMessageGroupClass = (index: number) => {
         const currentMsg = messages[index];
         const prevMsg = messages[index - 1];
@@ -247,7 +326,11 @@ const ChatConversation: React.FC = () => {
                             {!isSent && messages[index+1] && messages[index+1]?.sender_id === msg.sender_id && <div className="w-8 h-8 flex-shrink-0"></div> }
 
                             <div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${groupClass} ${isSent ? 'bg-chat-light-bubble-sent dark:bg-chat-bubble-sent text-chat-light-text-primary dark:text-chat-text-primary' : 'bg-chat-light-bubble-received dark:bg-chat-bubble-received text-chat-light-text-primary dark:text-chat-text-primary shadow-sm'}`}>
-                                <p className="text-sm break-words">{msg.text}</p>
+                                {msg.message_type === 'audio' && msg.media_url ? (
+                                    <audio controls src={msg.media_url} className="w-full h-10" />
+                                ) : (
+                                    <p className="text-sm break-words">{msg.text}</p>
+                                )}
                                 <p className={`text-xs mt-1 ${isSent ? 'text-slate-600 dark:text-chat-text-secondary' : 'text-chat-light-text-secondary dark:text-chat-text-secondary'} text-right`}>{formatTime(msg.created_at)}</p>
                             </div>
                         </div>
@@ -257,35 +340,49 @@ const ChatConversation: React.FC = () => {
             </main>
 
             {/* Input Area */}
-            <footer className="p-2 sm:p-4 flex-shrink-0 bg-chat-light-panel dark:bg-chat-bg border-t border-gray-200 dark:border-transparent">
+            <footer className="p-2 sm:p-4 flex-shrink-0 bg-chat-light-panel dark:bg-chat-bg border-t border-gray-200 dark:border-transparent relative">
+                 {showEmojiPicker && (
+                    <div ref={emojiPickerRef} className="absolute bottom-24 right-4 z-20">
+                        <EmojiPicker onEmojiClick={onEmojiClick} />
+                    </div>
+                )}
                 <form onSubmit={handleSendMessage} className="flex items-end gap-2 bg-chat-light-panel dark:bg-chat-panel p-2 rounded-xl">
                     <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
-                    <div className="flex items-center gap-0.5">
-                        <button type="button" onClick={handleEmoji} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><EmojiIcon className="w-6 h-6" /></button>
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><PaperclipIcon className="w-6 h-6" /></button>
-                        <button type="button" onClick={handleCamera} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><CameraIcon className="w-6 h-6" /></button>
-                    </div>
-                    <textarea
-                        ref={textareaRef}
-                        rows={1}
-                        placeholder="Type a message"
-                        value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        className="flex-grow bg-gray-100 dark:bg-gray-800 text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none focus:ring-0 rounded-2xl resize-none max-h-40 py-2.5 px-4"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSendMessage(e);
-                            }
-                        }}
-                    />
+                    {!isRecording &&
+                        <div className="flex items-center gap-0.5">
+                            <button type="button" onClick={() => setShowEmojiPicker(p => !p)} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><EmojiIcon className="w-6 h-6" /></button>
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><PaperclipIcon className="w-6 h-6" /></button>
+                            <button type="button" onClick={handleCamera} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><CameraIcon className="w-6 h-6" /></button>
+                        </div>
+                    }
+                    {isRecording ? (
+                        <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-2xl h-[46px]">
+                             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse mr-2"></div>
+                             <span className="font-mono text-red-500 font-semibold">{formatRecordingTime(recordingTime)}</span>
+                        </div>
+                    ) : (
+                        <textarea
+                            ref={textareaRef}
+                            rows={1}
+                            placeholder="Type a message"
+                            value={newMessage}
+                            onChange={e => setNewMessage(e.target.value)}
+                            className="flex-grow bg-gray-100 dark:bg-gray-800 text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none focus:ring-0 rounded-2xl resize-none max-h-40 py-2.5 px-4"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage(e);
+                                }
+                            }}
+                        />
+                    )}
                      {newMessage.trim() ? (
                         <button type="submit" className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
                             <PaperAirplaneIcon className="w-5 h-5" />
                         </button>
                     ) : (
-                        <button type="button" onClick={handleVoiceNote} className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
-                            <MicrophoneIcon className="w-6 h-6" />
+                        <button type="button" onClick={handleToggleRecording} className={`w-11 h-11 flex items-center justify-center text-white rounded-full shadow-sm transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-primary-500 hover:bg-primary-600'}`}>
+                           {isRecording ? <StopIcon className="w-6 h-6" /> : <MicrophoneIcon className="w-6 h-6" />}
                         </button>
                     )}
                 </form>

@@ -114,11 +114,13 @@ export interface Message {
   id: string;
   sender_id: string;
   recipient_id: string;
-  text: string;
+  text: string | null;
   created_at: string;
   sender_name?: string;
   sender_avatar?: string;
   is_read?: boolean;
+  message_type?: 'text' | 'audio';
+  media_url?: string | null;
 }
 
 export interface StoreItem {
