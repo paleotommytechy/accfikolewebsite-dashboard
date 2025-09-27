@@ -392,34 +392,38 @@ if (!supabase) {
  *    end;
  *    $$;
  *
- *    -- NEW: Function to approve a coin transaction and update user coins
- *    create or replace function approve_coin_transaction(transaction_id uuid)
- *    returns void
- *    language plpgsql
- *    security definer
- *    as $$
- *    declare
+ *    -- UPDATED: Function to approve a coin transaction and update user coins
+ *    -- First, remove the function that expects a UUID
+ *    DROP FUNCTION IF EXISTS public.approve_coin_transaction(transaction_id uuid);
+ * 
+ *    -- Now, create the function to correctly accept a BIGINT (int8)
+ *    CREATE OR REPLACE FUNCTION approve_coin_transaction(p_transaction_id bigint)
+ *    RETURNS void
+ *    LANGUAGE plpgsql
+ *    SECURITY DEFINER
+ *    AS $$
+ *    DECLARE
  *      tx_user_id uuid;
  *      tx_coin_amount int;
- *    begin
- *      -- Get user_id and coin_amount from the transaction
- *      select user_id, coin_amount into tx_user_id, tx_coin_amount
- *      from public.coin_transactions
- *      where id = transaction_id and status = 'pending';
+ *    BEGIN
+ *      -- Get user_id and coin_amount from the transaction using the BIGINT id
+ *      SELECT user_id, coin_amount INTO tx_user_id, tx_coin_amount
+ *      FROM public.coin_transactions
+ *      WHERE id = p_transaction_id AND status = 'pending';
  *
  *      -- Proceed only if a pending transaction was found
- *      if found then
+ *      IF found THEN
  *        -- Update the transaction status to 'approved'
- *        update public.coin_transactions
- *        set status = 'approved'
- *        where id = transaction_id;
+ *        UPDATE public.coin_transactions
+ *        SET status = 'approved'
+ *        WHERE id = p_transaction_id;
  *
  *        -- Atomically update the user's coin balance
- *        update public.profiles
- *        set coins = coins + tx_coin_amount
- *        where id = tx_user_id;
- *      end if;
- *    end;
+ *        UPDATE public.profiles
+ *        SET coins = coins + tx_coin_amount
+ *        WHERE id = tx_user_id;
+ *      END IF;
+ *    END;
  *    $$;
  *
  *    -- NEW: Function to assign a daily task to all users and create notifications

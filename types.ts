@@ -58,7 +58,7 @@ export interface WeeklyParticipant {
 }
 
 export interface CoinTransaction {
-  id: string;
+  id: number;
   user_id: string;
   source_type: 'task' | 'challenge' | 'admin_adjustment';
   source_id: string;
