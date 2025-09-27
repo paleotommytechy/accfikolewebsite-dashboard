@@ -137,9 +137,7 @@ const CoinApprovalManager: React.FC = () => {
         if (tasksResponse.error) console.error("Error fetching task details for admin:", tasksResponse.error);
         if (challengesResponse.error) console.error("Error fetching challenge details for admin:", challengesResponse.error);
 
-        // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
         const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }): [string, string] => [t.id, t.title]));
-        // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
         const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }): [string, string] => [c.id, c.title]));
 
         const enrichedTransactions = txData.map(tx => {
@@ -169,29 +167,32 @@ const CoinApprovalManager: React.FC = () => {
         return 'an activity';
     };
 
-    const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
+    const handleUpdateStatus = async (transactionId: string, status: 'approved' | 'rejected') => {
         if (!supabase) return;
 
+        const tx = transactions.find(t => t.id === transactionId);
+        if (!tx) {
+            addToast('Could not find the transaction to update.', 'error');
+            return;
+        }
+
         if (status === 'approved') {
-            setApprovingTxnId(id);
+            setApprovingTxnId(transactionId);
             try {
-                const { error: rpcError } = await supabase.rpc('approve_coin_transaction', { transaction_id: id });
+                const { error: rpcError } = await supabase.rpc('approve_coin_transaction', { transaction_id: transactionId });
                 if (rpcError) throw rpcError;
 
-                const txInfo = transactions.find(t => t.id === id);
-                if (txInfo) {
-                    const notificationMessage = `Your reward of ${txInfo.coin_amount} coins for completing "${getSourceName(txInfo)}" has been approved!`;
-                    
-                    const { error: notificationError } = await supabase.from('notifications').insert({
-                        user_id: txInfo.user_id,
-                        type: 'coin_approved',
-                        message: notificationMessage,
-                        link: '/store'
-                    });
+                const notificationMessage = `Your reward of ${tx.coin_amount} coins for completing "${getSourceName(tx)}" has been approved!`;
+                
+                const { error: notificationError } = await supabase.from('notifications').insert({
+                    user_id: tx.user_id,
+                    type: 'coin_approved',
+                    message: notificationMessage,
+                    link: '/store'
+                });
 
-                    if (notificationError) {
-                        console.error("Failed to create notification:", notificationError);
-                    }
+                if (notificationError) {
+                    console.error("Failed to create notification:", notificationError);
                 }
 
                 addToast('Transaction approved and coins awarded.', 'success');
@@ -202,9 +203,9 @@ const CoinApprovalManager: React.FC = () => {
                 setApprovingTxnId(null);
             }
         } else { // 'rejected'
-            const { error } = await supabase.from('coin_transactions').update({ status }).eq('id', id);
+            const { error } = await supabase.from('coin_transactions').update({ status }).eq('id', transactionId);
             if (error) {
-                addToast('Error updating status: ' + error.message, 'error');
+                addToast('Error rejecting transaction: ' + error.message, 'error');
             } else {
                 addToast(`Transaction ${status}.`, 'info');
                 fetchTransactions();
