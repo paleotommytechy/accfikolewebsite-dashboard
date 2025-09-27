@@ -6,12 +6,13 @@ const { useNavigate } = ReactRouterDOM;
 import { supabase } from '../lib/supabaseClient';
 // FIX: Corrected import path for AppContext
 import { useAppContext } from '../context/AppContext';
-import { EmailIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, GoogleIcon } from '../components/ui/Icons';
+import { EmailIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, GoogleIcon, UserIcon } from '../components/ui/Icons';
 
 const Auth: React.FC = () => {
     const { currentUser, isLoading } = useAppContext();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,6 +40,11 @@ const Auth: React.FC = () => {
             return;
         }
 
+        if (authMode === 'signup' && !fullName.trim()) {
+            setError("Full name is required.");
+            return;
+        }
+
         setLoading(true);
         setMessage('');
         setError('');
@@ -49,7 +55,15 @@ const Auth: React.FC = () => {
             if (error) setError(error.message);
         } else { // signup
             // FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions.
-            const { data, error } = await (supabase.auth as any).signUp({ email, password });
+            const { data, error } = await (supabase.auth as any).signUp({
+              email,
+              password,
+              options: {
+                data: {
+                  full_name: fullName,
+                },
+              },
+            });
             if (error) {
                 setError(error.message);
             } else {
@@ -125,6 +139,18 @@ const Auth: React.FC = () => {
                         autoComplete="email"
                         icon={<EmailIcon />}
                     />
+                    {authMode === 'signup' && (
+                         <InputField 
+                            id="full-name" 
+                            placeholder="Enter your full name" 
+                            type="text" 
+                            value={fullName} 
+                            onChange={e => setFullName(e.target.value)} 
+                            required 
+                            autoComplete="name"
+                            icon={<UserIcon />}
+                        />
+                    )}
                     <InputField 
                         id="password" 
                         placeholder="Password" 

@@ -5,19 +5,13 @@ import type { UserProfile } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
-// FIX: Import missing icons to resolve module export errors.
 import { SearchIcon, PencilAltIcon, TrashIcon, XIcon, CoinIcon } from '../components/ui/Icons';
 
-// Extend UserProfile to include the role from the joined table
-interface UserProfileWithRole extends UserProfile {
-  user_roles: { role: string } | null;
-}
-
 const UserManagement: React.FC = () => {
-    const [users, setUsers] = useState<UserProfileWithRole[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedUser, setSelectedUser] = useState<UserProfileWithRole | null>(null);
+    const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [coinAdjustment, setCoinAdjustment] = useState({ amount: 0, reason: '' });
     
@@ -46,11 +40,10 @@ const UserManagement: React.FC = () => {
             // Combine profile data with role data
             const combinedUsers = profilesData.map(profile => ({
                 ...profile,
-                // The join is on profile.id and role.user_id
-                user_roles: { role: rolesMap.get(profile.id) || 'member' } 
+                role: rolesMap.get(profile.id) || 'member' 
             }));
             
-            setUsers((combinedUsers as UserProfileWithRole[]) || []);
+            setUsers((combinedUsers as UserProfile[]) || []);
 
         } catch (error: any) {
             console.error("Error fetching users:", error.message);
@@ -72,7 +65,7 @@ const UserManagement: React.FC = () => {
         );
     }, [searchTerm, users]);
     
-    const openEditModal = (user: UserProfileWithRole) => {
+    const openEditModal = (user: UserProfile) => {
         setSelectedUser(JSON.parse(JSON.stringify(user))); // Deep copy to avoid mutating state directly
         setCoinAdjustment({ amount: 0, reason: '' });
         setIsEditModalOpen(true);
@@ -103,7 +96,7 @@ const UserManagement: React.FC = () => {
         }
 
         // Update role via RPC
-        const newRole = selectedUser.user_roles?.role;
+        const newRole = selectedUser.role;
         if (newRole) {
              const { error: roleError } = await supabase.rpc('update_user_role', {
                 target_user_id: selectedUser.id,
@@ -138,7 +131,7 @@ const UserManagement: React.FC = () => {
         }
     };
     
-    const handleDeleteUser = (user: UserProfileWithRole) => {
+    const handleDeleteUser = (user: UserProfile) => {
         if (!supabase) return;
         
         showConfirm(`Are you sure you want to permanently delete ${user.full_name || user.email}? This action is irreversible.`, async () => {
@@ -155,12 +148,7 @@ const UserManagement: React.FC = () => {
     const handleSelectedUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         if (!selectedUser) return;
         const { name, value } = e.target;
-        
-        if (name === 'role') {
-            setSelectedUser({ ...selectedUser, user_roles: { role: value } });
-        } else {
-            setSelectedUser({ ...selectedUser, [name]: value });
-        }
+        setSelectedUser({ ...selectedUser, [name]: value });
     };
 
     return (
@@ -213,8 +201,8 @@ const UserManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.user_roles?.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
-                                                    {user.user_roles?.role || 'member'}
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
+                                                    {user.role || 'member'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-yellow-600 dark:text-yellow-400">{user.coins}</td>
@@ -251,8 +239,8 @@ const UserManagement: React.FC = () => {
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-500 font-medium">Role:</span>
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.user_roles?.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
-                                                    {user.user_roles?.role || 'member'}
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
+                                                    {user.role || 'member'}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
@@ -300,7 +288,7 @@ const UserManagement: React.FC = () => {
                                     <InputField label="Full Name" name="full_name" value={selectedUser.full_name || ''} onChange={handleSelectedUserChange} />
                                     <InputField label="Fellowship Position" name="fellowship_position" value={selectedUser.fellowship_position || ''} onChange={handleSelectedUserChange} />
                                     <InputField label="Department" name="department" value={selectedUser.department || ''} onChange={handleSelectedUserChange} />
-                                    <SelectField label="Role" name="role" value={selectedUser.user_roles?.role || 'member'} onChange={handleSelectedUserChange}>
+                                    <SelectField label="Role" name="role" value={selectedUser.role || 'member'} onChange={handleSelectedUserChange}>
                                         <option value="member">Member</option>
                                         <option value="admin">Admin</option>
                                     </SelectField>
