@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { WeeklyChallenge, Task, CoinTransaction, Scripture } from '../types';
+import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource } from '../types';
 import Avatar from '../components/auth/Avatar';
 import { CheckIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
@@ -456,6 +457,91 @@ const TaskManager: React.FC = () => {
     );
 };
 
+const ResourceManager: React.FC = () => {
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [editingResource, setEditingResource] = useState<Partial<Resource> | null>(null);
+    const { addToast, showConfirm } = useNotifier();
+    const RESOURCE_CATEGORIES: Resource['category'][] = ['Sermon Notes', 'Bible Studies', 'Leadership Training', 'Worship Guides', 'Other'];
+
+    const fetchResources = useCallback(async () => {
+        if (!supabase) return;
+        const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
+        if (error) console.error('Error fetching resources', error);
+        else setResources(data || []);
+    }, []);
+
+    useEffect(() => {
+        fetchResources();
+    }, [fetchResources]);
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!supabase || !editingResource || !editingResource.title || !editingResource.url || !editingResource.category) {
+            addToast('Please fill all required fields.', 'error');
+            return;
+        }
+        const { error } = await supabase.from('resources').upsert(editingResource);
+        if (error) {
+            addToast('Error saving resource: ' + error.message, 'error');
+        } else {
+            addToast(`Resource ${editingResource.id ? 'updated' : 'created'} successfully!`, 'success');
+            setEditingResource(null);
+            fetchResources();
+        }
+    };
+
+    const handleDelete = (id: string) => {
+        showConfirm('Are you sure you want to delete this resource?', async () => {
+            if (!supabase) return;
+            const { error } = await supabase.from('resources').delete().eq('id', id);
+            if (error) {
+                addToast('Error deleting resource: ' + error.message, 'error');
+            } else {
+                addToast('Resource deleted.', 'success');
+                fetchResources();
+            }
+        });
+    };
+
+    return (
+        <Card title="Resource Library Management">
+            {editingResource ? (
+                <form onSubmit={handleSave} className="space-y-4 p-4 mb-6 border dark:border-gray-700 rounded-lg animate-fade-in-up">
+                    <h3 className="text-lg font-semibold">{editingResource.id ? 'Edit Resource' : 'Create New Resource'}</h3>
+                    <InputField label="Title" value={editingResource.title || ''} onChange={e => setEditingResource(p => ({ ...p, title: e.target.value }))} required />
+                    <TextAreaField label="Description" value={editingResource.description || ''} onChange={e => setEditingResource(p => ({ ...p, description: e.target.value }))} />
+                    <InputField label="URL" type="url" placeholder="https://example.com/resource" value={editingResource.url || ''} onChange={e => setEditingResource(p => ({ ...p, url: e.target.value }))} required />
+                    <InputField label="Thumbnail Image URL (optional)" type="url" placeholder="https://example.com/image.png" value={editingResource.thumbnail_url || ''} onChange={e => setEditingResource(p => ({ ...p, thumbnail_url: e.target.value }))} />
+                    <SelectField label="Category" value={editingResource.category || ''} onChange={e => setEditingResource(p => ({ ...p, category: e.target.value as Resource['category'] }))} required>
+                        <option value="" disabled>Select a category</option>
+                        {RESOURCE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </SelectField>
+                    <div className="flex gap-2">
+                        <Button type="submit">Save Resource</Button>
+                        <Button variant="ghost" type="button" onClick={() => setEditingResource(null)}>Cancel</Button>
+                    </div>
+                </form>
+            ) : (
+                <Button onClick={() => setEditingResource({ title: '', url: '', category: 'Other' })} className="mb-4">Create New Resource</Button>
+            )}
+            <ul className="space-y-2">
+                {resources.map(r => (
+                    <li key={r.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                        <div>
+                            <p className="font-semibold">{r.title}</p>
+                            <p className="text-sm text-gray-500">{r.category}</p>
+                        </div>
+                        <div className="space-x-2 flex-shrink-0">
+                            <Button size="sm" variant="outline" onClick={() => setEditingResource(r)}>Edit</Button>
+                            <Button size="sm" variant="secondary" onClick={() => handleDelete(r.id)}>Delete</Button>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+};
+
 
 const DeveloperSettings: React.FC = () => {
     return (
@@ -463,6 +549,7 @@ const DeveloperSettings: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Developer Settings</h1>
             <ScriptureManager />
             <CoinApprovalManager />
+            <ResourceManager />
             <ChallengeManager />
             <TaskManager />
         </div>
@@ -481,6 +568,15 @@ const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> 
     <div>
         <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
         <textarea {...props} rows={3} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+    </div>
+);
+
+const SelectField: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & {label: string; children: React.ReactNode}> = ({label, children, ...props}) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+        <select {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500">
+            {children}
+        </select>
     </div>
 );
 

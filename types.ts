@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export interface UserProfile {
@@ -165,4 +166,14 @@ export interface ChatHistoryItem {
   last_message_text: string | null;
   last_message_at: string | null;
   unread_count: number;
+}
+
+export interface Resource {
+  id: string;
+  title: string;
+  description: string | null;
+  category: 'Sermon Notes' | 'Bible Studies' | 'Leadership Training' | 'Worship Guides' | 'Other';
+  url: string;
+  thumbnail_url: string | null;
+  created_at: string;
 }

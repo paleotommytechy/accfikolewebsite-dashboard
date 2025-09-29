@@ -1,3 +1,4 @@
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // --- IMPORTANT ---
@@ -34,7 +35,6 @@ if (!supabase) {
  *    -- ================================================================================================
  *
  *    -- 1. Create public.profiles table
- *    -- This table will store user data that is publicly accessible.
  *    CREATE TABLE IF NOT EXISTS public.profiles (
  *        id uuid NOT NULL PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
  *        full_name text,
@@ -69,8 +69,10 @@ if (!supabase) {
  *    -- 4. Create RLS policies for profiles table
  *    DROP POLICY IF EXISTS "Authenticated users can view profiles" ON public.profiles;
  *    DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+ *    DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles; -- ADDED: Drop policy if exists
  *    CREATE POLICY "Authenticated users can view profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
  *    CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+ *    CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id); -- SOLUTION: Added missing INSERT policy
  *
  *    -- Helper function to get the current user's role. This is used in RLS policies
  *    -- on the user_roles table to prevent an infinite recursion error where a policy
@@ -87,11 +89,11 @@ if (!supabase) {
  *    $$;
  *
  *    -- 5. Create RLS policies for user_roles table
- *    -- FIX: Split the consolidated policy into individual policies for SELECT, INSERT, UPDATE, DELETE
- *    -- to prevent a query planner bug that can cause infinite recursion. This is a more robust setup.
  *    DROP POLICY IF EXISTS "Users can manage and view appropriate roles" ON public.user_roles; -- Drop old policy
  *    DROP POLICY IF EXISTS "Users can view their own role, admins can view all" ON public.user_roles;
  *    DROP POLICY IF EXISTS "Admins can insert new roles" ON public.user_roles;
+ *    DROP POLICY IF EXISTS "Users can create their own role, admins can insert any" ON public.user_roles;
+ *    DROP POLICY IF EXISTS "New users can create their own member role" ON public.user_roles; -- ADDED: Drop policy if exists
  *    DROP POLICY IF EXISTS "Admins can update roles" ON public.user_roles;
  *    DROP POLICY IF EXISTS "Admins can delete roles" ON public.user_roles;
  *
@@ -100,10 +102,13 @@ if (!supabase) {
  *    FOR SELECT
  *    USING ( (auth.uid() = user_id) OR (public.get_my_role() = 'admin') );
  *    
- *    -- Policy for INSERT: Only admins can create new roles.
- *    CREATE POLICY "Admins can insert new roles" ON public.user_roles
+ *    -- SOLUTION: Replaced the recursive INSERT policy with a secure, non-recursive one.
+ *    -- A new user can insert their own initial 'member' role. This prevents a user
+ *    -- from making themselves an admin. Admins should use the 'update_user_role'
+ *    -- function to elevate privileges, so an admin INSERT policy is not needed.
+ *    CREATE POLICY "New users can create their own member role" ON public.user_roles
  *    FOR INSERT
- *    WITH CHECK ( public.get_my_role() = 'admin' );
+ *    WITH CHECK ( auth.uid() = user_id AND role = 'member' );
  *
  *    -- Policy for UPDATE: Only admins can update roles.
  *    CREATE POLICY "Admins can update roles" ON public.user_roles
@@ -171,6 +176,38 @@ if (!supabase) {
  *      DELETE FROM auth.users WHERE id = target_user_id;
  *    END;
  *    $$;
+ *
+ *    -- ================================================================================================
+ *    -- === RESOURCE LIBRARY SETUP (NEW)                                                          ===
+ *    -- ================================================================================================
+ *    -- Create resources table
+ *    CREATE TABLE IF NOT EXISTS public.resources (
+ *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *        title text NOT NULL,
+ *        description text,
+ *        category text NOT NULL CHECK (category IN ('Sermon Notes', 'Bible Studies', 'Leadership Training', 'Worship Guides', 'Other')),
+ *        url text NOT NULL,
+ *        thumbnail_url text,
+ *        created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.resources IS 'Stores materials like sermon notes, study guides, and videos.';
+ *
+ *    -- Enable RLS
+ *    ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
+ *
+ *    -- Policies
+ *    DROP POLICY IF EXISTS "Authenticated users can view resources" ON public.resources;
+ *    CREATE POLICY "Authenticated users can view resources" ON public.resources
+ *    FOR SELECT
+ *    TO authenticated
+ *    USING (true);
+ *
+ *    DROP POLICY IF EXISTS "Admins can manage resources" ON public.resources;
+ *    CREATE POLICY "Admins can manage resources" ON public.resources
+ *    FOR ALL
+ *    USING (public.get_my_role() = 'admin')
+ *    WITH CHECK (public.get_my_role() = 'admin');
+ *
  *
  *    -- ================================================================================================
  *    -- === PUSH NOTIFICATION SETUP (NEW)                                                          ===

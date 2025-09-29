@@ -23,6 +23,7 @@ import ChatConversation from './pages/ChatConversation';
 import Notifications from './pages/Notifications';
 import Giving from './pages/Giving';
 import Sponsorships from './pages/Sponsorships';
+import ResourceLibrary from './pages/ResourceLibrary';
 
 // Dynamically choose the router based on the environment.
 // Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
@@ -67,6 +68,7 @@ function App(): React.ReactNode {
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/events" element={<Events />} />
               <Route path="/prayers" element={<PrayerRequests />} />
+              <Route path="/resources" element={<ResourceLibrary />} />
               <Route path="/messages" element={<ChatHistory />} />
               <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
