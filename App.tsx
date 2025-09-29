@@ -20,6 +20,8 @@ import ChatHistory from './pages/ChatHistory';
 import UserManagement from './pages/UserManagement';
 import ChatConversation from './pages/ChatConversation';
 import Notifications from './pages/Notifications';
+import Giving from './pages/Giving';
+import Sponsorships from './pages/Sponsorships';
 
 // Dynamically choose the router based on the environment.
 // Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
@@ -67,6 +69,8 @@ function App(): React.ReactNode {
               <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/giving" element={<Giving />} />
+              <Route path="/sponsorships" element={<Sponsorships />} />
               
               {/* Redirect from root and any other unmatched protected route to dashboard */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

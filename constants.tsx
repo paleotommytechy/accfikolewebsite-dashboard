@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon } from './components/ui/Icons';
+import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon } from './components/ui/Icons';
 
 export const NAV_LINKS = [
   { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
@@ -11,6 +11,8 @@ export const NAV_LINKS = [
   { name: 'Chats', href: '/messages', icon: <ChatIcon /> },
   { name: 'Notifications', href: '/notifications', icon: <BellIcon /> },
   { name: 'Coin Store', href: '/store', icon: <ShoppingCartIcon /> },
+  { name: 'Giving', href: '/giving', icon: <GiftIcon /> },
+  { name: 'Sponsorships', href: '/sponsorships', icon: <HeartIcon /> },
 ];
 
 export const ADMIN_LINKS = [
