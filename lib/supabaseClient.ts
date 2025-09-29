@@ -173,6 +173,28 @@ if (!supabase) {
  *    $$;
  *
  *    -- ================================================================================================
+ *    -- === PUSH NOTIFICATION SETUP (NEW)                                                          ===
+ *    -- ================================================================================================
+ *    -- Create push_subscriptions table
+ *    CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+ *        id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+ *        user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+ *        subscription_object jsonb NOT NULL,
+ *        created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.push_subscriptions IS 'Stores user push notification subscriptions.';
+ *
+ *    -- Enable RLS
+ *    ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+ *
+ *    -- Policies
+ *    DROP POLICY IF EXISTS "Users can manage their own subscriptions" ON public.push_subscriptions;
+ *    CREATE POLICY "Users can manage their own subscriptions" ON public.push_subscriptions
+ *    FOR ALL
+ *    USING (auth.uid() = user_id)
+ *    WITH CHECK (auth.uid() = user_id);
+ *
+ *    -- ================================================================================================
  *    -- === APP-SPECIFIC FEATURES (Existing setup)                                                   ===
  *    -- ================================================================================================
  *
