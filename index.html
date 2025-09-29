@@ -73,9 +73,23 @@
   }
 }
 </script>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#10b981" />
+  <link rel="apple-touch-icon" href="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" />
 </head>
   <body class="bg-light dark:bg-secondary">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>
