@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -162,7 +163,7 @@ const MyProgressCard: React.FC<{ user: UserProfile }> = ({ user }) => {
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full"></div>
       <div className="absolute -bottom-12 -left-8 w-40 h-40 bg-white/5 rounded-full"></div>
       
-      <Avatar src={user.avatar_url} alt={user.full_name || 'User Avatar'} size="xl" className="border-4 border-white/50 shadow-lg mb-3 relative z-10" />
+      <Avatar src={user.avatar_url} alt={user.full_name || 'User Avatar'} size="lg" className="sm:h-24 sm:w-24 border-4 border-white/50 shadow-lg mb-3 relative z-10" />
       <h3 className="text-xl font-bold relative z-10">{user.full_name || 'Member'}</h3>
       
       <div className="flex justify-around w-full my-4 relative z-10">

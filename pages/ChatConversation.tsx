@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -429,13 +430,13 @@ const ChatConversation: React.FC = () => {
                     <h2 className="font-bold text-lg text-chat-light-text-primary dark:text-chat-text-primary truncate">{otherUser?.full_name || '...'}</h2>
                     <p className="text-sm text-green-500">Online</p>
                 </div>
-                <button onClick={handleVoiceCall} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                <button onClick={handleVoiceCall} className="p-2 sm:p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50 hidden sm:block">
                     <PhoneIcon className="w-6 h-6" />
                 </button>
-                 <button onClick={handleVideoCall} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                 <button onClick={handleVideoCall} className="p-2 sm:p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50 hidden sm:block">
                     <VideoCameraIcon className="w-6 h-6" />
                 </button>
-                 <button onClick={() => setIsInfoModalOpen(true)} className="p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                 <button onClick={() => setIsInfoModalOpen(true)} className="p-2 sm:p-3 text-chat-light-text-secondary dark:text-chat-text-secondary rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/50">
                     <InformationCircleIcon className="w-6 h-6" />
                 </button>
             </header>
@@ -500,19 +501,19 @@ const ChatConversation: React.FC = () => {
             )}
 
             {/* Input Area */}
-            <footer className="p-2 sm:p-4 flex-shrink-0 bg-chat-light-panel dark:bg-chat-bg border-t border-gray-200 dark:border-transparent relative">
+            <footer className="p-2 sm:p-3 flex-shrink-0 bg-chat-light-panel dark:bg-chat-bg border-t border-gray-200 dark:border-transparent relative">
                  {showEmojiPicker && (
                     <div ref={emojiPickerRef} className="absolute bottom-24 right-4 z-20">
                         <EmojiPicker onEmojiClick={onEmojiClick} />
                     </div>
                 )}
-                <form onSubmit={handleSendMessage} className="flex items-end gap-2 bg-chat-light-panel dark:bg-chat-panel p-2 rounded-xl">
+                <form onSubmit={handleSendMessage} className="flex items-end gap-1 sm:gap-2 bg-chat-light-panel dark:bg-chat-panel p-1 sm:p-2 rounded-xl">
                     <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
                     {!isRecording &&
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex items-center gap-0">
                             <button type="button" onClick={() => setShowEmojiPicker(p => !p)} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><EmojiIcon className="w-6 h-6" /></button>
-                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><PaperclipIcon className="w-6 h-6" /></button>
-                            <button type="button" onClick={handleCamera} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><CameraIcon className="w-6 h-6" /></button>
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full hidden sm:block"><PaperclipIcon className="w-6 h-6" /></button>
+                            <button type="button" onClick={handleCamera} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full hidden sm:block"><CameraIcon className="w-6 h-6" /></button>
                         </div>
                     }
                     {isRecording ? (
@@ -527,7 +528,7 @@ const ChatConversation: React.FC = () => {
                             placeholder="Type a message"
                             value={newMessage}
                             onChange={e => setNewMessage(e.target.value)}
-                            className="flex-grow bg-gray-100 dark:bg-gray-800 text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none focus:ring-0 rounded-2xl resize-none max-h-40 py-2.5 px-4"
+                            className="flex-grow bg-gray-100 dark:bg-gray-800 text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none focus:ring-0 rounded-2xl resize-none max-h-32 sm:max-h-40 py-2 px-3"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();

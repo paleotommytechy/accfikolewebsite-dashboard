@@ -27,7 +27,7 @@ const DashboardLayout: React.FC = () => {
       <Sidebar />
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
         {!isChatPage && <Navbar />}
-        <main className={`flex-1 overflow-y-auto ${isChatPage ? '' : 'p-4 sm:p-6 lg:p-8'}`}>
+        <main className={`flex-1 overflow-y-auto ${isChatPage ? '' : 'p-3 sm:p-6 lg:p-8'}`}>
           <Outlet />
         </main>
       </div>

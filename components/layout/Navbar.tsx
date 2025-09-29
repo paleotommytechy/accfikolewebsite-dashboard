@@ -67,7 +67,7 @@ const Navbar: React.FC = () => {
                 )}
             </button>
             {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-96 bg-white dark:bg-dark rounded-md shadow-lg z-20 border dark:border-gray-700 max-h-[80vh] flex flex-col">
+                <div className="absolute right-0 mt-2 w-[90vw] sm:w-96 bg-white dark:bg-dark rounded-md shadow-lg z-20 border dark:border-gray-700 max-h-[80vh] flex flex-col">
                     <div className="p-3 font-semibold border-b dark:border-gray-700 flex justify-between items-center">
                         <span>Notifications</span>
                         {unreadCount > 0 && <span className="text-xs font-bold bg-red-500 text-white rounded-full px-2 py-0.5">{unreadCount} new</span>}
