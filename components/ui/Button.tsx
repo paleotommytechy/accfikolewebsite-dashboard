@@ -4,6 +4,7 @@ import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 const { Link } = ReactRouterDOM;
 
+// FIX: Add target and rel to ButtonProps for use with anchor tags.
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -11,6 +12,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
   href?: string;
   to?: string;
+  target?: string;
+  rel?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -20,6 +23,9 @@ const Button: React.FC<ButtonProps> = ({
   className = '',
   href,
   to,
+  // FIX: Destructure target and rel to prevent them from being passed to button elements.
+  target,
+  rel,
   ...props
 }) => {
   const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200';
@@ -42,8 +48,9 @@ const Button: React.FC<ButtonProps> = ({
   if (to) {
     // Cast props to 'any' for simplicity to allow anchor attributes.
     // A more robust solution would involve generics.
+    // FIX: Explicitly pass target and rel to the Link component.
     return (
-      <Link to={to} className={classes} {...(props as any)}>
+      <Link to={to} className={classes} target={target} rel={rel} {...(props as any)}>
         {children}
       </Link>
     );
@@ -52,8 +59,9 @@ const Button: React.FC<ButtonProps> = ({
   if (href) {
     // Cast props to 'any' for simplicity to allow anchor attributes.
     // A more robust solution would involve generics.
+    // FIX: Explicitly pass target and rel to the anchor tag.
     return (
-      <a href={href} className={classes} {...(props as any)}>
+      <a href={href} className={classes} target={target} rel={rel} {...(props as any)}>
         {children}
       </a>
     );
