@@ -2,7 +2,7 @@
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { HashRouter, Routes, Route, Navigate } = ReactRouterDOM;
+const { BrowserRouter, Routes, Route, Navigate } = ReactRouterDOM;
 import { AppProvider } from './context/AppContext';
 import { NotificationProvider } from './context/NotificationContext';
 import DashboardLayout from './components/ui/DashboardLayout';
@@ -25,7 +25,7 @@ function App(): React.ReactNode {
   return (
     <AppProvider>
       <NotificationProvider>
-        <HashRouter>
+        <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             
@@ -66,7 +66,7 @@ function App(): React.ReactNode {
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Routes>
-        </HashRouter>
+        </BrowserRouter>
       </NotificationProvider>
     </AppProvider>
   );
