@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
@@ -24,29 +23,29 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
       crownPosition?: string;
   }} = {
     1: {
-      podiumHeight: 'h-28 sm:h-40',
+      podiumHeight: 'h-40',
       bgColor: 'bg-yellow-400',
       textColor: 'text-white',
-      avatarSize: 'w-20 h-20 sm:w-24 sm:h-24',
-      rankTextSize: 'text-3xl sm:text-5xl',
+      avatarSize: 'w-24 h-24',
+      rankTextSize: 'text-5xl',
       borderColor: 'border-yellow-400',
-      crownSize: 'w-8 h-8 sm:w-10 sm:h-10',
-      crownPosition: '-top-4 sm:-top-5'
+      crownSize: 'w-10 h-10',
+      crownPosition: '-top-5'
     },
     2: {
-      podiumHeight: 'h-20 sm:h-32',
+      podiumHeight: 'h-32',
       bgColor: 'bg-slate-400',
       textColor: 'text-slate-100',
-      avatarSize: 'w-16 h-16 sm:w-20 sm:h-20',
-      rankTextSize: 'text-2xl sm:text-4xl',
+      avatarSize: 'w-20 h-20',
+      rankTextSize: 'text-4xl',
       borderColor: 'border-slate-400'
     },
     3: {
-      podiumHeight: 'h-16 sm:h-24',
+      podiumHeight: 'h-24',
       bgColor: 'bg-amber-600',
       textColor: 'text-amber-100',
-      avatarSize: 'w-14 h-14 sm:w-16 sm:h-16',
-      rankTextSize: 'text-xl sm:text-3xl',
+      avatarSize: 'w-16 h-16',
+      rankTextSize: 'text-3xl',
       borderColor: 'border-amber-600'
     }
   };
@@ -72,7 +71,7 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
         )}
         <Avatar src={user.avatar_url} alt={user.full_name || ''} className={`border-4 ${borderColor} shadow-lg ${avatarSize}`} />
       </div>
-      <h3 className="font-bold text-center text-xs sm:text-sm md:text-base truncate w-full px-1">{user.full_name}</h3>
+      <h3 className="font-bold text-center text-sm md:text-base truncate w-full px-1">{user.full_name}</h3>
       <p className="text-yellow-500 dark:text-yellow-400 font-semibold text-xs md:text-sm">{user.coins} coins</p>
       <div className={`mt-2 w-full ${podiumHeight} ${bgColor} rounded-t-lg flex items-center justify-center`}>
         <span className={`${rankTextSize} font-black ${textColor}`}>{rank}</span>
@@ -85,10 +84,12 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
 const Leaderboard: React.FC = () => {
   const { currentUser } = useAppContext();
   const [leaderboard, setLeaderboard] = useState<Partial<UserProfile>[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       if (!supabase) return;
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url, coins, level')
@@ -97,14 +98,42 @@ const Leaderboard: React.FC = () => {
       
       if(error) console.error('Error fetching leaderboard:', error);
       else setLeaderboard(data || []);
+      setLoading(false);
     };
     fetchLeaderboard();
   }, []);
+  
+  const topThree = leaderboard.slice(0, 3);
+  const restOfLeaderboard = leaderboard.slice(3);
 
-  const first = leaderboard[0];
-  const second = leaderboard[1];
-  const third = leaderboard[2];
-  const rest = leaderboard.slice(3);
+  const mobileRankStyles: { [key: number]: { bg: string; text: string; border: string; crown?: boolean } } = {
+    1: { 
+        bg: 'bg-yellow-50 dark:bg-yellow-500/10', 
+        text: 'text-yellow-600 dark:text-yellow-400', 
+        border: 'border-yellow-400 dark:border-yellow-500', 
+        crown: true 
+    },
+    2: { 
+        bg: 'bg-slate-50 dark:bg-slate-500/10', 
+        text: 'text-slate-600 dark:text-slate-400', 
+        border: 'border-slate-400 dark:border-slate-500' 
+    },
+    3: { 
+        bg: 'bg-amber-50 dark:bg-amber-700/10', 
+        text: 'text-amber-700 dark:text-amber-500', 
+        border: 'border-amber-600 dark:border-amber-700' 
+    },
+  };
+
+  if (loading) {
+      return (
+        <div className="space-y-8 animate-pulse">
+            <div className="h-10 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div>
+            <div className="h-64 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
+            <div className="h-96 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
+        </div>
+      );
+  }
 
   return (
     <div className="space-y-8">
@@ -112,10 +141,42 @@ const Leaderboard: React.FC = () => {
       
       {leaderboard.length > 0 && (
         <Card className="!p-0 overflow-hidden">
-           <div className="flex justify-center items-end gap-1 px-1 pt-6 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-secondary dark:to-gray-800 min-h-[280px] sm:min-h-[350px]">
-                {second && <PodiumItem user={second} rank={2} />}
-                {first && <PodiumItem user={first} rank={1} />}
-                {third && <PodiumItem user={third} rank={3} />}
+            {/* --- DESKTOP PODIUM --- */}
+            <div className="hidden sm:flex justify-center items-end gap-1 px-1 pt-6 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-secondary dark:to-gray-800 min-h-[350px]">
+                {topThree[1] && <PodiumItem user={topThree[1]} rank={2} />}
+                {topThree[0] && <PodiumItem user={topThree[0]} rank={1} />}
+                {topThree[2] && <PodiumItem user={topThree[2]} rank={3} />}
+            </div>
+            
+            {/* --- MOBILE PODIUM --- */}
+            <div className="block sm:hidden p-4 space-y-3 bg-gray-50 dark:bg-gray-800/50">
+                <h2 className="text-lg font-bold text-center mb-2 text-gray-800 dark:text-gray-200">Top 3 Champions</h2>
+                 {topThree.map((user, index) => {
+                    const rank = (index + 1) as 1 | 2 | 3;
+                    const style = mobileRankStyles[rank];
+                    return (
+                        <div key={user.id} className={`flex items-center gap-4 p-3 rounded-lg border-2 animate-fade-in-up ${style.bg} ${style.border}`} style={{ animationDelay: `${index * 100}ms` }}>
+                            <div className="relative flex items-center justify-center w-8">
+                                <span className={`text-xl font-bold ${style.text}`}>
+                                    {rank}
+                                </span>
+                                {style.crown && (
+                                    <CrownIcon className="w-5 h-5 text-yellow-400 absolute -top-3 left-1/2 -translate-x-1/2" />
+                                )}
+                            </div>
+                            <Avatar src={user.avatar_url} alt={user.full_name || ''} size="md" />
+                            <div className="flex-1 overflow-hidden">
+                                <p className="font-semibold truncate text-gray-800 dark:text-gray-200">{user.full_name}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                                <p className="font-bold text-yellow-600 dark:text-yellow-500">
+                                    {user.coins}
+                                </p>
+                                <p className="text-xs text-gray-500">coins</p>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </Card>
       )}
@@ -132,7 +193,7 @@ const Leaderboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
-              {rest.map((person, index) => (
+              {restOfLeaderboard.map((person, index) => (
                 <tr key={person.id} className={`${person.id === currentUser?.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors`}>
                   <td className="px-3 py-4 whitespace-nowrap">
                     <div className="text-sm font-bold text-gray-500">{index + 4}</div>
