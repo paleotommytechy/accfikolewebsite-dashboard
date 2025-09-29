@@ -2,7 +2,7 @@
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
-const { BrowserRouter, Routes, Route, Navigate } = ReactRouterDOM;
+const { BrowserRouter, HashRouter, Routes, Route, Navigate } = ReactRouterDOM;
 import { AppProvider } from './context/AppContext';
 import { NotificationProvider } from './context/NotificationContext';
 import DashboardLayout from './components/ui/DashboardLayout';
@@ -21,11 +21,18 @@ import UserManagement from './pages/UserManagement';
 import ChatConversation from './pages/ChatConversation';
 import Notifications from './pages/Notifications';
 
+// Dynamically choose the router based on the environment.
+// Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
+// Other environments (like AI Studio preview) need HashRouter for compatibility.
+const Router = window.location.hostname.endsWith('vercel.app') 
+  ? BrowserRouter 
+  : HashRouter;
+
 function App(): React.ReactNode {
   return (
     <AppProvider>
       <NotificationProvider>
-        <BrowserRouter>
+        <Router>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             
@@ -66,7 +73,7 @@ function App(): React.ReactNode {
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </Router>
       </NotificationProvider>
     </AppProvider>
   );
