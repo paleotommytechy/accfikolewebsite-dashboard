@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import Leaderboard from './pages/Leaderboard';
 import Events from './pages/Events';
+import PrayerRequests from './pages/PrayerRequests';
 import Analytics from './pages/Analytics';
 import DeveloperSettings from './pages/DeveloperSettings';
 import Store from './pages/Store';
@@ -65,6 +66,7 @@ function App(): React.ReactNode {
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/prayers" element={<PrayerRequests />} />
               <Route path="/messages" element={<ChatHistory />} />
               <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
