@@ -5,7 +5,7 @@ const { useParams, Link, useNavigate } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
-import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, SendIcon, XIcon, StopIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon } from '../components/ui/Icons';
+import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, SendIcon, XIcon, StopIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon, CopyIcon, TrashIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
@@ -110,12 +110,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, isLoading, on
 const ChatConversation: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
     const { currentUser } = useAppContext();
-    const { addToast, refreshNotifications } = useNotifier();
+    const { addToast, refreshNotifications, showConfirm } = useNotifier();
     const [otherUser, setOtherUser] = useState<Partial<UserProfile> | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: Message } | null>(null);
     
     // Voice Note State
     const [isRecording, setIsRecording] = useState(false);
@@ -138,12 +139,14 @@ const ChatConversation: React.FC = () => {
         }
     }, [newMessage]);
     
-    // Close emoji picker on outside click
+    // Close emoji picker or context menu on outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
                 setShowEmojiPicker(false);
             }
+            // A small delay to allow context menu item click
+            setTimeout(() => setContextMenu(null), 100);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => {
@@ -207,31 +210,36 @@ const ChatConversation: React.FC = () => {
         channel.on(
             'postgres_changes',
             {
-                event: 'INSERT',
+                event: '*', // Listen to INSERT, UPDATE, DELETE
                 schema: 'public',
                 table: 'messages',
             },
             (payload) => {
-                const newMessagePayload = payload.new as Message;
-                const isRelevant =
-                    (newMessagePayload.sender_id === currentUser.id && newMessagePayload.recipient_id === userId) ||
-                    (newMessagePayload.sender_id === userId && newMessagePayload.recipient_id === currentUser.id);
-    
-                if (isRelevant) {
-                    setMessages((prevMessages) => {
-                        if (prevMessages.some((m) => m.id === newMessagePayload.id)) {
-                            return prevMessages;
-                        }
-                        return [...prevMessages, newMessagePayload];
-                    });
-    
-                    refreshNotifications();
-                    
-                    if (newMessagePayload.sender_id === userId) {
-                        supabase.rpc('mark_messages_as_read', { p_sender_id: userId }).then(({ error }) => {
-                            if (error) console.error("Error marking new message as read:", error);
+                 if (payload.eventType === 'INSERT') {
+                    const newMessagePayload = payload.new as Message;
+                    const isRelevant =
+                        (newMessagePayload.sender_id === currentUser.id && newMessagePayload.recipient_id === userId) ||
+                        (newMessagePayload.sender_id === userId && newMessagePayload.recipient_id === currentUser.id);
+        
+                    if (isRelevant) {
+                        setMessages((prevMessages) => {
+                            if (prevMessages.some((m) => m.id === newMessagePayload.id)) {
+                                return prevMessages;
+                            }
+                            return [...prevMessages, newMessagePayload];
                         });
+        
+                        refreshNotifications();
+                        
+                        if (newMessagePayload.sender_id === userId) {
+                            supabase.rpc('mark_messages_as_read', { p_sender_id: userId }).then(({ error }) => {
+                                if (error) console.error("Error marking new message as read:", error);
+                            });
+                        }
                     }
+                } else if (payload.eventType === 'DELETE') {
+                    const deletedMessage = payload.old as { id: string };
+                    setMessages(prev => prev.filter(m => m.id !== deletedMessage.id));
                 }
             }
         ).subscribe();
@@ -362,6 +370,26 @@ const ChatConversation: React.FC = () => {
         }
     };
 
+    const handleCopy = (text: string | null) => {
+        if (text) {
+            navigator.clipboard.writeText(text);
+            addToast('Message copied!', 'success');
+        }
+        setContextMenu(null);
+    };
+
+    const handleDelete = (messageId: string) => {
+        setContextMenu(null);
+        showConfirm('Are you sure you want to delete this message? This action cannot be undone.', async () => {
+            if (!supabase) return;
+            const { error } = await supabase.from('messages').delete().eq('id', messageId);
+            if (error) {
+                addToast('Failed to delete message: ' + error.message, 'error');
+            }
+        });
+    };
+
+
     const formatTime = (timestamp: string) => new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     const formatRecordingTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -422,7 +450,11 @@ const ChatConversation: React.FC = () => {
                     const groupClass = getMessageGroupClass(index);
                     
                     return (
-                        <div key={msg.id} className={`flex items-end gap-2 ${isSent ? 'justify-end' : 'justify-start'}`}>
+                        <div 
+                            key={msg.id} 
+                            className={`flex items-end gap-2 group relative ${isSent ? 'justify-end' : 'justify-start'}`}
+                            onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, message: msg }); }}
+                        >
                             {!isSent && !messages[index+1] && <Avatar src={otherUser?.avatar_url} alt={otherUser?.full_name || ''} size="sm" className="mb-2" />}
                             {!isSent && messages[index+1] && messages[index+1]?.sender_id !== msg.sender_id && <Avatar src={otherUser?.avatar_url} alt={otherUser?.full_name || ''} size="sm" className="mb-2" />}
                             {!isSent && messages[index+1] && messages[index+1]?.sender_id === msg.sender_id && <div className="w-8 h-8 flex-shrink-0"></div> }
@@ -440,6 +472,32 @@ const ChatConversation: React.FC = () => {
                 })}
                  <div ref={messagesEndRef} />
             </main>
+
+             {/* Context Menu */}
+            {contextMenu && (
+                <div 
+                    // FIX: Combine multiple `style` attributes into one.
+                    style={{ top: contextMenu.y, left: contextMenu.x, animationDuration: '100ms' }}
+                    className="fixed z-30 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-1 w-40 animate-fade-in-up"
+                >
+                    {contextMenu.message.message_type === 'text' && (
+                        <button 
+                            onClick={() => handleCopy(contextMenu.message.text)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+                        >
+                            <CopyIcon className="w-4 h-4" /> Copy
+                        </button>
+                    )}
+                    {contextMenu.message.sender_id === currentUser?.id && (
+                         <button 
+                            onClick={() => handleDelete(contextMenu.message.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-3"
+                        >
+                            <TrashIcon className="w-4 h-4" /> Delete
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Input Area */}
             <footer className="p-2 sm:p-4 flex-shrink-0 bg-chat-light-panel dark:bg-chat-bg border-t border-gray-200 dark:border-transparent relative">

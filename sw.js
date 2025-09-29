@@ -1,9 +1,11 @@
-const CACHE_NAME = 'accf-dashboard-cache-v1';
+const CACHE_NAME = 'accf-dashboard-cache-v2';
 // These are the core files for the app shell.
 // More resources will be cached on the fly.
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
+  '/index.tsx',
+  '/manifest.json',
   'https://cdn.tailwindcss.com',
   'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg'
 ];
@@ -59,6 +61,9 @@ self.addEventListener('fetch', (event) => {
                     cache.put(event.request, responseToCache);
                 }
                 return networkResponse;
+            }).catch(() => {
+                // If the network fails, and we didn't have a cached response,
+                // we can return a fallback page or just let the request fail.
             });
             
             return cachedResponse || fetchPromise;
