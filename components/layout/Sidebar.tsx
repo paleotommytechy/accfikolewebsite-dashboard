@@ -16,12 +16,12 @@ const Sidebar: React.FC = () => {
   const disabledClasses = "opacity-50 cursor-not-allowed pointer-events-none";
 
   return (
-    <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-40 w-64
+    <aside className={`fixed top-0 left-0 h-full bg-secondary text-gray-300 transition-all duration-300 z-40 flex flex-col w-64
       ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
       lg:translate-x-0 
       ${isSidebarOpen ? 'lg:w-64' : 'lg:w-20'}
     `}>
-      <div className="flex items-center justify-center h-16 border-b border-gray-700">
+      <div className="flex items-center justify-center h-16 border-b border-gray-700 flex-shrink-0">
         <img src="https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg" alt="ACCF Ikole Logo" className="w-10 h-10 rounded-full border-2 border-gray-700 flex-shrink-0" />
         {isSidebarOpen && <span className="ml-3 text-white text-lg font-bold">ACCF Ikole</span>}
       </div>
