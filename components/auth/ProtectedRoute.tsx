@@ -8,9 +8,9 @@ const { useLocation, Navigate } = ReactRouterDOM;
 import { useAppContext } from '../../context/AppContext';
 
 // FIX: Made children prop optional to resolve TypeScript error in App.tsx.
-// NEW: Added bloggerOnly prop for blog management routes.
-const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean }): React.ReactNode => {
-  const { currentUser, isAdmin, isBlogger, isLoading, isProfileComplete } = useAppContext();
+// NEW: Added bloggerOnly and mediaOnly props.
+const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean }): React.ReactNode => {
+  const { currentUser, isAdmin, isBlogger, isMediaManager, isLoading, isProfileComplete } = useAppContext();
   const location = useLocation();
 
   if (isLoading) {
@@ -25,8 +25,8 @@ const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false }: { 
     return <Navigate to="/auth" replace />;
   }
 
-  // If profile is not complete, only allow access to dashboard and profile page
-  const isAllowedPath = location.pathname === '/dashboard' || location.pathname === '/profile';
+  // If profile is not complete, only allow access to dashboard, profile and gallery page
+  const isAllowedPath = location.pathname === '/dashboard' || location.pathname === '/profile' || location.pathname === '/gallery';
   if (!isProfileComplete && !isAllowedPath) {
     return <Navigate to="/profile" replace />;
   }
@@ -36,6 +36,10 @@ const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false }: { 
   }
 
   if (bloggerOnly && !isAdmin && !isBlogger) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  if (mediaOnly && !isAdmin && !isMediaManager) {
     return <Navigate to="/dashboard" replace />;
   }
 

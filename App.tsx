@@ -29,6 +29,8 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import BlogManagement from './pages/BlogManagement';
 import PostEditor from './pages/PostEditor';
+import Gallery from './pages/Gallery';
+import MediaManagement from './pages/MediaManagement';
 
 // Dynamically choose the router based on the environment.
 // Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
@@ -72,6 +74,17 @@ function App(): React.ReactNode {
               <Route path="/blog-management/editor/:postId" element={<PostEditor />} />
             </Route>
 
+            {/* Media manager protected routes */}
+            <Route 
+              element={
+                <ProtectedRoute mediaOnly={true}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/media-management" element={<MediaManagement />} />
+            </Route>
+
             {/* General protected routes for all authenticated users */}
             <Route 
               element={
@@ -87,6 +100,7 @@ function App(): React.ReactNode {
               <Route path="/events" element={<Events />} />
               <Route path="/prayers" element={<PrayerRequests />} />
               <Route path="/resources" element={<ResourceLibrary />} />
+              <Route path="/gallery" element={<Gallery />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:postId" element={<BlogPost />} />
               <Route path="/messages" element={<ChatHistory />} />

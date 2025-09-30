@@ -213,3 +213,15 @@ export interface PostBookmark {
   post_id: string;
   user_id: string;
 }
+
+// --- NEW: Gallery System Types ---
+export interface GalleryPost {
+  id: string;
+  title: string;
+  category: string;
+  image_urls: string[];
+  more_images_url?: string;
+  author_id: string;
+  created_at: string;
+  profiles: Pick<UserProfile, 'full_name' | 'avatar_url'>;
+}
