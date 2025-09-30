@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -8,9 +9,9 @@ const { useLocation, Navigate } = ReactRouterDOM;
 import { useAppContext } from '../../context/AppContext';
 
 // FIX: Made children prop optional to resolve TypeScript error in App.tsx.
-// NEW: Added bloggerOnly, mediaOnly, and proOnly props.
-const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false, proOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean, proOnly?: boolean }): React.ReactNode => {
-  const { currentUser, isAdmin, isBlogger, isMediaManager, isPro, isLoading, isProfileComplete } = useAppContext();
+// NEW: Added bloggerOnly, mediaOnly, proOnly, and academicsOnly props.
+const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false, proOnly = false, academicsOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean, proOnly?: boolean, academicsOnly?: boolean }): React.ReactNode => {
+  const { currentUser, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isLoading, isProfileComplete } = useAppContext();
   const location = useLocation();
 
   if (isLoading) {
@@ -25,8 +26,8 @@ const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, medi
     return <Navigate to="/auth" replace />;
   }
 
-  // If profile is not complete, only allow access to dashboard, profile and gallery page
-  const isAllowedPath = location.pathname === '/dashboard' || location.pathname === '/profile' || location.pathname === '/gallery';
+  // If profile is not complete, only allow access to dashboard, profile, gallery and academics page
+  const isAllowedPath = ['/dashboard', '/profile', '/gallery', '/academics'].includes(location.pathname);
   if (!isProfileComplete && !isAllowedPath) {
     return <Navigate to="/profile" replace />;
   }
@@ -44,6 +45,10 @@ const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, medi
   }
 
   if (proOnly && !isAdmin && !isPro) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  if (academicsOnly && !isAdmin && !isAcademicsManager) {
     return <Navigate to="/dashboard" replace />;
   }
 

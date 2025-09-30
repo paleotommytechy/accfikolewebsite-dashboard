@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 
 export interface UserProfile {
@@ -224,4 +222,45 @@ export interface GalleryPost {
   author_id: string;
   created_at: string;
   profiles: Pick<UserProfile, 'full_name' | 'avatar_url'>;
+}
+
+// --- NEW: Academics System Types ---
+export interface Faculty {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  faculty_id: string;
+  created_at: string;
+}
+
+export interface Course {
+  id: string;
+  name: string;
+  code: string;
+  level: number;
+  department_id: string | null; // Can be null for general courses
+  faculty_id: string | null; // For faculty-wide general courses
+  is_general: boolean;
+  created_at: string;
+}
+
+export interface CourseMaterial {
+  id: string;
+  course_id: string;
+  title: string;
+  type: 'pdf_link' | 'drive_folder' | 'video_link' | 'text';
+  url: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface CourseBorrower {
+    id: string;
+    course_id: string;
+    department_id: string;
 }

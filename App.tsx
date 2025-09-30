@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -33,6 +34,9 @@ import PostEditor from './pages/PostEditor';
 import Gallery from './pages/Gallery';
 import MediaManagement from './pages/MediaManagement';
 import EventManagement from './pages/EventManagement';
+import Academics from './pages/Academics';
+import AcademicsManagement from './pages/AcademicsManagement';
+
 
 // Dynamically choose the router based on the environment.
 // Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
@@ -97,6 +101,17 @@ function App(): React.ReactNode {
             >
               <Route path="/media-management" element={<MediaManagement />} />
             </Route>
+            
+            {/* Academics manager protected routes */}
+            <Route 
+              element={
+                <ProtectedRoute academicsOnly={true}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/academics-management" element={<AcademicsManagement />} />
+            </Route>
 
             {/* General protected routes for all authenticated users */}
             <Route 
@@ -113,6 +128,7 @@ function App(): React.ReactNode {
               <Route path="/events" element={<Events />} />
               <Route path="/prayers" element={<PrayerRequests />} />
               <Route path="/resources" element={<ResourceLibrary />} />
+              <Route path="/academics" element={<Academics />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:postId" element={<BlogPost />} />

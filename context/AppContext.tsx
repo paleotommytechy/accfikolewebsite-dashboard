@@ -10,6 +10,7 @@ interface AppContextType {
   isAdmin: boolean;
   isBlogger: boolean;
   isMediaManager: boolean;
+  isAcademicsManager: boolean;
   isPro: boolean;
   isProfileComplete: boolean;
   refreshCurrentUser: () => Promise<void>;
@@ -24,6 +25,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isBlogger, setIsBlogger] = useState(false);
   const [isMediaManager, setIsMediaManager] = useState(false);
+  const [isAcademicsManager, setIsAcademicsManager] = useState(false);
   const [isPro, setIsPro] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
 
@@ -57,6 +59,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isAdminStatus = userRole === 'admin';
         const isBloggerStatus = userRole === 'blog';
         const isMediaManagerStatus = userRole === 'media';
+        const isAcademicsManagerStatus = userRole === 'academics';
         const isProStatus = userRole === 'pro';
 
         const { data: profile, error: profileError } = profileResponse;
@@ -96,6 +99,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAdmin(isAdminStatus);
         setIsBlogger(isBloggerStatus);
         setIsMediaManager(isMediaManagerStatus);
+        setIsAcademicsManager(isAcademicsManagerStatus);
         setIsPro(isProStatus);
       } else {
         // No user session, clear all user-related state
@@ -103,6 +107,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAdmin(false);
         setIsBlogger(false);
         setIsMediaManager(false);
+        setIsAcademicsManager(false);
         setIsPro(false);
         setIsProfileComplete(false);
       }
@@ -116,6 +121,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsAdmin(false);
       setIsBlogger(false);
       setIsMediaManager(false);
+      setIsAcademicsManager(false);
       setIsPro(false);
       setIsProfileComplete(false);
     } finally {
@@ -155,10 +161,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isAdmin,
     isBlogger,
     isMediaManager,
+    isAcademicsManager,
     isPro,
     isProfileComplete,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isPro, isProfileComplete]);
+  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete]);
 
   return (
     <AppContext.Provider value={value}>

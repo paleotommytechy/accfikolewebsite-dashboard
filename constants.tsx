@@ -1,5 +1,7 @@
 
 
+
+
 import React from 'react';
 import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon, PencilAltIcon, CameraIcon } from './components/ui/Icons';
 
@@ -12,6 +14,7 @@ export const NAV_LINKS = [
   { name: 'Events', href: '/events', icon: <CalendarIcon /> },
   { name: 'Gallery', href: '/gallery', icon: <CameraIcon /> },
   { name: 'Resource Library', href: '/resources', icon: <BookOpenIcon /> },
+  { name: 'Academics', href: '/academics', icon: <BookOpenIcon /> },
   { name: 'Prayer Wall', href: '/prayers', icon: <SparklesIcon /> },
   { name: 'Chats', href: '/messages', icon: <ChatIcon /> },
   { name: 'Notifications', href: '/notifications', icon: <BellIcon /> },
@@ -26,6 +29,10 @@ export const BLOG_LINKS = [
 
 export const MEDIA_LINKS = [
   { name: 'Media Management', href: '/media-management', icon: <CameraIcon /> },
+];
+
+export const ACADEMICS_LINKS = [
+  { name: 'Academics Mgt.', href: '/academics-management', icon: <PencilAltIcon /> },
 ];
 
 export const ADMIN_LINKS = [
