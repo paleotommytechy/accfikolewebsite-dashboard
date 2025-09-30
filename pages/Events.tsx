@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -5,6 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import type { Event } from '../types';
 import { ClockIcon, LocationMarkerIcon, CalendarIcon } from '../components/ui/Icons';
+import { marked } from 'marked';
 
 // Array of placeholder images for visual variety
 const placeholderImages = [
@@ -50,7 +53,10 @@ const EventCard: React.FC<{ event: Event; index: number }> = ({ event, index }) 
                     </p>
                 </div>
                
-                <p className="text-sm text-gray-700 dark:text-gray-300 flex-grow line-clamp-3 mb-5">{event.description}</p>
+                <div 
+                  className="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300 flex-grow mb-5"
+                  dangerouslySetInnerHTML={{ __html: marked.parse(event.description) }}
+                ></div>
                 
                 <div className="mt-auto">
                     <Button size="md" className="w-full">RSVP Now</Button>
@@ -62,7 +68,7 @@ const EventCard: React.FC<{ event: Event; index: number }> = ({ event, index }) 
 
 const Events: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const { isAdmin } = useAppContext();
+  const { isAdmin, isPro } = useAppContext();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,7 +95,7 @@ const Events: React.FC = () => {
     <div className="space-y-6">
         <div className="flex justify-between items-center">
              <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Upcoming Events</h1>
-             {isAdmin && <Button>Create Event</Button>}
+             {(isAdmin || isPro) && <Button to="/event-management">Manage Events</Button>}
         </div>
        
         {loading ? (

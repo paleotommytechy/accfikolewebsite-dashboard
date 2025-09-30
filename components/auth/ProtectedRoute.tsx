@@ -8,9 +8,9 @@ const { useLocation, Navigate } = ReactRouterDOM;
 import { useAppContext } from '../../context/AppContext';
 
 // FIX: Made children prop optional to resolve TypeScript error in App.tsx.
-// NEW: Added bloggerOnly and mediaOnly props.
-const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean }): React.ReactNode => {
-  const { currentUser, isAdmin, isBlogger, isMediaManager, isLoading, isProfileComplete } = useAppContext();
+// NEW: Added bloggerOnly, mediaOnly, and proOnly props.
+const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false, proOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean, proOnly?: boolean }): React.ReactNode => {
+  const { currentUser, isAdmin, isBlogger, isMediaManager, isPro, isLoading, isProfileComplete } = useAppContext();
   const location = useLocation();
 
   if (isLoading) {
@@ -40,6 +40,10 @@ const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, medi
   }
   
   if (mediaOnly && !isAdmin && !isMediaManager) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (proOnly && !isAdmin && !isPro) {
     return <Navigate to="/dashboard" replace />;
   }
 

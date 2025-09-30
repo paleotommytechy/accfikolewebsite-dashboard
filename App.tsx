@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -31,6 +32,7 @@ import BlogManagement from './pages/BlogManagement';
 import PostEditor from './pages/PostEditor';
 import Gallery from './pages/Gallery';
 import MediaManagement from './pages/MediaManagement';
+import EventManagement from './pages/EventManagement';
 
 // Dynamically choose the router based on the environment.
 // Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
@@ -61,6 +63,17 @@ function App(): React.ReactNode {
               <Route path="/developer-settings" element={<DeveloperSettings />} />
             </Route>
             
+            {/* Pro & Admin protected routes */}
+            <Route 
+              element={
+                <ProtectedRoute proOnly={true}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/event-management" element={<EventManagement />} />
+            </Route>
+
             {/* Blog manager protected routes */}
             <Route 
               element={

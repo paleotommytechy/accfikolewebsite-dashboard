@@ -159,6 +159,8 @@ const UserManagement: React.FC = () => {
                 return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
             case 'media':
                 return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300';
+            case 'pro':
+                return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300';
             default:
                 return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
         }
@@ -304,6 +306,7 @@ const UserManagement: React.FC = () => {
                                     <SelectField label="Role" name="role" value={selectedUser.role || 'member'} onChange={handleSelectedUserChange}>
                                         <option value="member">Member</option>
                                         <option value="admin">Admin</option>
+                                        <option value="pro">Pro</option>
                                         <option value="blog">Blogger</option>
                                         <option value="media">Media</option>
                                     </SelectField>

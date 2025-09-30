@@ -10,6 +10,7 @@ interface AppContextType {
   isAdmin: boolean;
   isBlogger: boolean;
   isMediaManager: boolean;
+  isPro: boolean;
   isProfileComplete: boolean;
   refreshCurrentUser: () => Promise<void>;
 }
@@ -23,6 +24,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isBlogger, setIsBlogger] = useState(false);
   const [isMediaManager, setIsMediaManager] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
 
   const fetchCurrentUser = async () => {
@@ -55,6 +57,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isAdminStatus = userRole === 'admin';
         const isBloggerStatus = userRole === 'blog';
         const isMediaManagerStatus = userRole === 'media';
+        const isProStatus = userRole === 'pro';
 
         const { data: profile, error: profileError } = profileResponse;
         if (profileError) {
@@ -93,12 +96,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAdmin(isAdminStatus);
         setIsBlogger(isBloggerStatus);
         setIsMediaManager(isMediaManagerStatus);
+        setIsPro(isProStatus);
       } else {
         // No user session, clear all user-related state
         setCurrentUser(null);
         setIsAdmin(false);
         setIsBlogger(false);
         setIsMediaManager(false);
+        setIsPro(false);
         setIsProfileComplete(false);
       }
     } catch (e) {
@@ -111,6 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsAdmin(false);
       setIsBlogger(false);
       setIsMediaManager(false);
+      setIsPro(false);
       setIsProfileComplete(false);
     } finally {
       setIsLoading(false);
@@ -149,9 +155,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isAdmin,
     isBlogger,
     isMediaManager,
+    isPro,
     isProfileComplete,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isProfileComplete]);
+  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isPro, isProfileComplete]);
 
   return (
     <AppContext.Provider value={value}>
