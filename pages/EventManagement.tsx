@@ -114,7 +114,17 @@ const EventManagement: React.FC = () => {
             imageUrl = data.publicUrl;
         }
 
-        const { error } = await supabase.from('events').upsert({ ...editingEvent, image_url: imageUrl });
+        const eventData = {
+            id: editingEvent.id, // This will be undefined for a new event, which is correct for an insert
+            title: editingEvent.title,
+            date: editingEvent.date,
+            time: editingEvent.time,
+            location: editingEvent.location,
+            description: editingEvent.description,
+            image_url: imageUrl,
+        };
+
+        const { error } = await supabase.from('events').upsert(eventData);
 
         if (error) {
             addToast('Error saving event: ' + error.message, 'error');
