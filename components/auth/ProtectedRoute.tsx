@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -7,8 +8,9 @@ const { useLocation, Navigate } = ReactRouterDOM;
 import { useAppContext } from '../../context/AppContext';
 
 // FIX: Made children prop optional to resolve TypeScript error in App.tsx.
-const ProtectedRoute = ({ children, adminOnly = false }: { children?: React.ReactNode, adminOnly?: boolean }): React.ReactNode => {
-  const { currentUser, isAdmin, isLoading, isProfileComplete } = useAppContext();
+// NEW: Added bloggerOnly prop for blog management routes.
+const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean }): React.ReactNode => {
+  const { currentUser, isAdmin, isBlogger, isLoading, isProfileComplete } = useAppContext();
   const location = useLocation();
 
   if (isLoading) {
@@ -30,6 +32,10 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children?: React.Reac
   }
   
   if (adminOnly && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (bloggerOnly && !isAdmin && !isBlogger) {
     return <Navigate to="/dashboard" replace />;
   }
 

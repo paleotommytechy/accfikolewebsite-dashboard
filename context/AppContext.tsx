@@ -8,6 +8,7 @@ interface AppContextType {
   currentUser: UserProfile | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isBlogger: boolean;
   isProfileComplete: boolean;
   refreshCurrentUser: () => Promise<void>;
 }
@@ -19,6 +20,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isBlogger, setIsBlogger] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
 
   const fetchCurrentUser = async () => {
@@ -49,6 +51,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         const userRole = roleData?.role || 'member';
         const isAdminStatus = userRole === 'admin';
+        const isBloggerStatus = userRole === 'blog';
 
         const { data: profile, error: profileError } = profileResponse;
         if (profileError) {
@@ -85,10 +88,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         setIsAdmin(isAdminStatus);
+        setIsBlogger(isBloggerStatus);
       } else {
         // No user session, clear all user-related state
         setCurrentUser(null);
         setIsAdmin(false);
+        setIsBlogger(false);
         setIsProfileComplete(false);
       }
     } catch (e) {
@@ -99,6 +104,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setCurrentUser(null);
       setIsAdmin(false);
+      setIsBlogger(false);
       setIsProfileComplete(false);
     } finally {
       setIsLoading(false);
@@ -135,9 +141,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentUser,
     isLoading,
     isAdmin,
+    isBlogger,
     isProfileComplete,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isProfileComplete]);
+  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isProfileComplete]);
 
   return (
     <AppContext.Provider value={value}>

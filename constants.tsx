@@ -1,10 +1,12 @@
 
+
 import React from 'react';
-import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon } from './components/ui/Icons';
+import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon, PencilAltIcon } from './components/ui/Icons';
 
 export const NAV_LINKS = [
   { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
   { name: 'My Profile', href: '/profile', icon: <UserIcon /> },
+  { name: 'Fellowship Blog', href: '/blog', icon: <BookOpenIcon /> },
   { name: 'Tasks & Challenges', href: '/tasks', icon: <ClipboardListIcon /> },
   { name: 'Leaderboard', href: '/leaderboard', icon: <TrendingUpIcon /> },
   { name: 'Events', href: '/events', icon: <CalendarIcon /> },
@@ -15,6 +17,10 @@ export const NAV_LINKS = [
   { name: 'Coin Store', href: '/store', icon: <ShoppingCartIcon /> },
   { name: 'Giving', href: '/giving', icon: <GiftIcon /> },
   { name: 'Sponsorships', href: '/sponsorships', icon: <HeartIcon /> },
+];
+
+export const BLOG_LINKS = [
+  { name: 'Blog Management', href: '/blog-management', icon: <PencilAltIcon /> },
 ];
 
 export const ADMIN_LINKS = [

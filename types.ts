@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 export interface UserProfile {
@@ -176,4 +177,38 @@ export interface Resource {
   url: string;
   thumbnail_url: string | null;
   created_at: string;
+}
+
+// --- NEW: Blog System Types ---
+export interface Post {
+  id: string;
+  author_id: string;
+  title: string;
+  content: string;
+  category: 'Devotional' | 'Bible Study' | 'Announcement' | 'Other';
+  image_url: string | null;
+  likes_count: number;
+  comments_count: number;
+  status: 'published' | 'draft';
+  created_at: string;
+  profiles: Pick<UserProfile, 'full_name' | 'avatar_url'>; // For author details
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  comment: string;
+  created_at: string;
+  profiles: Pick<UserProfile, 'full_name' | 'avatar_url'>; // For commenter details
+}
+
+export interface PostLike {
+  post_id: string;
+  user_id: string;
+}
+
+export interface PostBookmark {
+  post_id: string;
+  user_id: string;
 }

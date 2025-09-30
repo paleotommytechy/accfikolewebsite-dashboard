@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -24,6 +25,10 @@ import Notifications from './pages/Notifications';
 import Giving from './pages/Giving';
 import Sponsorships from './pages/Sponsorships';
 import ResourceLibrary from './pages/ResourceLibrary';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
+import BlogManagement from './pages/BlogManagement';
+import PostEditor from './pages/PostEditor';
 
 // Dynamically choose the router based on the environment.
 // Vercel deployments support BrowserRouter thanks to vercel.json rewrites.
@@ -53,6 +58,19 @@ function App(): React.ReactNode {
               <Route path="/user-management" element={<UserManagement />} />
               <Route path="/developer-settings" element={<DeveloperSettings />} />
             </Route>
+            
+            {/* Blog manager protected routes */}
+            <Route 
+              element={
+                <ProtectedRoute bloggerOnly={true}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/blog-management" element={<BlogManagement />} />
+              <Route path="/blog-management/editor" element={<PostEditor />} />
+              <Route path="/blog-management/editor/:postId" element={<PostEditor />} />
+            </Route>
 
             {/* General protected routes for all authenticated users */}
             <Route 
@@ -69,6 +87,8 @@ function App(): React.ReactNode {
               <Route path="/events" element={<Events />} />
               <Route path="/prayers" element={<PrayerRequests />} />
               <Route path="/resources" element={<ResourceLibrary />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:postId" element={<BlogPost />} />
               <Route path="/messages" element={<ChatHistory />} />
               <Route path="/messages/:userId" element={<ChatConversation />} />
               <Route path="/store" element={<Store />} />
