@@ -76,18 +76,17 @@ if (!supabase) {
  *    CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
  *    CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id); -- SOLUTION: Added missing INSERT policy
  *
- *    -- Helper function to get the current user's role. This is used in RLS policies
- *    -- on the user_roles table to prevent an infinite recursion error where a policy
- *    -- would need to check the same table it is being applied to.
+ *    -- Helper function to securely get the current user's role.
+ *    -- It's defined with `SECURITY DEFINER` to run with the permissions of the owner,
+ *    -- which allows it to bypass RLS on the `user_roles` table and prevent recursion.
+ *    -- The table is schema-qualified (`public.user_roles`) for robustness.
  *    CREATE OR REPLACE FUNCTION public.get_my_role()
  *    RETURNS TEXT
  *    LANGUAGE sql
  *    STABLE
  *    SECURITY DEFINER
- *    -- Set a search_path to ensure the function can find the 'user_roles' table.
- *    SET search_path = public
  *    AS $$
- *      SELECT role FROM user_roles WHERE user_id = auth.uid();
+ *      SELECT role FROM public.user_roles WHERE user_id = auth.uid();
  *    $$;
  *
  *    -- 5. Create RLS policies for user_roles table

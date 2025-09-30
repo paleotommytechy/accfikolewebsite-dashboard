@@ -226,29 +226,54 @@ const EventManagement: React.FC = () => {
                         <p className="mt-4 text-gray-500">No events found. Create one to get started!</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-800">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                    <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
-                                {events.map(event => (
-                                    <tr key={event.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 dark:text-white">{event.title}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(event.date).toLocaleDateString()} at {event.time}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}><PencilAltIcon className="w-4 h-4" /></Button>
-                                            <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}><TrashIcon className="w-4 h-4" /></Button>
-                                        </td>
+                    <>
+                        {/* --- DESKTOP TABLE VIEW --- */}
+                        <div className="overflow-x-auto hidden md:block">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                        <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                                     </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
+                                    {events.map(event => (
+                                        <tr key={event.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 dark:text-white">{event.title}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(event.date).toLocaleDateString()} at {event.time}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                                <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}><PencilAltIcon className="w-4 h-4" /></Button>
+                                                <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}><TrashIcon className="w-4 h-4" /></Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* --- MOBILE CARD VIEW --- */}
+                        <div className="block md:hidden">
+                            <div className="space-y-4">
+                                {events.map(event => (
+                                    <div key={event.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                                        <div>
+                                            <p className="font-bold text-gray-900 dark:text-white truncate">{event.title}</p>
+                                            <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString()} at {event.time}</p>
+                                        </div>
+                                        <hr className="my-3 border-gray-200 dark:border-gray-700" />
+                                        <div className="flex items-center justify-end space-x-2">
+                                            <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}>
+                                                <PencilAltIcon className="w-4 h-4 mr-1" /> Edit
+                                            </Button>
+                                            <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}>
+                                                <TrashIcon className="w-4 h-4 mr-1" /> Delete
+                                            </Button>
+                                        </div>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            </div>
+                        </div>
+                    </>
                 )}
             </Card>
         </div>
