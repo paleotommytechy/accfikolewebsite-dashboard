@@ -9,6 +9,7 @@ import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
 import { HeartIcon, ChatIcon, ShareIcon, BookmarkIcon, SendIcon } from '../components/ui/Icons';
+import { marked } from 'marked';
 
 const BlogPost: React.FC = () => {
     const { postId } = useParams<{ postId: string }>();
@@ -78,6 +79,19 @@ const BlogPost: React.FC = () => {
         } else {
             setNewComment('');
             // The new comment will be added via the real-time subscription.
+            // Notify post author if it's not their own post
+            if (post.author_id !== currentUser.id) {
+                const { error: notificationError } = await supabase.from('notifications').insert({
+                    user_id: post.author_id,
+                    type: 'comment',
+                    message: `${currentUser.full_name || 'Someone'} commented on your post: "${post.title}"`,
+                    link: `/blog/${post.id}`,
+                    metadata: { postId: post.id, commenterId: currentUser.id }
+                });
+                if (notificationError) {
+                    console.error('Error creating comment notification:', notificationError);
+                }
+            }
         }
     };
     
@@ -99,12 +113,44 @@ const BlogPost: React.FC = () => {
 
     const toggleLike = async () => {
         if (!currentUser || !post || !supabase) return;
-        if (isLiked) {
-            await supabase.from('post_likes').delete().match({ post_id: post.id, user_id: currentUser.id });
-            setIsLiked(false);
+        
+        // Optimistically update UI
+        const newIsLiked = !isLiked;
+        setIsLiked(newIsLiked);
+        setPost(p => p ? { ...p, likes_count: p.likes_count + (newIsLiked ? 1 : -1) } : null);
+
+        if (newIsLiked) {
+            // Liking
+            const { error } = await supabase.from('post_likes').insert({ post_id: post.id, user_id: currentUser.id });
+            if (error) {
+                addToast('Failed to like post: ' + error.message, 'error');
+                // Revert optimistic update
+                setIsLiked(false);
+                setPost(p => p ? { ...p, likes_count: p.likes_count - 1 } : null);
+            } else {
+                // Notify post author
+                if (post.author_id !== currentUser.id) {
+                    const { error: notificationError } = await supabase.from('notifications').insert({
+                        user_id: post.author_id,
+                        type: 'like',
+                        message: `${currentUser.full_name || 'Someone'} liked your post: "${post.title}"`,
+                        link: `/blog/${post.id}`,
+                        metadata: { postId: post.id, likerId: currentUser.id }
+                    });
+                    if (notificationError) {
+                        console.error('Error creating like notification:', notificationError);
+                    }
+                }
+            }
         } else {
-            await supabase.from('post_likes').insert({ post_id: post.id, user_id: currentUser.id });
-            setIsLiked(true);
+            // Unliking
+            const { error } = await supabase.from('post_likes').delete().match({ post_id: post.id, user_id: currentUser.id });
+            if (error) {
+                addToast('Failed to unlike post: ' + error.message, 'error');
+                // Revert optimistic update
+                setIsLiked(true);
+                setPost(p => p ? { ...p, likes_count: p.likes_count + 1 } : null);
+            }
         }
     };
 
@@ -144,8 +190,10 @@ const BlogPost: React.FC = () => {
                         </div>
                     </div>
                 </header>
-                <div className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {post.content}
+                <div 
+                    className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300"
+                    dangerouslySetInnerHTML={{ __html: marked.parse(post.content) }}
+                >
                 </div>
             </article>
 

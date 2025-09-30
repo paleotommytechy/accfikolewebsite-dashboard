@@ -94,7 +94,8 @@ export interface Notification {
   id: string;
   user_id: string;
   // FIX: Add 'new_post' and 'comment' to the type union to allow for more notification types used in mock data.
-  type: 'new_user' | 'task_assigned' | 'task_completed' | 'coin_approved' | 'new_message' | 'custom' | 'new_post' | 'comment';
+  // NEW: Add 'like' to support notifications for post likes.
+  type: 'new_user' | 'task_assigned' | 'task_completed' | 'coin_approved' | 'new_message' | 'custom' | 'new_post' | 'comment' | 'like';
   message: string;
   metadata: Record<string, any> | null;
   link: string | null;

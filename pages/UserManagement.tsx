@@ -151,6 +151,17 @@ const UserManagement: React.FC = () => {
         setSelectedUser({ ...selectedUser, [name]: value });
     };
 
+    const getRoleClasses = (role: string) => {
+        switch (role) {
+            case 'admin':
+                return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
+            case 'blog':
+                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
+            default:
+                return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
+        }
+    };
+
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">User Management</h1>
@@ -201,7 +212,7 @@ const UserManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${getRoleClasses(user.role)}`}>
                                                     {user.role || 'member'}
                                                 </span>
                                             </td>
@@ -239,7 +250,7 @@ const UserManagement: React.FC = () => {
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-500 font-medium">Role:</span>
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'}`}>
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${getRoleClasses(user.role)}`}>
                                                     {user.role || 'member'}
                                                 </span>
                                             </div>
@@ -291,6 +302,7 @@ const UserManagement: React.FC = () => {
                                     <SelectField label="Role" name="role" value={selectedUser.role || 'member'} onChange={handleSelectedUserChange}>
                                         <option value="member">Member</option>
                                         <option value="admin">Admin</option>
+                                        <option value="blog">Blogger</option>
                                     </SelectField>
                                 </div>
                             </form>

@@ -5,7 +5,7 @@ const { useNavigate } = ReactRouterDOM;
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useNotifier } from '../context/NotificationContext';
-import { BellIcon, CheckDoubleIcon, UserIcon, ClipboardListIcon, CoinIcon, ChatIcon } from '../components/ui/Icons';
+import { BellIcon, CheckDoubleIcon, UserIcon, ClipboardListIcon, CoinIcon, ChatIcon, HeartIcon, BookOpenIcon } from '../components/ui/Icons';
 import type { Notification } from '../types';
 
 const Notifications: React.FC = () => {
@@ -35,7 +35,13 @@ const Notifications: React.FC = () => {
         case 'task_assigned':
         case 'task_completed': return <div className={`${containerClass} bg-purple-500`}><ClipboardListIcon className={iconClass} /></div>;
         case 'coin_approved': return <div className={`${containerClass} bg-yellow-500`}><CoinIcon className={iconClass} /></div>;
-        case 'new_message': return <div className={`${containerClass} bg-green-500`}><ChatIcon className={iconClass} /></div>;
+        case 'new_message':
+        case 'comment':
+             return <div className={`${containerClass} bg-green-500`}><ChatIcon className={iconClass} /></div>;
+        case 'like':
+             return <div className={`${containerClass} bg-red-500`}><HeartIcon className={iconClass} /></div>;
+        case 'new_post':
+             return <div className={`${containerClass} bg-indigo-500`}><BookOpenIcon className={iconClass} /></div>;
         default: return <div className={`${containerClass} bg-gray-500`}><BellIcon className={iconClass} /></div>;
       }
     };
