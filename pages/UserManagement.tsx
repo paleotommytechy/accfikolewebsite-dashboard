@@ -59,9 +59,10 @@ const UserManagement: React.FC = () => {
 
     const filteredUsers = useMemo(() => {
         if (!searchTerm) return users;
+        const lowercasedTerm = searchTerm.toLowerCase();
         return users.filter(user =>
-            user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase())
+            (user.full_name?.toLowerCase().includes(lowercasedTerm)) ||
+            (user.email?.toLowerCase().includes(lowercasedTerm))
         );
     }, [searchTerm, users]);
     
@@ -172,7 +173,7 @@ const UserManagement: React.FC = () => {
 
             <Card>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-                    <h2 className="text-xl font-semibold">All Members ({users.length})</h2>
+                    <h2 className="text-xl font-semibold">All Members ({filteredUsers.length})</h2>
                     <div className="relative w-full sm:max-w-xs">
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
