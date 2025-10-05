@@ -172,9 +172,15 @@ export interface Resource {
   id: string;
   title: string;
   description: string | null;
-  category: 'Sermon Notes' | 'Bible Studies' | 'Leadership Training' | 'Worship Guides' | 'Other';
+  category: string;
   url: string;
   thumbnail_url: string | null;
+  created_at: string;
+}
+
+export interface ResourceCategory {
+  id: string;
+  name: string;
   created_at: string;
 }
 

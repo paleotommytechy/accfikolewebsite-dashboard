@@ -74,8 +74,13 @@ const FacultiesManager: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (!supabase) return;
         const { error } = await supabase.from('faculties').delete().eq('id', id);
-        if (error) addToast(error.message, 'error');
-        else {
+        if (error) {
+            if (error.code === '23503') { // foreign key violation
+                addToast('Cannot delete faculty. It is currently being used by some departments.', 'error');
+            } else {
+                addToast(error.message, 'error');
+            }
+        } else {
             addToast('Faculty deleted.', 'success');
             fetchFaculties();
         }
@@ -131,8 +136,16 @@ const DepartmentsManager: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (!supabase) return;
         const { error } = await supabase.from('departments').delete().eq('id', id);
-        if (error) addToast(error.message, 'error');
-        else { addToast('Department deleted.', 'success'); fetchData(); }
+        if (error) {
+             if (error.code === '23503') { // Foreign key violation
+                addToast('Cannot delete department. It is currently being used by some courses.', 'error');
+            } else {
+                addToast(error.message, 'error');
+            }
+        } else { 
+            addToast('Department deleted.', 'success'); 
+            fetchData(); 
+        }
     };
 
     return (
@@ -206,8 +219,16 @@ const CoursesManager: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (!supabase) return;
         const { error } = await supabase.from('courses').delete().eq('id', id);
-        if (error) addToast(error.message, 'error');
-        else { addToast('Course deleted.', 'success'); fetchData(); }
+        if (error) {
+             if (error.code === '23503') { // Foreign key violation
+                addToast('Cannot delete course. It is currently being used by some materials.', 'error');
+            } else {
+                addToast(error.message, 'error');
+            }
+        } else { 
+            addToast('Course deleted.', 'success'); 
+            fetchData(); 
+        }
     };
     
     return (
@@ -218,14 +239,14 @@ const CoursesManager: React.FC = () => {
             onSetEditing={item => setEditing(item || { name: '', code: '', level: 100, is_general: false })}
             onDelete={handleDelete}
             renderItem={item => (
-                <span>
-                    {item.code} - {item.name} ({item.level}L)
-                    <span className="text-xs text-gray-500 ml-2">
+                <div>
+                    <p className="font-semibold text-gray-800 dark:text-white truncate">{item.code} - {item.name} ({item.level}L)</p>
+                    <p className="text-sm text-gray-500">
                         {item.is_general ? 'University-wide' : 
-                         item.department_id ? departments.find(d => d.id === item.department_id)?.name :
-                         item.faculty_id ? faculties.find(f => f.id === item.faculty_id)?.name + ' (Faculty-wide)' : 'N/A'}
-                    </span>
-                </span>
+                            item.department_id ? departments.find(d => d.id === item.department_id)?.name :
+                            item.faculty_id ? `${faculties.find(f => f.id === item.faculty_id)?.name} (Faculty-wide)` : 'N/A'}
+                    </p>
+                </div>
             )}
             renderForm={() => (
                 <>
@@ -235,7 +256,7 @@ const CoursesManager: React.FC = () => {
                         {[100, 200, 300, 400, 500].map(l => <option key={l} value={l}>{l} Level</option>)}
                     </SelectField>
                     <div className="flex items-center space-x-2 pt-2">
-                        <input type="checkbox" id="is_general" checked={editing?.is_general || false} onChange={e => setEditing(p => ({ ...p, is_general: e.target.checked }))} className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500" />
+                        <input type="checkbox" id="is_general" checked={editing?.is_general || false} onChange={e => setEditing(p => ({ ...p, is_general: e.target.checked, faculty_id: null, department_id: null }))} className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500" />
                         <label htmlFor="is_general" className="text-sm text-gray-700 dark:text-gray-300">University-wide General Course</label>
                     </div>
                     {!editing?.is_general && (
@@ -244,7 +265,7 @@ const CoursesManager: React.FC = () => {
                                 <option value="">Select a faculty...</option>
                                 {faculties.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                             </SelectField>
-                            <SelectField label="Department (optional)" value={editing?.department_id || ''} onChange={e => setEditing(p => ({ ...p, department_id: e.target.value }))}>
+                            <SelectField label="Department (optional)" value={editing?.department_id || ''} onChange={e => setEditing(p => ({ ...p, department_id: e.target.value }))} disabled={!editing?.faculty_id}>
                                 <option value="">Select for departmental course...</option>
                                 {departments.filter(d=>d.faculty_id === editing?.faculty_id).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                             </SelectField>
@@ -438,11 +459,17 @@ const ManagerUI = <T extends { id: string; [key: string]: any; }>({ title, items
 
                 <ul className="space-y-2">
                     {items.map(item => (
-                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                            <div>{renderItem(item)}</div>
-                            <div className="space-x-2 flex-shrink-0">
-                                <Button size="sm" variant="outline" onClick={() => onSetEditing(item)}><PencilAltIcon className="w-4 h-4" /></Button>
-                                <Button size="sm" variant="secondary" onClick={() => onDelete(item.id)}><TrashIcon className="w-4 h-4" /></Button>
+                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                            <div className="flex-grow w-full min-w-0">
+                                {renderItem(item)}
+                            </div>
+                            <div className="flex-shrink-0 w-full sm:w-auto flex items-center justify-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => onSetEditing(item)}>
+                                    <PencilAltIcon className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={() => onDelete(item.id)}>
+                                    <TrashIcon className="w-4 h-4" />
+                                </Button>
                             </div>
                         </li>
                     ))}

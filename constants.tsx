@@ -1,9 +1,5 @@
-
-
-
-
 import React from 'react';
-import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon, PencilAltIcon, CameraIcon } from './components/ui/Icons';
+import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon, PencilAltIcon, CameraIcon, ArchiveIcon } from './components/ui/Icons';
 
 export const NAV_LINKS = [
   { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
@@ -13,7 +9,7 @@ export const NAV_LINKS = [
   { name: 'Leaderboard', href: '/leaderboard', icon: <TrendingUpIcon /> },
   { name: 'Events', href: '/events', icon: <CalendarIcon /> },
   { name: 'Gallery', href: '/gallery', icon: <CameraIcon /> },
-  { name: 'Resource Library', href: '/resources', icon: <BookOpenIcon /> },
+  { name: 'Resource Library', href: '/resources', icon: <ArchiveIcon /> },
   { name: 'Academics', href: '/academics', icon: <BookOpenIcon /> },
   { name: 'Prayer Wall', href: '/prayers', icon: <SparklesIcon /> },
   { name: 'Chats', href: '/messages', icon: <ChatIcon /> },

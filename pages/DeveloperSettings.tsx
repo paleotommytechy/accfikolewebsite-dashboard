@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource } from '../types';
+import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource, ResourceCategory } from '../types';
 import Avatar from '../components/auth/Avatar';
-import { CheckIcon } from '../components/ui/Icons';
+import { CheckIcon, PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
 
@@ -459,20 +458,27 @@ const TaskManager: React.FC = () => {
 
 const ResourceManager: React.FC = () => {
     const [resources, setResources] = useState<Resource[]>([]);
+    const [categories, setCategories] = useState<ResourceCategory[]>([]);
     const [editingResource, setEditingResource] = useState<Partial<Resource> | null>(null);
     const { addToast, showConfirm } = useNotifier();
-    const RESOURCE_CATEGORIES: Resource['category'][] = ['Sermon Notes', 'Bible Studies', 'Leadership Training', 'Worship Guides', 'Other'];
 
-    const fetchResources = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         if (!supabase) return;
-        const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
-        if (error) console.error('Error fetching resources', error);
-        else setResources(data || []);
+        const [resourcesRes, categoriesRes] = await Promise.all([
+            supabase.from('resources').select('*').order('created_at', { ascending: false }),
+            supabase.from('resource_categories').select('*').order('name', { ascending: true })
+        ]);
+        
+        if (resourcesRes.error) console.error('Error fetching resources', resourcesRes.error);
+        else setResources(resourcesRes.data || []);
+        
+        if (categoriesRes.error) console.error('Error fetching categories', categoriesRes.error);
+        else setCategories(categoriesRes.data || []);
     }, []);
 
     useEffect(() => {
-        fetchResources();
-    }, [fetchResources]);
+        fetchData();
+    }, [fetchData]);
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -486,7 +492,7 @@ const ResourceManager: React.FC = () => {
         } else {
             addToast(`Resource ${editingResource.id ? 'updated' : 'created'} successfully!`, 'success');
             setEditingResource(null);
-            fetchResources();
+            fetchData();
         }
     };
 
@@ -498,7 +504,7 @@ const ResourceManager: React.FC = () => {
                 addToast('Error deleting resource: ' + error.message, 'error');
             } else {
                 addToast('Resource deleted.', 'success');
-                fetchResources();
+                fetchData();
             }
         });
     };
@@ -514,7 +520,7 @@ const ResourceManager: React.FC = () => {
                     <InputField label="Thumbnail Image URL (optional)" type="url" placeholder="https://example.com/image.png" value={editingResource.thumbnail_url || ''} onChange={e => setEditingResource(p => ({ ...p, thumbnail_url: e.target.value }))} />
                     <SelectField label="Category" value={editingResource.category || ''} onChange={e => setEditingResource(p => ({ ...p, category: e.target.value as Resource['category'] }))} required>
                         <option value="" disabled>Select a category</option>
-                        {RESOURCE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                     </SelectField>
                     <div className="flex gap-2">
                         <Button type="submit">Save Resource</Button>
@@ -522,7 +528,7 @@ const ResourceManager: React.FC = () => {
                     </div>
                 </form>
             ) : (
-                <Button onClick={() => setEditingResource({ title: '', url: '', category: 'Other' })} className="mb-4">Create New Resource</Button>
+                <Button onClick={() => setEditingResource({ title: '', url: '', category: categories[0]?.name || '' })} className="mb-4">Create New Resource</Button>
             )}
             <ul className="space-y-2">
                 {resources.map(r => (
@@ -542,6 +548,79 @@ const ResourceManager: React.FC = () => {
     );
 };
 
+const ResourceCategoryManager: React.FC = () => {
+    const [categories, setCategories] = useState<ResourceCategory[]>([]);
+    const [editing, setEditing] = useState<Partial<ResourceCategory> | null>(null);
+    const { addToast } = useNotifier();
+
+    const fetchCategories = useCallback(async () => {
+        if (!supabase) return;
+        const { data, error } = await supabase.from('resource_categories').select('*').order('name');
+        if (error) addToast(error.message, 'error');
+        else setCategories(data || []);
+    }, [addToast]);
+
+    useEffect(() => { fetchCategories(); }, [fetchCategories]);
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editing || !editing.name || !supabase) return;
+        const { error } = await supabase.from('resource_categories').upsert(editing);
+        if (error) addToast(error.message, 'error');
+        else {
+            addToast(`Category ${editing.id ? 'updated' : 'created'}.`, 'success');
+            setEditing(null);
+            fetchCategories();
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('resource_categories').delete().eq('id', id);
+        if (error) {
+            if (error.code === '23503') { // Foreign key violation
+                addToast('Cannot delete category. It is currently being used by some resources.', 'error');
+            } else {
+                addToast(error.message, 'error');
+            }
+        } else {
+            addToast('Category deleted.', 'success');
+            fetchCategories();
+        }
+    };
+
+    return (
+        <Card title="Resource Categories">
+            <div className="space-y-4">
+                {editing ? (
+                    <form onSubmit={handleSave} className="space-y-4 p-4 mb-4 border dark:border-gray-700 rounded-lg">
+                        <h3 className="text-lg font-semibold">{editing.id ? 'Edit' : 'Create'} Category</h3>
+                        <InputField label="Category Name" value={editing?.name || ''} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} required />
+                        <div className="flex gap-2 justify-end">
+                            <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                            <Button type="submit">Save</Button>
+                        </div>
+                    </form>
+                ) : (
+                    <Button onClick={() => setEditing({})}>
+                        <PlusIcon className="w-5 h-5 mr-2" /> Add New Category
+                    </Button>
+                )}
+                 <ul className="space-y-2">
+                    {categories.map(item => (
+                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                            <span>{item.name}</span>
+                            <div className="space-x-2 flex-shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => setEditing(item)}><PencilAltIcon className="w-4 h-4" /></Button>
+                                <Button size="sm" variant="secondary" onClick={() => handleDelete(item.id)}><TrashIcon className="w-4 h-4" /></Button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </Card>
+    );
+};
 
 const DeveloperSettings: React.FC = () => {
     return (
@@ -550,6 +629,7 @@ const DeveloperSettings: React.FC = () => {
             <ScriptureManager />
             <CoinApprovalManager />
             <ResourceManager />
+            <ResourceCategoryManager />
             <ChallengeManager />
             <TaskManager />
         </div>

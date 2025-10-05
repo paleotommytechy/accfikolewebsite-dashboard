@@ -198,10 +198,24 @@ const BlogPost: React.FC = () => {
             </article>
 
             <div className="flex items-center justify-around p-4 border-y dark:border-gray-700">
-                <Button variant="ghost" onClick={toggleLike} className={isLiked ? 'text-red-500' : ''}><HeartIcon className="w-5 h-5 mr-2" /> Like ({post.likes_count})</Button>
-                <Button variant="ghost"><ChatIcon className="w-5 h-5 mr-2" /> Comment ({comments.length})</Button>
-                <Button variant="ghost" onClick={handleShare}><ShareIcon className="w-5 h-5 mr-2" /> Share</Button>
-                <Button variant="ghost" onClick={toggleBookmark} className={isBookmarked ? 'text-primary-500' : ''}><BookmarkIcon className="w-5 h-5 mr-2" /> Bookmark</Button>
+                <Button variant="ghost" onClick={toggleLike} className={isLiked ? 'text-red-500' : ''}>
+                    <HeartIcon className="w-5 h-5" />
+                    <span className="ml-2 hidden sm:inline">Like ({post.likes_count})</span>
+                    <span className="ml-1 sm:hidden">{post.likes_count}</span>
+                </Button>
+                <Button variant="ghost">
+                    <ChatIcon className="w-5 h-5" />
+                    <span className="ml-2 hidden sm:inline">Comment ({comments.length})</span>
+                    <span className="ml-1 sm:hidden">{comments.length}</span>
+                </Button>
+                <Button variant="ghost" onClick={handleShare}>
+                    <ShareIcon className="w-5 h-5" />
+                    <span className="ml-2 hidden sm:inline">Share</span>
+                </Button>
+                <Button variant="ghost" onClick={toggleBookmark} className={isBookmarked ? 'text-primary-500' : ''}>
+                    <BookmarkIcon className="w-5 h-5" />
+                    <span className="ml-2 hidden sm:inline">Bookmark</span>
+                </Button>
             </div>
 
             <section>

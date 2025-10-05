@@ -1,12 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { Resource } from '../types';
+import type { Resource, ResourceCategory } from '../types';
 import { BookOpenIcon, ExternalLinkIcon } from '../components/ui/Icons';
-
-const RESOURCE_CATEGORIES: Resource['category'][] = ['Sermon Notes', 'Bible Studies', 'Leadership Training', 'Worship Guides', 'Other'];
 
 const ResourceCard: React.FC<{ resource: Resource, index: number }> = ({ resource, index }) => {
     const defaultThumbnail = 'https://images.unsplash.com/photo-1543002588-b9b6b622e8af?q=80&w=800&auto=format&fit=crop';
@@ -43,26 +40,33 @@ const ResourceCard: React.FC<{ resource: Resource, index: number }> = ({ resourc
 
 const ResourceLibrary: React.FC = () => {
     const [resources, setResources] = useState<Resource[]>([]);
+    const [categories, setCategories] = useState<ResourceCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<string>('All');
 
     useEffect(() => {
-        const fetchResources = async () => {
+        const fetchData = async () => {
             if (!supabase) return;
             setLoading(true);
-            const { data, error } = await supabase
-                .from('resources')
-                .select('*')
-                .order('created_at', { ascending: false });
+            const [resourcesRes, categoriesRes] = await Promise.all([
+                supabase.from('resources').select('*').order('created_at', { ascending: false }),
+                supabase.from('resource_categories').select('*').order('name', { ascending: true })
+            ]);
             
-            if (error) {
-                console.error("Error fetching resources:", error);
+            if (resourcesRes.error) {
+                console.error("Error fetching resources:", resourcesRes.error);
             } else {
-                setResources(data || []);
+                setResources(resourcesRes.data || []);
+            }
+
+            if (categoriesRes.error) {
+                console.error("Error fetching resource categories:", categoriesRes.error);
+            } else {
+                setCategories(categoriesRes.data || []);
             }
             setLoading(false);
         };
-        fetchResources();
+        fetchData();
     }, []);
 
     const filteredResources = useMemo(() => {
@@ -90,9 +94,9 @@ const ResourceLibrary: React.FC = () => {
             
             <div className="flex flex-wrap gap-2">
                 <Button variant={activeCategory === 'All' ? 'primary' : 'outline'} onClick={() => setActiveCategory('All')}>All</Button>
-                {RESOURCE_CATEGORIES.map(category => (
-                    <Button key={category} variant={activeCategory === category ? 'primary' : 'outline'} onClick={() => setActiveCategory(category)}>
-                        {category}
+                {categories.map(category => (
+                    <Button key={category.id} variant={activeCategory === category.name ? 'primary' : 'outline'} onClick={() => setActiveCategory(category.name)}>
+                        {category.name}
                     </Button>
                 ))}
             </div>
