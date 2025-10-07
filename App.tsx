@@ -35,6 +35,7 @@ const EventManagement = lazy(() => import('./pages/EventManagement'));
 const Academics = lazy(() => import('./pages/Academics'));
 const AcademicsManagement = lazy(() => import('./pages/AcademicsManagement'));
 const Hymns = lazy(() => import('./pages/Hymns'));
+const QuizEditor = lazy(() => import('./pages/QuizEditor'));
 
 
 // --- SUSPENSE FALLBACK LOADER ---
@@ -73,6 +74,7 @@ function App(): React.ReactNode {
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/user-management" element={<UserManagement />} />
                 <Route path="/developer-settings" element={<DeveloperSettings />} />
+                <Route path="/developer-settings/quiz-editor/:quizId" element={<QuizEditor />} />
               </Route>
               
               {/* Pro & Admin protected routes */}

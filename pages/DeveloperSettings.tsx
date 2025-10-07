@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource, ResourceCategory } from '../types';
+import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource, ResourceCategory, Quiz, QuizQuestion } from '../types';
 import Avatar from '../components/auth/Avatar';
 import { CheckIcon, PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
@@ -311,7 +312,7 @@ const ChallengeManager: React.FC = () => {
                     <h3 className="text-lg font-semibold">{editingChallenge.id ? 'Edit Challenge' : 'Create New Challenge'}</h3>
                     <InputField label="Title" value={editingChallenge.title || ''} onChange={e => setEditingChallenge(p => ({...p, title: e.target.value}))} required />
                     <TextAreaField label="Details" value={editingChallenge.details || ''} onChange={e => setEditingChallenge(p => ({...p, details: e.target.value}))} />
-                    <InputField label="Coin Reward" type="number" value={editingChallenge.coin_reward || 0} onChange={e => setEditingChallenge(p => ({...p, coin_reward: parseInt(e.target.value, 10)}))} required />
+                    <InputField label="Coin Reward" type="number" value={editingChallenge.coin_reward || 50} onChange={e => setEditingChallenge(p => ({...p, coin_reward: parseInt(e.target.value, 10)}))} required />
                     <div className="grid grid-cols-2 gap-4">
                         <InputField label="Start Date" type="date" value={editingChallenge.start_date || ''} onChange={e => setEditingChallenge(p => ({...p, start_date: e.target.value}))} />
                         <InputField label="Due Date" type="date" value={editingChallenge.due_date || ''} onChange={e => setEditingChallenge(p => ({...p, due_date: e.target.value}))} />
@@ -622,6 +623,95 @@ const ResourceCategoryManager: React.FC = () => {
     );
 };
 
+const QuizManager: React.FC = () => {
+    const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+    const [challenges, setChallenges] = useState<WeeklyChallenge[]>([]);
+    const [editing, setEditing] = useState<Partial<Quiz> | null>(null);
+    const { addToast } = useNotifier();
+    const navigate = useNavigate();
+
+    const fetchData = useCallback(async () => {
+        if (!supabase) return;
+        const [quizzesRes, challengesRes] = await Promise.all([
+            supabase.from('quizzes').select('*').order('created_at', { ascending: false }),
+            supabase.from('weekly_challenges').select('id, title').order('created_at', { ascending: false }),
+        ]);
+        if (quizzesRes.error) addToast(quizzesRes.error.message, 'error'); else setQuizzes(quizzesRes.data || []);
+        if (challengesRes.error) addToast(challengesRes.error.message, 'error'); else setChallenges(challengesRes.data || []);
+    }, [addToast]);
+    
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editing || !editing.title || !editing.challenge_id || !supabase) {
+            addToast('Please fill all required fields.', 'error');
+            return;
+        }
+        const { error } = await supabase.from('quizzes').upsert(editing, { onConflict: 'challenge_id' });
+        if (error) {
+            if (error.code === '23505') addToast('A quiz already exists for this challenge. Please edit the existing one.', 'error');
+            else addToast(error.message, 'error');
+        } else {
+            addToast(`Quiz ${editing.id ? 'updated' : 'created'}.`, 'success');
+            setEditing(null);
+            fetchData();
+        }
+    };
+    
+    const handleDelete = async (id: string) => {
+        if (!supabase) return;
+        const { error } = await supabase.from('quizzes').delete().eq('id', id);
+        if (error) addToast(error.message, 'error');
+        else { addToast('Quiz deleted.', 'success'); fetchData(); }
+    };
+    
+    return (
+        <Card title="Challenge Quizzes Management">
+            <div className="space-y-4">
+                {editing ? (
+                    <form onSubmit={handleSave} className="space-y-4 p-4 mb-4 border dark:border-gray-700 rounded-lg">
+                        <h3 className="text-lg font-semibold">{editing.id ? 'Edit Quiz' : 'Create New Quiz'}</h3>
+                        <SelectField label="Link to Challenge" value={editing.challenge_id || ''} onChange={e => setEditing(p => ({ ...p, challenge_id: e.target.value }))} required>
+                             <option value="" disabled>Select a challenge</option>
+                             {challenges.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                        </SelectField>
+                        <InputField label="Quiz Title" value={editing.title || ''} onChange={e => setEditing(p => ({ ...p, title: e.target.value }))} required />
+                        <div className="grid grid-cols-2 gap-4">
+                           <InputField label="Coin Reward" type="number" value={editing.coin_reward || 25} onChange={e => setEditing(p => ({ ...p, coin_reward: parseInt(e.target.value) }))} required />
+                           <InputField label="Questions to Pass" type="number" value={editing.pass_threshold || 2} onChange={e => setEditing(p => ({ ...p, pass_threshold: parseInt(e.target.value) }))} required />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                            <Button type="submit">Save</Button>
+                        </div>
+                    </form>
+                ) : (
+                    <Button onClick={() => setEditing({})}>
+                        <PlusIcon className="w-5 h-5 mr-2" /> Add New Quiz
+                    </Button>
+                )}
+                 <ul className="space-y-2">
+                    {quizzes.map(item => (
+                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                            <div>
+                                <p className="font-semibold">{item.title}</p>
+                                <p className="text-sm text-gray-500">For: {challenges.find(c => c.id === item.challenge_id)?.title || '...'}</p>
+                            </div>
+                            <div className="space-x-2 flex-shrink-0">
+                                <Button size="sm" variant="outline" onClick={() => navigate(`/developer-settings/quiz-editor/${item.id}`)}>Manage Questions</Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditing(item)}><PencilAltIcon className="w-4 h-4" /></Button>
+                                <Button size="sm" variant="secondary" onClick={() => handleDelete(item.id)}><TrashIcon className="w-4 h-4" /></Button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </Card>
+    );
+};
+
+
 const DeveloperSettings: React.FC = () => {
     return (
         <div className="space-y-6">
@@ -631,6 +721,7 @@ const DeveloperSettings: React.FC = () => {
             <ResourceManager />
             <ResourceCategoryManager />
             <ChallengeManager />
+            <QuizManager />
             <TaskManager />
         </div>
     );

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
@@ -49,9 +48,8 @@ const WeeklyGroupChallenge: React.FC<{
     quiz: Quiz | null,
     quizAttempt: QuizAttempt | null,
     onJoin: () => void,
-    onProgress: () => void,
     onStartQuiz: () => void,
-}> = ({ challenge, participant, allParticipants, txStatus, quiz, quizAttempt, onJoin, onProgress, onStartQuiz }) => {
+}> = ({ challenge, participant, allParticipants, txStatus, quiz, quizAttempt, onJoin, onStartQuiz }) => {
     
     if (!challenge) {
         return (
@@ -92,8 +90,8 @@ const WeeklyGroupChallenge: React.FC<{
             );
         }
     
-        if (challenge.has_quiz && quiz) {
-            // New Quiz Flow
+        if (quiz) {
+            // Quiz Flow
             if (quizAttempt?.passed) {
                 return (
                     <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
@@ -118,32 +116,17 @@ const WeeklyGroupChallenge: React.FC<{
             }
             
             return (
-                <Button onClick={onStartQuiz} className="w-full bg-yellow-400 text-yellow-900 font-bold hover:bg-yellow-300 !py-3 mt-4">
-                    <QuestionMarkCircleIcon className="w-5 h-5 mr-2" />
-                    Complete Challenge & Start Quiz
+                <Button onClick={onStartQuiz} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
+                    Done
                 </Button>
             );
     
         } else {
-            // Existing Progress-based Flow
-            if (isCompleted) {
-                 return (
-                    <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
-                        txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
-                        txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
-                    }`}>
-                        {txStatus === 'approved' && "Challenge approved! Your reward has been sent."}
-                        {txStatus === 'rejected' && "Your submission has been rejected."}
-                        {txStatus === 'pending' && "Challenge completed! Your reward is pending approval."}
-                        {!txStatus && "Challenge completed! Processing reward..."}
-                    </div>
-                );
-            }
-            
+             // This handles the case where there is a challenge but no quiz is associated with it in the DB.
             return (
-                <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
-                    Log Progress
-                </Button>
+                <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 bg-white/20`}>
+                    Challenge details are being prepared. Check back soon.
+                </div>
             );
         }
     };
@@ -168,7 +151,7 @@ const WeeklyGroupChallenge: React.FC<{
                 </div>
 
                 <div className="mt-6">
-                    {participant && (!challenge.has_quiz || (challenge.has_quiz && quizAttempt?.passed)) && (
+                    {participant && isCompleted && (
                          <>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm font-semibold">Your Progress</span>
@@ -326,19 +309,21 @@ const VersePackModal: React.FC<{ verse: Verse, onClose: () => void }> = ({ verse
     );
 };
 
-// --- NEW: Quiz Modal ---
-const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => void }> = ({ quiz, onClose, onComplete }) => {
-    const { currentUser } = useAppContext();
+// --- NEW: Refactored Quiz Modal ---
+interface QuizModalProps {
+    quiz: Quiz;
+    onClose: () => void;
+    onComplete: (result: { score: number; passed: boolean; }) => void;
+}
+
+const QuizModal: React.FC<QuizModalProps> = ({ quiz, onClose, onComplete }) => {
     const { addToast } = useNotifier();
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [answers, setAnswers] = useState<(number | null)[]>([]);
-    const [currentStep, setCurrentStep] = useState(0); // 0 to questions.length-1 are questions, questions.length is result
-    const [submitted, setSubmitted] = useState(false);
+    const [currentStep, setCurrentStep] = useState(0); 
+    const [finalResult, setFinalResult] = useState<{ score: number; passed: boolean } | null>(null);
 
-    // Get access to parent scope variables for handleSubmit
-    const { challenge, participant, createCoinTransaction, quizAttempt } = useTasksScope();
-    
     useEffect(() => {
         const fetchQuestions = async () => {
             if (!supabase) return;
@@ -357,78 +342,59 @@ const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => v
     }, [quiz.id, addToast, onClose]);
 
     const handleAnswer = (optionIndex: number) => {
-        setAnswers(prev => {
-            const newAnswers = [...prev];
-            newAnswers[currentStep] = optionIndex;
-            return newAnswers;
-        });
-        // Automatically move to next question
+        const newAnswers = [...answers];
+        newAnswers[currentStep] = optionIndex;
+        setAnswers(newAnswers);
+
         setTimeout(() => {
-            setCurrentStep(s => s + 1);
+            const nextStep = currentStep + 1;
+            if (nextStep < questions.length) {
+                setCurrentStep(nextStep);
+            } else {
+                // Quiz is finished, calculate and show results
+                const score = newAnswers.reduce((acc, answer, index) => {
+                    return answer === questions[index].correct_option_index ? acc + 1 : acc;
+                }, 0);
+                const passed = score >= quiz.pass_threshold;
+                setFinalResult({ score, passed });
+            }
         }, 300);
     };
-
-    const handleSubmit = async () => {
-        if (!currentUser || !supabase || !challenge || !participant) return;
-        const score = answers.reduce((acc, answer, index) => {
-            return answer === questions[index].correct_option_index ? acc + 1 : acc;
-        }, 0);
-        
-        const passed = score >= quiz.pass_threshold;
-        
-        const attemptData = {
-            user_id: currentUser.id,
-            quiz_id: quiz.id,
-            score,
-            passed,
-        };
-
-        let attemptError;
-        if (quizAttempt) {
-            const { error } = await supabase.from('quiz_attempts').update(attemptData).eq('id', quizAttempt.id);
-            attemptError = error;
+    
+    const handleModalCloseAndComplete = () => {
+        if (finalResult) {
+            onComplete(finalResult);
         } else {
-            const { error } = await supabase.from('quiz_attempts').insert(attemptData);
-            attemptError = error;
-        }
-
-        if (attemptError) {
-            addToast('Error saving quiz attempt: ' + attemptError.message, 'error');
-        } else if (passed) {
-            addToast(`Quiz passed! Rewards are being processed.`, 'success');
-            
-            // Update participant progress to 100
-            const { error: progressError } = await supabase.from('weekly_participants')
-                .update({ progress: 100 })
-                .eq('id', participant.id);
-            if(progressError) addToast('Error updating challenge progress.', 'error');
-
-            // Create coin transactions
-            await createCoinTransaction('quiz', quiz.id, quiz.coin_reward);
-            await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
+            onClose(); // Should not happen, but as a fallback
         }
     };
-
-    useEffect(() => {
-        if (currentStep === questions.length && questions.length > 0 && !submitted) {
-            setSubmitted(true);
-            handleSubmit();
-        }
-    }, [currentStep, questions, submitted]);
-
-
+    
     if (loading) {
         return <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"><p className="text-white">Loading Quiz...</p></div>
     }
 
-    const isResultStep = currentStep === questions.length;
-    const score = answers.reduce((acc, answer, index) => answer === questions[index]?.correct_option_index ? acc + 1 : acc, 0);
-    const passed = score >= quiz.pass_threshold;
-
     return (
          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in-up" style={{ animationDuration: '200ms' }}>
             <Card title={quiz.title} className="max-w-lg w-full">
-                {!isResultStep && questions[currentStep] ? (
+                {finalResult ? (
+                    <div className="text-center">
+                        {finalResult.passed ? (
+                            <>
+                                <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto" />
+                                <h2 className="text-2xl font-bold mt-4">Congratulations!</h2>
+                                <p className="mt-2 text-gray-600 dark:text-gray-300">You passed the quiz with a score of {finalResult.score}/{questions.length}.</p>
+                                <p className="font-semibold text-lg mt-2">You earned <span className="text-yellow-500">{quiz.coin_reward} coins</span>!</p>
+                            </>
+                        ) : (
+                            <>
+                                <XCircleIcon className="w-16 h-16 text-red-500 mx-auto" />
+                                <h2 className="text-2xl font-bold mt-4">Nice Try!</h2>
+                                <p className="mt-2 text-gray-600 dark:text-gray-300">You scored {finalResult.score}/{questions.length}. You need {quiz.pass_threshold} correct answers to pass. Keep studying!</p>
+                            </>
+                        )}
+                         <Button onClick={handleModalCloseAndComplete} className="mt-6">Close</Button>
+                    </div>
+                ) : questions[currentStep] ? (
                     <div>
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold">Question {currentStep + 1} of {questions.length}</h3>
@@ -448,39 +414,12 @@ const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => v
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center">
-                        {passed ? (
-                            <>
-                                <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto" />
-                                <h2 className="text-2xl font-bold mt-4">Congratulations!</h2>
-                                <p className="mt-2 text-gray-600 dark:text-gray-300">You passed the quiz with a score of {score}/{questions.length}.</p>
-                                <p className="font-semibold text-lg mt-2">You earned <span className="text-yellow-500">{quiz.coin_reward} coins</span>!</p>
-                            </>
-                        ) : (
-                            <>
-                                <XCircleIcon className="w-16 h-16 text-red-500 mx-auto" />
-                                <h2 className="text-2xl font-bold mt-4">Nice Try!</h2>
-                                <p className="mt-2 text-gray-600 dark:text-gray-300">You scored {score}/{questions.length}. You did not pass this time, but keep studying!</p>
-                            </>
-                        )}
-                         <Button onClick={onComplete} className="mt-6">Close</Button>
-                    </div>
+                    <div className="text-center p-4">No questions found for this quiz.</div>
                 )}
             </Card>
         </div>
     );
 };
-
-// Hook to provide parent scope to the modal
-const useTasksScope = () => {
-    const context = React.useContext(TasksScopeContext);
-    if (!context) {
-        throw new Error('useTasksScope must be used within TasksScopeContext.Provider');
-    }
-    return context;
-};
-
-const TasksScopeContext = React.createContext<any>(null);
 
 
 const Tasks: React.FC = () => {
@@ -597,17 +536,15 @@ const Tasks: React.FC = () => {
             else if (txData) setChallengeTxStatus(txData.status as TxStatus);
             else setChallengeTxStatus(null);
             
-            // If challenge has quiz, fetch quiz and attempt status
-            if(challengeData.has_quiz) {
-                const {data: quizData, error: quizError} = await supabase.from('quizzes').select('*').eq('challenge_id', challengeData.id).maybeSingle();
-                if(quizError) console.error('Error fetching quiz', quizError);
-                else setQuiz(quizData);
+            // Fetch quiz and attempt status
+            const {data: quizData, error: quizError} = await supabase.from('quizzes').select('*').eq('challenge_id', challengeData.id).maybeSingle();
+            if(quizError) console.error('Error fetching quiz', quizError);
+            else setQuiz(quizData);
 
-                if(quizData) {
-                    const {data: attemptData, error: attemptError} = await supabase.from('quiz_attempts').select('*').eq('quiz_id', quizData.id).eq('user_id', currentUser.id).maybeSingle();
-                    if(attemptError && attemptError.code !== 'PGRST116') console.error('Error fetching quiz attempt', attemptError); // Ignore no rows found
-                    else setQuizAttempt(attemptData);
-                }
+            if(quizData) {
+                const {data: attemptData, error: attemptError} = await supabase.from('quiz_attempts').select('*').eq('quiz_id', quizData.id).eq('user_id', currentUser.id).maybeSingle();
+                if(attemptError && attemptError.code !== 'PGRST116') console.error('Error fetching quiz attempt', attemptError); // Ignore no rows found
+                else setQuizAttempt(attemptData);
             } else {
                 setQuiz(null);
                 setQuizAttempt(null);
@@ -637,11 +574,47 @@ const Tasks: React.FC = () => {
 
         if (assignmentsError) console.error("Error fetching task assignments", assignmentsError);
         else setAssignments(assignmentsData as TaskAssignment[] || []);
-    }, [currentUser]);
+    }, [currentUser, addToast]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const handleQuizCompletion = async (result: { score: number, passed: boolean }) => {
+        setIsQuizModalOpen(false);
+        if (!currentUser || !supabase || !challenge || !participant || !quiz) return;
+
+        const { score, passed } = result;
+
+        const attemptData = {
+            user_id: currentUser.id,
+            quiz_id: quiz.id,
+            score,
+            passed,
+        };
+
+        const { error: attemptError } = await supabase
+            .from('quiz_attempts')
+            .upsert(attemptData, { onConflict: 'user_id,quiz_id' });
+
+        if (attemptError) {
+            addToast('Error saving quiz attempt: ' + attemptError.message, 'error');
+        } else if (passed) {
+            addToast(`Quiz passed! Rewards are being processed.`, 'success');
+            
+            const { error: progressError } = await supabase.from('weekly_participants')
+                .update({ progress: 100 })
+                .eq('id', participant.id);
+            if(progressError) addToast('Error updating challenge progress.', 'error');
+
+            await createCoinTransaction('quiz', quiz.id, quiz.coin_reward);
+            await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
+        } else {
+            addToast(`You didn't pass this time. Feel free to try again!`, 'info');
+        }
+        
+        fetchData();
+    };
     
     const grantVersePackReward = async () => {
         if (!supabase || !currentUser) return;
@@ -687,24 +660,6 @@ const Tasks: React.FC = () => {
             fetchData();
         }
     };
-
-    const handleChallengeProgress = async () => {
-        if (!supabase || !currentUser || !participant) return;
-
-        const newProgress = Math.min(100, participant.progress + 10); // Increment by 10%
-        const { error } = await supabase.from('weekly_participants')
-            .update({ progress: newProgress })
-            .eq('id', participant.id);
-        
-        if (error) {
-            addToast("Error updating progress: " + error.message, 'error');
-        } else {
-            if (newProgress >= 100 && participant.progress < 100 && challenge && !challenge.has_quiz) {
-                await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
-            }
-            fetchData();
-        }
-    };
     
     const handleToggleTask = async (assignment: TaskAssignment, currentStatus: 'assigned' | 'done') => {
         if (!supabase || !currentUser) return;
@@ -738,50 +693,43 @@ const Tasks: React.FC = () => {
         }
     };
     
-    const scopeValue = { challenge, participant, createCoinTransaction, quizAttempt };
 
   return (
-    <TasksScopeContext.Provider value={scopeValue}>
-        <div className="space-y-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Tasks & Challenges</h1>
-            <WeeklyGroupChallenge 
-                challenge={challenge} 
-                participant={participant} 
-                allParticipants={allParticipants}
-                txStatus={challengeTxStatus}
-                quiz={quiz}
-                quizAttempt={quizAttempt}
-                onJoin={handleJoinChallenge} 
-                onProgress={handleChallengeProgress}
-                onStartQuiz={() => setIsQuizModalOpen(true)}
-            />
-            <MyDailyTasks tasks={assignments} onTaskAction={handleTaskAction} />
+    <div className="space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Tasks & Challenges</h1>
+        <WeeklyGroupChallenge 
+            challenge={challenge} 
+            participant={participant} 
+            allParticipants={allParticipants}
+            txStatus={challengeTxStatus}
+            quiz={quiz}
+            quizAttempt={quizAttempt}
+            onJoin={handleJoinChallenge} 
+            onStartQuiz={() => setIsQuizModalOpen(true)}
+        />
+        <MyDailyTasks tasks={assignments} onTaskAction={handleTaskAction} />
 
-            {focusSessionTask && (
-                <FocusSessionModal 
-                    assignment={focusSessionTask}
-                    onClose={() => setFocusSessionTask(null)}
-                    onComplete={handleToggleTask}
-                />
-            )}
-            {revealedVerse && (
-                <VersePackModal
-                    verse={revealedVerse}
-                    onClose={() => setRevealedVerse(null)}
-                />
-            )}
-            {isQuizModalOpen && quiz && (
-                <QuizModal 
-                    quiz={quiz}
-                    onClose={() => setIsQuizModalOpen(false)}
-                    onComplete={() => {
-                        setIsQuizModalOpen(false);
-                        fetchData(); // Refetch everything to update status
-                    }}
-                />
-            )}
-        </div>
-    </TasksScopeContext.Provider>
+        {focusSessionTask && (
+            <FocusSessionModal 
+                assignment={focusSessionTask}
+                onClose={() => setFocusSessionTask(null)}
+                onComplete={handleToggleTask}
+            />
+        )}
+        {revealedVerse && (
+            <VersePackModal
+                verse={revealedVerse}
+                onClose={() => setRevealedVerse(null)}
+            />
+        )}
+        {isQuizModalOpen && quiz && (
+            <QuizModal 
+                quiz={quiz}
+                onClose={() => setIsQuizModalOpen(false)}
+                onComplete={handleQuizCompletion}
+            />
+        )}
+    </div>
   );
 };
 
