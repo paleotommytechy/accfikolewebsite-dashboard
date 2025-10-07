@@ -499,6 +499,29 @@ if (!supabase) {
  *    USING (public.get_my_role() = 'admin')
  *    WITH CHECK (public.get_my_role() = 'admin');
  *
+ *    -- ================================================================================================
+ *    -- === NOTIFICATION SYSTEM SETUP (WITH FIX)                                                     ===
+ *    -- ================================================================================================
+ *    CREATE TABLE IF NOT EXISTS public.notifications (
+ *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+ *        user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ *        type text NOT NULL,
+ *        message text NOT NULL,
+ *        metadata jsonb,
+ *        link text,
+ *        is_read boolean DEFAULT false NOT NULL,
+ *        created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.notifications IS 'Stores notifications for users.';
+ *
+ *    -- Enable RLS
+ *    ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ *
+ *    -- RLS Policies
+ *    CREATE POLICY "Users can view their own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+ *    CREATE POLICY "Authenticated users can create notifications" ON public.notifications FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+ *    CREATE POLICY "Users can update their own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+ *    CREATE POLICY "Users can delete their own notifications" ON public.notifications FOR DELETE USING (auth.uid() = user_id);
  *
  *    -- ================================================================================================
  *    -- === PUSH NOTIFICATION SETUP (NEW)                                                          ===
@@ -584,6 +607,48 @@ if (!supabase) {
  *    CREATE POLICY "Users can manage their own verse rewards" ON public.user_verse_rewards
  *    FOR ALL USING (auth.uid() = user_id)
  *    WITH CHECK (auth.uid() = user_id);
+ *
+ *    -- ================================================================================================
+ *    -- === PRAYER WALL SETUP (NEW)                                                                  ===
+ *    -- ================================================================================================
+ *    CREATE TABLE IF NOT EXISTS public.prayer_requests (
+ *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+ *        request text NOT NULL,
+ *        author_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ *        author_name text NOT NULL,
+ *        author_avatar text,
+ *        prayers integer DEFAULT 0 NOT NULL,
+ *        created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.prayer_requests IS 'Stores user-submitted prayer requests for the prayer wall.';
+ *    ALTER TABLE public.prayer_requests ENABLE ROW LEVEL SECURITY;
+ *    CREATE POLICY "Authenticated users can view all prayer requests" ON public.prayer_requests FOR SELECT TO authenticated USING (true);
+ *    CREATE POLICY "Users can insert their own prayer requests" ON public.prayer_requests FOR INSERT WITH CHECK (auth.uid() = author_id);
+ *    CREATE POLICY "Users can delete their own requests, admins can delete any" ON public.prayer_requests FOR DELETE USING (auth.uid() = author_id OR public.get_my_role() = 'admin');
+ *
+ *    -- RPC function to safely increment prayer count
+ *    CREATE OR REPLACE FUNCTION increment_prayer_count(request_id_in uuid)
+ *    RETURNS void LANGUAGE plpgsql AS $$
+ *    BEGIN
+ *      UPDATE public.prayer_requests SET prayers = prayers + 1 WHERE id = request_id_in;
+ *    END;
+ *    $$;
+ *
+ *    -- ================================================================================================
+ *    -- === SCRIPTURE OF THE DAY SETUP (NEW)                                                         ===
+ *    -- ================================================================================================
+ *    CREATE TABLE IF NOT EXISTS public.scripture_of_the_day (
+ *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+ *        verse_reference text NOT NULL,
+ *        verse_text text NOT NULL,
+ *        date_for date NOT NULL UNIQUE,
+ *        set_by uuid REFERENCES public.profiles(id),
+ *        created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.scripture_of_the_day IS 'Stores the scripture verse for a specific day.';
+ *    ALTER TABLE public.scripture_of_the_day ENABLE ROW LEVEL SECURITY;
+ *    CREATE POLICY "Authenticated users can view scriptures" ON public.scripture_of_the_day FOR SELECT TO authenticated USING (true);
+ *    CREATE POLICY "Admins can manage scriptures" ON public.scripture_of_the_day FOR ALL USING (public.get_my_role() = 'admin');
  *
  *    -- ================================================================================================
  *    -- === APP-SPECIFIC FEATURES (Existing setup)                                                   ===

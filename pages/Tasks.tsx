@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
@@ -90,41 +91,61 @@ const WeeklyGroupChallenge: React.FC<{
                 </div>
             );
         }
-
-        if (isCompleted) {
-            if (challenge.has_quiz && quiz) {
-                if (quizAttempt) {
-                     return (
-                        <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${quizAttempt.passed ? 'bg-green-500/30 text-green-100' : 'bg-red-500/30 text-red-100'}`}>
-                            Quiz Completed: {quizAttempt.passed ? `Passed (+${quiz.coin_reward} coins)` : 'Failed'}
-                        </div>
-                    );
-                }
+    
+        if (challenge.has_quiz && quiz) {
+            // New Quiz Flow
+            if (quizAttempt?.passed) {
+                return (
+                    <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
+                        txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
+                        txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
+                    }`}>
+                        {txStatus === 'approved' && "Rewards approved!"}
+                        {txStatus === 'rejected' && "Submission rejected."}
+                        {txStatus === 'pending' && "Quiz passed! Rewards are pending approval."}
+                        {!txStatus && "Quiz passed! Processing rewards..."}
+                    </div>
+                );
+            }
+    
+            if (quizAttempt && !quizAttempt.passed) {
                 return (
                     <Button onClick={onStartQuiz} className="w-full bg-yellow-400 text-yellow-900 font-bold hover:bg-yellow-300 !py-3 mt-4">
                         <QuestionMarkCircleIcon className="w-5 h-5 mr-2" />
-                        Take the Challenge Quiz!
+                        Retry Quiz
                     </Button>
                 );
             }
-             return (
-                <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
-                    txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
-                    txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
-                }`}>
-                    {txStatus === 'approved' && "Challenge approved! Your reward has been sent."}
-                    {txStatus === 'rejected' && "Your submission has been rejected."}
-                    {txStatus === 'pending' && "Challenge completed! Your reward is pending approval."}
-                    {!txStatus && "Challenge completed! Processing reward..."}
-                </div>
+            
+            return (
+                <Button onClick={onStartQuiz} className="w-full bg-yellow-400 text-yellow-900 font-bold hover:bg-yellow-300 !py-3 mt-4">
+                    <QuestionMarkCircleIcon className="w-5 h-5 mr-2" />
+                    Complete Challenge & Start Quiz
+                </Button>
+            );
+    
+        } else {
+            // Existing Progress-based Flow
+            if (isCompleted) {
+                 return (
+                    <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
+                        txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
+                        txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
+                    }`}>
+                        {txStatus === 'approved' && "Challenge approved! Your reward has been sent."}
+                        {txStatus === 'rejected' && "Your submission has been rejected."}
+                        {txStatus === 'pending' && "Challenge completed! Your reward is pending approval."}
+                        {!txStatus && "Challenge completed! Processing reward..."}
+                    </div>
+                );
+            }
+            
+            return (
+                <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
+                    Log Progress
+                </Button>
             );
         }
-        
-        return (
-            <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
-                Log Progress
-            </Button>
-        );
     };
 
     return (
@@ -147,7 +168,7 @@ const WeeklyGroupChallenge: React.FC<{
                 </div>
 
                 <div className="mt-6">
-                    {participant && (
+                    {participant && (!challenge.has_quiz || (challenge.has_quiz && quizAttempt?.passed)) && (
                          <>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm font-semibold">Your Progress</span>
@@ -313,6 +334,10 @@ const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => v
     const [loading, setLoading] = useState(true);
     const [answers, setAnswers] = useState<(number | null)[]>([]);
     const [currentStep, setCurrentStep] = useState(0); // 0 to questions.length-1 are questions, questions.length is result
+    const [submitted, setSubmitted] = useState(false);
+
+    // Get access to parent scope variables for handleSubmit
+    const { challenge, participant, createCoinTransaction, quizAttempt } = useTasksScope();
     
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -344,43 +369,52 @@ const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => v
     };
 
     const handleSubmit = async () => {
-        if (!currentUser || !supabase) return;
+        if (!currentUser || !supabase || !challenge || !participant) return;
         const score = answers.reduce((acc, answer, index) => {
             return answer === questions[index].correct_option_index ? acc + 1 : acc;
         }, 0);
         
         const passed = score >= quiz.pass_threshold;
         
-        const { error } = await supabase.from('quiz_attempts').insert({
+        const attemptData = {
             user_id: currentUser.id,
             quiz_id: quiz.id,
             score,
             passed,
-        });
+        };
 
-        if (error) {
-            addToast('Error saving quiz attempt.', 'error');
+        let attemptError;
+        if (quizAttempt) {
+            const { error } = await supabase.from('quiz_attempts').update(attemptData).eq('id', quizAttempt.id);
+            attemptError = error;
         } else {
-            if (passed) {
-                // Create coin transaction for passing
-                const { error: txError } = await supabase.from('coin_transactions').insert({
-                    user_id: currentUser.id,
-                    source_type: 'quiz',
-                    source_id: quiz.id,
-                    coin_amount: quiz.coin_reward,
-                    status: 'pending' // Or 'approved' if you want it to be automatic
-                });
-                if(txError) addToast('Error creating coin reward transaction.', 'error');
-            }
+            const { error } = await supabase.from('quiz_attempts').insert(attemptData);
+            attemptError = error;
         }
-        onComplete(); // Refetch data on parent
+
+        if (attemptError) {
+            addToast('Error saving quiz attempt: ' + attemptError.message, 'error');
+        } else if (passed) {
+            addToast(`Quiz passed! Rewards are being processed.`, 'success');
+            
+            // Update participant progress to 100
+            const { error: progressError } = await supabase.from('weekly_participants')
+                .update({ progress: 100 })
+                .eq('id', participant.id);
+            if(progressError) addToast('Error updating challenge progress.', 'error');
+
+            // Create coin transactions
+            await createCoinTransaction('quiz', quiz.id, quiz.coin_reward);
+            await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
+        }
     };
 
     useEffect(() => {
-        if (currentStep === questions.length && questions.length > 0) {
+        if (currentStep === questions.length && questions.length > 0 && !submitted) {
+            setSubmitted(true);
             handleSubmit();
         }
-    }, [currentStep, questions]);
+    }, [currentStep, questions, submitted]);
 
 
     if (loading) {
@@ -429,13 +463,24 @@ const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => v
                                 <p className="mt-2 text-gray-600 dark:text-gray-300">You scored {score}/{questions.length}. You did not pass this time, but keep studying!</p>
                             </>
                         )}
-                         <Button onClick={onClose} className="mt-6">Close</Button>
+                         <Button onClick={onComplete} className="mt-6">Close</Button>
                     </div>
                 )}
             </Card>
         </div>
     );
 };
+
+// Hook to provide parent scope to the modal
+const useTasksScope = () => {
+    const context = React.useContext(TasksScopeContext);
+    if (!context) {
+        throw new Error('useTasksScope must be used within TasksScopeContext.Provider');
+    }
+    return context;
+};
+
+const TasksScopeContext = React.createContext<any>(null);
 
 
 const Tasks: React.FC = () => {
@@ -453,126 +498,6 @@ const Tasks: React.FC = () => {
     const [quiz, setQuiz] = useState<Quiz | null>(null);
     const [quizAttempt, setQuizAttempt] = useState<QuizAttempt | null>(null);
     const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
-
-    const fetchData = async () => {
-        if (!supabase || !currentUser) return;
-        
-        // Fetch current challenge
-        const today = new Date().toISOString();
-        const { data: challengeData, error: challengeError } = await supabase
-            .from('weekly_challenges')
-            .select('*')
-            .lte('start_date', today)
-            .gte('due_date', today)
-            .order('created_at', { ascending: false })
-            .limit(1).maybeSingle();
-        if (challengeError) console.error("Error fetching challenge", challengeError);
-        else setChallenge(challengeData);
-
-        if (challengeData) {
-            // Fetch all participants for accountability
-            const { data: allParticipantsData, error: allParticipantsError } = await supabase
-                .from('weekly_participants')
-                .select('*, profiles(full_name, avatar_url)')
-                .eq('challenge_id', challengeData.id);
-
-            if(allParticipantsError) console.error("Error fetching all participants", allParticipantsError);
-            else setAllParticipants(allParticipantsData as WeeklyParticipant[] || []);
-            
-            const currentUserParticipant = allParticipantsData?.find(p => p.user_id === currentUser.id) || null;
-            setParticipant(currentUserParticipant);
-
-             // Fetch transaction status for the challenge
-            const { data: txData, error: txError } = await supabase
-                .from('coin_transactions')
-                .select('status')
-                .eq('user_id', currentUser.id)
-                .eq('source_type', 'challenge')
-                .eq('source_id', challengeData.id)
-                .maybeSingle();
-            
-            if (txError) console.error("Error fetching challenge transaction status", txError);
-            else if (txData) setChallengeTxStatus(txData.status as TxStatus);
-            else setChallengeTxStatus(null);
-            
-            // If challenge has quiz, fetch quiz and attempt status
-            if(challengeData.has_quiz) {
-                const {data: quizData, error: quizError} = await supabase.from('quizzes').select('*').eq('challenge_id', challengeData.id).single();
-                if(quizError) console.error('Error fetching quiz', quizError);
-                else setQuiz(quizData);
-
-                if(quizData) {
-                    const {data: attemptData, error: attemptError} = await supabase.from('quiz_attempts').select('*').eq('quiz_id', quizData.id).eq('user_id', currentUser.id).single();
-                    if(attemptError && attemptError.code !== 'PGRST116') console.error('Error fetching quiz attempt', attemptError); // Ignore no rows found
-                    else setQuizAttempt(attemptData);
-                }
-            } else {
-                setQuiz(null);
-                setQuizAttempt(null);
-            }
-
-        } else {
-            setParticipant(null);
-            setAllParticipants([]);
-            setChallengeTxStatus(null);
-            setQuiz(null);
-            setQuizAttempt(null);
-        }
-
-        // Fetch daily task assignments for today
-        const todayStart = new Date();
-        todayStart.setHours(0,0,0,0);
-        const todayEnd = new Date();
-        todayEnd.setHours(23,59,59,999);
-        
-        const { data: assignmentsData, error: assignmentsError } = await supabase
-            .from('tasks_assignments')
-            .select('*, tasks(*)')
-            .eq('assignee_id', currentUser.id)
-            .gte('created_at', todayStart.toISOString())
-            .lte('created_at', todayEnd.toISOString())
-            .eq('tasks.frequency', 'daily');
-
-        if (assignmentsError) console.error("Error fetching task assignments", assignmentsError);
-        else setAssignments(assignmentsData as TaskAssignment[] || []);
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, [currentUser]);
-    
-    const grantVersePackReward = async () => {
-        if (!supabase || !currentUser) return;
-        const { data: unlockedData, error: unlockedError } = await supabase
-            .from('user_verse_rewards')
-            .select('verse_id')
-            .eq('user_id', currentUser.id);
-
-        if (unlockedError) {
-            console.error('Error fetching unlocked verses', unlockedError);
-            return;
-        }
-
-        const unlockedVerseIds = new Set(unlockedData.map(r => r.verse_id));
-        const availableVerses = versePacks.filter(v => !unlockedVerseIds.has(v.id));
-
-        if (availableVerses.length === 0) {
-            addToast("You've collected all available verse packs! Amazing!", 'success');
-            return;
-        }
-
-        const verseToGrant = availableVerses[Math.floor(Math.random() * availableVerses.length)];
-        const { error: insertError } = await supabase
-            .from('user_verse_rewards')
-            .insert({ user_id: currentUser.id, verse_id: verseToGrant.id });
-
-        if (insertError) {
-            console.error('Error granting verse reward', insertError);
-        } else {
-            setRevealedVerse(verseToGrant);
-        }
-    }
-
 
     const createCoinTransaction = async (
         sourceType: 'task' | 'challenge' | 'quiz',
@@ -625,9 +550,130 @@ const Tasks: React.FC = () => {
             const message = sourceType === 'task' 
                 ? "Task complete! Reward is pending approval." 
                 : "Challenge complete! Reward is pending approval.";
-            addToast(message, 'success');
+            if (sourceType !== 'quiz') { // Quiz has its own toast
+                addToast(message, 'success');
+            }
         }
     };
+
+    const fetchData = useCallback(async () => {
+        if (!supabase || !currentUser) return;
+        
+        // Fetch current challenge
+        const today = new Date().toISOString();
+        const { data: challengeData, error: challengeError } = await supabase
+            .from('weekly_challenges')
+            .select('*')
+            .lte('start_date', today)
+            .gte('due_date', today)
+            .order('created_at', { ascending: false })
+            .limit(1).maybeSingle();
+        if (challengeError) console.error("Error fetching challenge", challengeError);
+        else setChallenge(challengeData);
+
+        if (challengeData) {
+            // Fetch all participants for accountability
+            const { data: allParticipantsData, error: allParticipantsError } = await supabase
+                .from('weekly_participants')
+                .select('*, profiles(full_name, avatar_url)')
+                .eq('challenge_id', challengeData.id);
+
+            if(allParticipantsError) console.error("Error fetching all participants", allParticipantsError);
+            else setAllParticipants(allParticipantsData as WeeklyParticipant[] || []);
+            
+            const currentUserParticipant = allParticipantsData?.find(p => p.user_id === currentUser.id) || null;
+            setParticipant(currentUserParticipant);
+
+             // Fetch transaction status for the challenge
+            const { data: txData, error: txError } = await supabase
+                .from('coin_transactions')
+                .select('status')
+                .eq('user_id', currentUser.id)
+                .eq('source_type', 'challenge')
+                .eq('source_id', challengeData.id)
+                .maybeSingle();
+            
+            if (txError) console.error("Error fetching challenge transaction status", txError);
+            else if (txData) setChallengeTxStatus(txData.status as TxStatus);
+            else setChallengeTxStatus(null);
+            
+            // If challenge has quiz, fetch quiz and attempt status
+            if(challengeData.has_quiz) {
+                const {data: quizData, error: quizError} = await supabase.from('quizzes').select('*').eq('challenge_id', challengeData.id).maybeSingle();
+                if(quizError) console.error('Error fetching quiz', quizError);
+                else setQuiz(quizData);
+
+                if(quizData) {
+                    const {data: attemptData, error: attemptError} = await supabase.from('quiz_attempts').select('*').eq('quiz_id', quizData.id).eq('user_id', currentUser.id).maybeSingle();
+                    if(attemptError && attemptError.code !== 'PGRST116') console.error('Error fetching quiz attempt', attemptError); // Ignore no rows found
+                    else setQuizAttempt(attemptData);
+                }
+            } else {
+                setQuiz(null);
+                setQuizAttempt(null);
+            }
+
+        } else {
+            setParticipant(null);
+            setAllParticipants([]);
+            setChallengeTxStatus(null);
+            setQuiz(null);
+            setQuizAttempt(null);
+        }
+
+        // Fetch daily task assignments for today
+        const todayStart = new Date();
+        todayStart.setHours(0,0,0,0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23,59,59,999);
+        
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+            .from('tasks_assignments')
+            .select('*, tasks(*)')
+            .eq('assignee_id', currentUser.id)
+            .gte('created_at', todayStart.toISOString())
+            .lte('created_at', todayEnd.toISOString())
+            .eq('tasks.frequency', 'daily');
+
+        if (assignmentsError) console.error("Error fetching task assignments", assignmentsError);
+        else setAssignments(assignmentsData as TaskAssignment[] || []);
+    }, [currentUser]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+    
+    const grantVersePackReward = async () => {
+        if (!supabase || !currentUser) return;
+        const { data: unlockedData, error: unlockedError } = await supabase
+            .from('user_verse_rewards')
+            .select('verse_id')
+            .eq('user_id', currentUser.id);
+
+        if (unlockedError) {
+            console.error('Error fetching unlocked verses', unlockedError);
+            return;
+        }
+
+        const unlockedVerseIds = new Set(unlockedData.map(r => r.verse_id));
+        const availableVerses = versePacks.filter(v => !unlockedVerseIds.has(v.id));
+
+        if (availableVerses.length === 0) {
+            addToast("You've collected all available verse packs! Amazing!", 'success');
+            return;
+        }
+
+        const verseToGrant = availableVerses[Math.floor(Math.random() * availableVerses.length)];
+        const { error: insertError } = await supabase
+            .from('user_verse_rewards')
+            .insert({ user_id: currentUser.id, verse_id: verseToGrant.id });
+
+        if (insertError) {
+            console.error('Error granting verse reward', insertError);
+        } else {
+            setRevealedVerse(verseToGrant);
+        }
+    }
 
     const handleJoinChallenge = async () => {
         if (!supabase || !currentUser || !challenge) return;
@@ -691,47 +737,51 @@ const Tasks: React.FC = () => {
             handleToggleTask(assignment, assignment.status);
         }
     };
+    
+    const scopeValue = { challenge, participant, createCoinTransaction, quizAttempt };
 
   return (
-    <div className="space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Tasks & Challenges</h1>
-        <WeeklyGroupChallenge 
-            challenge={challenge} 
-            participant={participant} 
-            allParticipants={allParticipants}
-            txStatus={challengeTxStatus}
-            quiz={quiz}
-            quizAttempt={quizAttempt}
-            onJoin={handleJoinChallenge} 
-            onProgress={handleChallengeProgress}
-            onStartQuiz={() => setIsQuizModalOpen(true)}
-        />
-        <MyDailyTasks tasks={assignments} onTaskAction={handleTaskAction} />
-
-        {focusSessionTask && (
-            <FocusSessionModal 
-                assignment={focusSessionTask}
-                onClose={() => setFocusSessionTask(null)}
-                onComplete={handleToggleTask}
-            />
-        )}
-        {revealedVerse && (
-            <VersePackModal
-                verse={revealedVerse}
-                onClose={() => setRevealedVerse(null)}
-            />
-        )}
-        {isQuizModalOpen && quiz && (
-            <QuizModal 
+    <TasksScopeContext.Provider value={scopeValue}>
+        <div className="space-y-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Tasks & Challenges</h1>
+            <WeeklyGroupChallenge 
+                challenge={challenge} 
+                participant={participant} 
+                allParticipants={allParticipants}
+                txStatus={challengeTxStatus}
                 quiz={quiz}
-                onClose={() => setIsQuizModalOpen(false)}
-                onComplete={() => {
-                    setIsQuizModalOpen(false);
-                    fetchData(); // Refetch everything to update status
-                }}
+                quizAttempt={quizAttempt}
+                onJoin={handleJoinChallenge} 
+                onProgress={handleChallengeProgress}
+                onStartQuiz={() => setIsQuizModalOpen(true)}
             />
-        )}
-    </div>
+            <MyDailyTasks tasks={assignments} onTaskAction={handleTaskAction} />
+
+            {focusSessionTask && (
+                <FocusSessionModal 
+                    assignment={focusSessionTask}
+                    onClose={() => setFocusSessionTask(null)}
+                    onComplete={handleToggleTask}
+                />
+            )}
+            {revealedVerse && (
+                <VersePackModal
+                    verse={revealedVerse}
+                    onClose={() => setRevealedVerse(null)}
+                />
+            )}
+            {isQuizModalOpen && quiz && (
+                <QuizModal 
+                    quiz={quiz}
+                    onClose={() => setIsQuizModalOpen(false)}
+                    onComplete={() => {
+                        setIsQuizModalOpen(false);
+                        fetchData(); // Refetch everything to update status
+                    }}
+                />
+            )}
+        </div>
+    </TasksScopeContext.Provider>
   );
 };
 
