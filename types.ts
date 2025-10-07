@@ -25,6 +25,7 @@ export interface Task {
   created_at: string;
   updated_at: string | null;
   coin_reward: number;
+  time_gate_minutes?: number | null;
 }
 
 export interface TaskAssignment {
@@ -46,6 +47,7 @@ export interface WeeklyChallenge {
   rules: string | null;
   created_at: string;
   coin_reward: number;
+  has_quiz: boolean;
 }
 
 export interface WeeklyParticipant {
@@ -55,12 +57,13 @@ export interface WeeklyParticipant {
     progress: number;
     streak: number;
     joined_at: string;
+    profiles?: { full_name: string | null; avatar_url: string | null; }; // For accountability feature
 }
 
 export interface CoinTransaction {
   id: number;
   user_id: string;
-  source_type: 'task' | 'challenge' | 'admin_adjustment';
+  source_type: 'task' | 'challenge' | 'admin_adjustment' | 'quiz';
   source_id: string;
   coin_amount: number;
   status: 'pending' | 'approved' | 'rejected';
@@ -269,4 +272,44 @@ export interface CourseBorrower {
     id: string;
     course_id: string;
     department_id: string;
+}
+
+// --- NEW: Gamification Types ---
+export interface Verse {
+  id: number;
+  verse_reference: string;
+  verse_text: string;
+}
+
+export interface UserVerseReward {
+    id: number;
+    user_id: string;
+    verse_id: number;
+    unlocked_at: string;
+}
+
+export interface Quiz {
+    id: string;
+    challenge_id: string;
+    title: string;
+    coin_reward: number;
+    pass_threshold: number;
+    created_at: string;
+}
+
+export interface QuizQuestion {
+    id: string;
+    quiz_id: string;
+    question_text: string;
+    options: string[];
+    correct_option_index: number;
+}
+
+export interface QuizAttempt {
+    id: string;
+    user_id: string;
+    quiz_id: string;
+    score: number;
+    passed: boolean;
+    created_at: string;
 }

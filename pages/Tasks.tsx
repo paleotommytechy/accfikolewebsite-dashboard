@@ -1,22 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';
-import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant } from '../types';
-// FIX: Import TrophyIcon to resolve module export error.
-import { TrophyIcon } from '../components/ui/Icons';
+import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant, Verse, Quiz, QuizQuestion, QuizAttempt } from '../types';
+import { TrophyIcon, ClockIcon, GiftIcon, SparklesIcon, UsersIcon, CheckCircleIcon, XCircleIcon, QuestionMarkCircleIcon } from '../components/ui/Icons';
+import { versePacks } from '../services/verses';
+import Avatar from '../components/auth/Avatar';
+
 
 type TxStatus = 'pending' | 'approved' | 'rejected' | null;
+
+const AccountabilitySection: React.FC<{ participants: WeeklyParticipant[] }> = ({ participants }) => {
+    if (participants.length <= 1) return null; // Don't show if only you are participating
+
+    return (
+        <div className="mt-6 border-t border-white/20 pt-4">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-primary-300 flex items-center gap-2 mb-3">
+                <UsersIcon className="w-5 h-5" />
+                Fellowship Members in this Challenge
+            </h4>
+            <div className="space-y-3 max-h-40 overflow-y-auto pr-2">
+                {participants.map(p => (
+                    <div key={p.user_id} className="flex items-center gap-3">
+                        <Avatar src={p.profiles?.avatar_url} alt={p.profiles?.full_name || 'member'} size="sm" />
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-white truncate">{p.profiles?.full_name}</p>
+                            <div className="w-full bg-black/20 rounded-full h-1.5 mt-1">
+                                <div className="bg-yellow-300 h-1.5 rounded-full" style={{ width: `${p.progress}%` }}></div>
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold text-yellow-300">{p.progress}%</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const WeeklyGroupChallenge: React.FC<{
     challenge: WeeklyChallenge | null,
     participant: WeeklyParticipant | null,
+    allParticipants: WeeklyParticipant[],
     txStatus: TxStatus,
+    quiz: Quiz | null,
+    quizAttempt: QuizAttempt | null,
     onJoin: () => void,
     onProgress: () => void,
-}> = ({ challenge, participant, txStatus, onJoin, onProgress }) => {
+    onStartQuiz: () => void,
+}> = ({ challenge, participant, allParticipants, txStatus, quiz, quizAttempt, onJoin, onProgress, onStartQuiz }) => {
     
     if (!challenge) {
         return (
@@ -35,7 +69,6 @@ const WeeklyGroupChallenge: React.FC<{
     const daysLeft = challenge.due_date ? (() => {
         const due = new Date(challenge.due_date);
         const today = new Date();
-        // Adjust for timezone offset to compare dates correctly by using UTC
         const utcDue = Date.UTC(due.getFullYear(), due.getMonth(), due.getUTCDate());
         const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getUTCDate());
         const diffTime = utcDue - utcToday;
@@ -45,6 +78,54 @@ const WeeklyGroupChallenge: React.FC<{
         if (diffDays === 0) return 'Ends Today';
         return `${diffDays} day${diffDays !== 1 ? 's' : ''} left`;
     })() : '';
+
+    const renderActionButton = () => {
+        if (!participant) {
+            return (
+                 <div className="mt-4 flex flex-col sm:flex-row items-center gap-4">
+                    <Button onClick={onJoin} className="w-full sm:w-auto flex-grow bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
+                        Join Challenge
+                    </Button>
+                    {daysLeft && <span className="text-sm font-medium bg-white/20 px-3 py-2 rounded-full">{daysLeft}</span>}
+                </div>
+            );
+        }
+
+        if (isCompleted) {
+            if (challenge.has_quiz && quiz) {
+                if (quizAttempt) {
+                     return (
+                        <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${quizAttempt.passed ? 'bg-green-500/30 text-green-100' : 'bg-red-500/30 text-red-100'}`}>
+                            Quiz Completed: {quizAttempt.passed ? `Passed (+${quiz.coin_reward} coins)` : 'Failed'}
+                        </div>
+                    );
+                }
+                return (
+                    <Button onClick={onStartQuiz} className="w-full bg-yellow-400 text-yellow-900 font-bold hover:bg-yellow-300 !py-3 mt-4">
+                        <QuestionMarkCircleIcon className="w-5 h-5 mr-2" />
+                        Take the Challenge Quiz!
+                    </Button>
+                );
+            }
+             return (
+                <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
+                    txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
+                    txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
+                }`}>
+                    {txStatus === 'approved' && "Challenge approved! Your reward has been sent."}
+                    {txStatus === 'rejected' && "Your submission has been rejected."}
+                    {txStatus === 'pending' && "Challenge completed! Your reward is pending approval."}
+                    {!txStatus && "Challenge completed! Processing reward..."}
+                </div>
+            );
+        }
+        
+        return (
+            <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
+                Log Progress
+            </Button>
+        );
+    };
 
     return (
         <div className="rounded-lg shadow-lg bg-gradient-to-br from-primary-700 to-primary-900 text-white p-6 relative overflow-hidden">
@@ -66,7 +147,7 @@ const WeeklyGroupChallenge: React.FC<{
                 </div>
 
                 <div className="mt-6">
-                    {participant ? (
+                    {participant && (
                          <>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm font-semibold">Your Progress</span>
@@ -77,33 +158,11 @@ const WeeklyGroupChallenge: React.FC<{
                                      <span className="font-bold text-xs text-primary-800">{progress}%</span>
                                 </div>
                             </div>
-                             <div className="mt-4">
-                                {isCompleted ? (
-                                    <div className={`text-center font-semibold py-3 px-4 rounded-lg ${
-                                        txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
-                                        txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
-                                    }`}>
-                                        {txStatus === 'approved' && "Challenge approved! Your reward has been sent."}
-                                        {txStatus === 'rejected' && "Your submission has been rejected."}
-                                        {txStatus === 'pending' && "Challenge completed! Your reward is pending approval."}
-                                        {!txStatus && "Challenge completed! Processing reward..."}
-                                    </div>
-                                ) : (
-                                    <Button onClick={onProgress} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
-                                        Log Progress
-                                    </Button>
-                                )}
-                            </div>
                         </>
-                    ) : (
-                         <div className="mt-4 flex flex-col sm:flex-row items-center gap-4">
-                            <Button onClick={onJoin} className="w-full sm:w-auto flex-grow bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3">
-                                Join Challenge
-                            </Button>
-                            {daysLeft && <span className="text-sm font-medium bg-white/20 px-3 py-2 rounded-full">{daysLeft}</span>}
-                        </div>
                     )}
+                    {renderActionButton()}
                 </div>
+                {participant && <AccountabilitySection participants={allParticipants} />}
             </div>
         </div>
     );
@@ -111,8 +170,8 @@ const WeeklyGroupChallenge: React.FC<{
 
 const MyDailyTasks: React.FC<{
     tasks: TaskAssignment[],
-    onToggle: (assignment: TaskAssignment, currentStatus: 'assigned' | 'done') => void
-}> = ({ tasks, onToggle }) => {
+    onTaskAction: (assignment: TaskAssignment) => void
+}> = ({ tasks, onTaskAction }) => {
     return (
         <Card title="My Daily Tasks">
             <div className="space-y-4">
@@ -120,7 +179,10 @@ const MyDailyTasks: React.FC<{
                 <div key={assignment.id} className={`p-4 rounded-lg border ${assignment.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-dark border-gray-200 dark:border-gray-700'}`}>
                     <div className="flex justify-between items-start">
                         <div>
-                            <h4 className={`font-semibold text-lg ${assignment.status === 'done' ? 'line-through text-gray-500' : ''}`}>{assignment.tasks?.title}</h4>
+                            <h4 className={`font-semibold text-lg ${assignment.status === 'done' ? 'line-through text-gray-500' : ''}`}>
+                                {assignment.tasks?.title}
+                                {assignment.tasks?.time_gate_minutes && assignment.status !== 'done' && <ClockIcon className="w-4 h-4 inline-block ml-2 text-gray-400" />}
+                            </h4>
                             <p className="text-gray-500 text-sm mt-1">{assignment.tasks?.details}</p>
                             {assignment.tasks?.coin_reward && <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 font-semibold">{assignment.tasks.coin_reward} Coins</p>}
                         </div>
@@ -128,7 +190,7 @@ const MyDailyTasks: React.FC<{
                             <span className={`text-xs font-bold uppercase ${assignment.status === 'done' ? 'text-green-500' : 'text-yellow-500'}`}>
                                 {assignment.status === 'done' ? 'Completed' : 'Pending'}
                             </span>
-                            <button onClick={() => onToggle(assignment, assignment.status)} className={`p-2 rounded-full ${assignment.status === 'done' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>
+                            <button onClick={() => onTaskAction(assignment)} className={`p-2 rounded-full ${assignment.status === 'done' ? 'bg-green-500 text-white' : 'border border-gray-300'}`}>
                                 {assignment.status === 'done' ? 
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg> :
                                     <span className="h-5 w-5 block"></span>
@@ -143,13 +205,254 @@ const MyDailyTasks: React.FC<{
     );
 };
 
+// --- Time-gated Task Modal ---
+const FocusSessionModal: React.FC<{
+    assignment: TaskAssignment,
+    onClose: () => void,
+    onComplete: (assignment: TaskAssignment, currentStatus: 'assigned' | 'done') => void
+}> = ({ assignment, onClose, onComplete }) => {
+    const timeInSeconds = (assignment.tasks?.time_gate_minutes || 0) * 60;
+    const [timeLeft, setTimeLeft] = useState(timeInSeconds);
+    const [timerActive, setTimerActive] = useState(false);
+
+    useEffect(() => {
+        if (!timerActive || timeLeft <= 0) return;
+        const intervalId = setInterval(() => {
+            setTimeLeft(t => Math.max(0, t - 1));
+        }, 1000);
+        return () => clearInterval(intervalId);
+    }, [timerActive, timeLeft]);
+
+    const isTimerFinished = timeLeft <= 0;
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    };
+
+    const handleComplete = () => {
+        onComplete(assignment, 'assigned');
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in-up" style={{ animationDuration: '200ms' }}>
+            <Card title="Focus Session" className="max-w-lg w-full">
+                <div className="text-center">
+                    <h3 className="text-xl font-bold">{assignment.tasks?.title}</h3>
+                    <p className="text-gray-500 mt-2">{assignment.tasks?.details}</p>
+
+                    <div className="my-8">
+                        <p className="text-6xl font-mono font-bold text-primary-600">{formatTime(timeLeft)}</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
+                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${((timeInSeconds - timeLeft) / timeInSeconds) * 100}%` }}></div>
+                        </div>
+                    </div>
+
+                    {!timerActive && <Button size="lg" onClick={() => setTimerActive(true)}>Start Timer</Button>}
+                    {timerActive && (
+                        <Button size="lg" onClick={handleComplete} disabled={!isTimerFinished}>
+                            {isTimerFinished ? "I'm Done!" : "In Progress..."}
+                        </Button>
+                    )}
+                </div>
+                <div className="text-center mt-4">
+                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+
+// --- Verse Pack Reward Modal ---
+const VersePackModal: React.FC<{ verse: Verse, onClose: () => void }> = ({ verse, onClose }) => {
+    const [isRevealed, setIsRevealed] = useState(false);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+            <div className="w-full max-w-md" style={{ perspective: '1000px' }}>
+                <div 
+                    className={`relative w-full h-80 transition-transform duration-700`}
+                    style={{ transformStyle: 'preserve-3d', transform: isRevealed ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
+                >
+                    {/* Front of the card */}
+                    <div 
+                        className="absolute w-full h-full bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl shadow-xl flex flex-col items-center justify-center text-white cursor-pointer p-6 text-center"
+                        style={{ backfaceVisibility: 'hidden' }}
+                        onClick={() => setIsRevealed(true)}
+                    >
+                         <GiftIcon className="w-20 h-20" />
+                         <h2 className="text-2xl font-bold mt-4">You earned a Verse Pack!</h2>
+                         <p className="opacity-80 mt-2">Tap to open and see today’s encouragement.</p>
+                    </div>
+
+                    {/* Back of the card */}
+                     <div 
+                        className="absolute w-full h-full bg-white dark:bg-dark rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 text-center"
+                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                    >
+                        <SparklesIcon className="w-8 h-8 text-yellow-400 mb-4" />
+                        <blockquote className="text-center">
+                            <p className="text-lg italic text-gray-700 dark:text-gray-200">"{verse.verse_text}"</p>
+                            <footer className="mt-4 text-right font-semibold text-primary-600 dark:text-primary-400">{verse.verse_reference}</footer>
+                        </blockquote>
+                        <Button onClick={onClose} className="mt-8">Collect</Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- NEW: Quiz Modal ---
+const QuizModal: React.FC<{ quiz: Quiz, onClose: () => void, onComplete: () => void }> = ({ quiz, onClose, onComplete }) => {
+    const { currentUser } = useAppContext();
+    const { addToast } = useNotifier();
+    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [answers, setAnswers] = useState<(number | null)[]>([]);
+    const [currentStep, setCurrentStep] = useState(0); // 0 to questions.length-1 are questions, questions.length is result
+    
+    useEffect(() => {
+        const fetchQuestions = async () => {
+            if (!supabase) return;
+            setLoading(true);
+            const { data, error } = await supabase.from('quiz_questions').select('*').eq('quiz_id', quiz.id);
+            if (error) {
+                addToast('Failed to load quiz questions.', 'error');
+                onClose();
+            } else {
+                setQuestions(data || []);
+                setAnswers(new Array(data.length).fill(null));
+            }
+            setLoading(false);
+        };
+        fetchQuestions();
+    }, [quiz.id, addToast, onClose]);
+
+    const handleAnswer = (optionIndex: number) => {
+        setAnswers(prev => {
+            const newAnswers = [...prev];
+            newAnswers[currentStep] = optionIndex;
+            return newAnswers;
+        });
+        // Automatically move to next question
+        setTimeout(() => {
+            setCurrentStep(s => s + 1);
+        }, 300);
+    };
+
+    const handleSubmit = async () => {
+        if (!currentUser || !supabase) return;
+        const score = answers.reduce((acc, answer, index) => {
+            return answer === questions[index].correct_option_index ? acc + 1 : acc;
+        }, 0);
+        
+        const passed = score >= quiz.pass_threshold;
+        
+        const { error } = await supabase.from('quiz_attempts').insert({
+            user_id: currentUser.id,
+            quiz_id: quiz.id,
+            score,
+            passed,
+        });
+
+        if (error) {
+            addToast('Error saving quiz attempt.', 'error');
+        } else {
+            if (passed) {
+                // Create coin transaction for passing
+                const { error: txError } = await supabase.from('coin_transactions').insert({
+                    user_id: currentUser.id,
+                    source_type: 'quiz',
+                    source_id: quiz.id,
+                    coin_amount: quiz.coin_reward,
+                    status: 'pending' // Or 'approved' if you want it to be automatic
+                });
+                if(txError) addToast('Error creating coin reward transaction.', 'error');
+            }
+        }
+        onComplete(); // Refetch data on parent
+    };
+
+    useEffect(() => {
+        if (currentStep === questions.length && questions.length > 0) {
+            handleSubmit();
+        }
+    }, [currentStep, questions]);
+
+
+    if (loading) {
+        return <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"><p className="text-white">Loading Quiz...</p></div>
+    }
+
+    const isResultStep = currentStep === questions.length;
+    const score = answers.reduce((acc, answer, index) => answer === questions[index]?.correct_option_index ? acc + 1 : acc, 0);
+    const passed = score >= quiz.pass_threshold;
+
+    return (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in-up" style={{ animationDuration: '200ms' }}>
+            <Card title={quiz.title} className="max-w-lg w-full">
+                {!isResultStep && questions[currentStep] ? (
+                    <div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">Question {currentStep + 1} of {questions.length}</h3>
+                            <button onClick={onClose}><XCircleIcon className="w-6 h-6 text-gray-400"/></button>
+                        </div>
+                        <p className="text-xl my-4">{questions[currentStep].question_text}</p>
+                        <div className="space-y-3">
+                            {questions[currentStep].options.map((option, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => handleAnswer(index)}
+                                    className="w-full text-left p-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:bg-primary-50 dark:hover:bg-primary-900/40 hover:border-primary-500 transition-colors"
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center">
+                        {passed ? (
+                            <>
+                                <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto" />
+                                <h2 className="text-2xl font-bold mt-4">Congratulations!</h2>
+                                <p className="mt-2 text-gray-600 dark:text-gray-300">You passed the quiz with a score of {score}/{questions.length}.</p>
+                                <p className="font-semibold text-lg mt-2">You earned <span className="text-yellow-500">{quiz.coin_reward} coins</span>!</p>
+                            </>
+                        ) : (
+                            <>
+                                <XCircleIcon className="w-16 h-16 text-red-500 mx-auto" />
+                                <h2 className="text-2xl font-bold mt-4">Nice Try!</h2>
+                                <p className="mt-2 text-gray-600 dark:text-gray-300">You scored {score}/{questions.length}. You did not pass this time, but keep studying!</p>
+                            </>
+                        )}
+                         <Button onClick={onClose} className="mt-6">Close</Button>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+};
+
+
 const Tasks: React.FC = () => {
     const { currentUser } = useAppContext();
     const { addToast } = useNotifier();
     const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
     const [participant, setParticipant] = useState<WeeklyParticipant | null>(null);
+    const [allParticipants, setAllParticipants] = useState<WeeklyParticipant[]>([]);
     const [assignments, setAssignments] = useState<TaskAssignment[]>([]);
     const [challengeTxStatus, setChallengeTxStatus] = useState<TxStatus>(null);
+    const [focusSessionTask, setFocusSessionTask] = useState<TaskAssignment | null>(null);
+    const [revealedVerse, setRevealedVerse] = useState<Verse | null>(null);
+
+    // New quiz state
+    const [quiz, setQuiz] = useState<Quiz | null>(null);
+    const [quizAttempt, setQuizAttempt] = useState<QuizAttempt | null>(null);
+    const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
     const fetchData = async () => {
         if (!supabase || !currentUser) return;
@@ -167,15 +470,17 @@ const Tasks: React.FC = () => {
         else setChallenge(challengeData);
 
         if (challengeData) {
-            // Fetch participation status
-            const { data: participantData, error: participantError } = await supabase
+            // Fetch all participants for accountability
+            const { data: allParticipantsData, error: allParticipantsError } = await supabase
                 .from('weekly_participants')
-                .select('*')
-                .eq('challenge_id', challengeData.id)
-                .eq('user_id', currentUser.id)
-                .maybeSingle();
-            if (participantError) console.error("Error fetching participation", participantError);
-            else setParticipant(participantData);
+                .select('*, profiles(full_name, avatar_url)')
+                .eq('challenge_id', challengeData.id);
+
+            if(allParticipantsError) console.error("Error fetching all participants", allParticipantsError);
+            else setAllParticipants(allParticipantsData as WeeklyParticipant[] || []);
+            
+            const currentUserParticipant = allParticipantsData?.find(p => p.user_id === currentUser.id) || null;
+            setParticipant(currentUserParticipant);
 
              // Fetch transaction status for the challenge
             const { data: txData, error: txError } = await supabase
@@ -187,14 +492,31 @@ const Tasks: React.FC = () => {
                 .maybeSingle();
             
             if (txError) console.error("Error fetching challenge transaction status", txError);
-            else if (txData) {
-                setChallengeTxStatus(txData.status as TxStatus);
+            else if (txData) setChallengeTxStatus(txData.status as TxStatus);
+            else setChallengeTxStatus(null);
+            
+            // If challenge has quiz, fetch quiz and attempt status
+            if(challengeData.has_quiz) {
+                const {data: quizData, error: quizError} = await supabase.from('quizzes').select('*').eq('challenge_id', challengeData.id).single();
+                if(quizError) console.error('Error fetching quiz', quizError);
+                else setQuiz(quizData);
+
+                if(quizData) {
+                    const {data: attemptData, error: attemptError} = await supabase.from('quiz_attempts').select('*').eq('quiz_id', quizData.id).eq('user_id', currentUser.id).single();
+                    if(attemptError && attemptError.code !== 'PGRST116') console.error('Error fetching quiz attempt', attemptError); // Ignore no rows found
+                    else setQuizAttempt(attemptData);
+                }
             } else {
-                setChallengeTxStatus(null);
+                setQuiz(null);
+                setQuizAttempt(null);
             }
+
         } else {
             setParticipant(null);
+            setAllParticipants([]);
             setChallengeTxStatus(null);
+            setQuiz(null);
+            setQuizAttempt(null);
         }
 
         // Fetch daily task assignments for today
@@ -218,9 +540,42 @@ const Tasks: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, [currentUser]);
+    
+    const grantVersePackReward = async () => {
+        if (!supabase || !currentUser) return;
+        const { data: unlockedData, error: unlockedError } = await supabase
+            .from('user_verse_rewards')
+            .select('verse_id')
+            .eq('user_id', currentUser.id);
+
+        if (unlockedError) {
+            console.error('Error fetching unlocked verses', unlockedError);
+            return;
+        }
+
+        const unlockedVerseIds = new Set(unlockedData.map(r => r.verse_id));
+        const availableVerses = versePacks.filter(v => !unlockedVerseIds.has(v.id));
+
+        if (availableVerses.length === 0) {
+            addToast("You've collected all available verse packs! Amazing!", 'success');
+            return;
+        }
+
+        const verseToGrant = availableVerses[Math.floor(Math.random() * availableVerses.length)];
+        const { error: insertError } = await supabase
+            .from('user_verse_rewards')
+            .insert({ user_id: currentUser.id, verse_id: verseToGrant.id });
+
+        if (insertError) {
+            console.error('Error granting verse reward', insertError);
+        } else {
+            setRevealedVerse(verseToGrant);
+        }
+    }
+
 
     const createCoinTransaction = async (
-        sourceType: 'task' | 'challenge',
+        sourceType: 'task' | 'challenge' | 'quiz',
         sourceId: string,
         coinAmount: number | null | undefined
     ) => {
@@ -229,7 +584,6 @@ const Tasks: React.FC = () => {
             return;
         }
 
-        // Strict validation
         if (typeof coinAmount !== 'number' || coinAmount <= 0) {
             console.log(`No coin reward for this ${sourceType} or amount is invalid.`);
             return;
@@ -239,7 +593,6 @@ const Tasks: React.FC = () => {
             return;
         }
 
-        // Check if a transaction for this source already exists to prevent duplicates.
         const { data: existingTx, error: checkError } = await supabase
             .from('coin_transactions')
             .select('id')
@@ -249,15 +602,13 @@ const Tasks: React.FC = () => {
             .limit(1)
             .single();
 
-        // .single() throws an error if no row is found (PGRST116), which is expected.
-        // We only care about other errors.
         if (checkError && checkError.code !== 'PGRST116') {
              addToast('Error checking for existing transaction: ' + checkError.message, 'error');
              return;
         }
         if (existingTx) {
             console.log(`Transaction for this ${sourceType} already exists.`);
-            return; // Silently exit if transaction exists
+            return;
         }
         
         const { error: txError } = await supabase.from('coin_transactions').insert({
@@ -302,8 +653,7 @@ const Tasks: React.FC = () => {
         if (error) {
             addToast("Error updating progress: " + error.message, 'error');
         } else {
-            // If progress reaches 100 and it's the first time, create transaction
-            if (newProgress >= 100 && participant.progress < 100 && challenge) {
+            if (newProgress >= 100 && participant.progress < 100 && challenge && !challenge.has_quiz) {
                 await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
             }
             fetchData();
@@ -322,11 +672,23 @@ const Tasks: React.FC = () => {
         if (error) {
             addToast("Error updating task: " + error.message, 'error');
         } else {
-            // Create a pending coin transaction if task is completed
             if (newStatus === 'done' && assignment.tasks) {
                  await createCoinTransaction('task', assignment.task_id, assignment.tasks.coin_reward);
+                 
+                 const remainingTasks = assignments.filter(a => a.id !== assignment.id && a.status === 'assigned');
+                 if (remainingTasks.length === 0) {
+                     await grantVersePackReward();
+                 }
             }
             fetchData();
+        }
+    };
+
+    const handleTaskAction = (assignment: TaskAssignment) => {
+        if (assignment.tasks?.time_gate_minutes && assignment.status !== 'done') {
+            setFocusSessionTask(assignment);
+        } else {
+            handleToggleTask(assignment, assignment.status);
         }
     };
 
@@ -336,11 +698,39 @@ const Tasks: React.FC = () => {
         <WeeklyGroupChallenge 
             challenge={challenge} 
             participant={participant} 
+            allParticipants={allParticipants}
             txStatus={challengeTxStatus}
+            quiz={quiz}
+            quizAttempt={quizAttempt}
             onJoin={handleJoinChallenge} 
-            onProgress={handleChallengeProgress} 
+            onProgress={handleChallengeProgress}
+            onStartQuiz={() => setIsQuizModalOpen(true)}
         />
-        <MyDailyTasks tasks={assignments} onToggle={handleToggleTask} />
+        <MyDailyTasks tasks={assignments} onTaskAction={handleTaskAction} />
+
+        {focusSessionTask && (
+            <FocusSessionModal 
+                assignment={focusSessionTask}
+                onClose={() => setFocusSessionTask(null)}
+                onComplete={handleToggleTask}
+            />
+        )}
+        {revealedVerse && (
+            <VersePackModal
+                verse={revealedVerse}
+                onClose={() => setRevealedVerse(null)}
+            />
+        )}
+        {isQuizModalOpen && quiz && (
+            <QuizModal 
+                quiz={quiz}
+                onClose={() => setIsQuizModalOpen(false)}
+                onComplete={() => {
+                    setIsQuizModalOpen(false);
+                    fetchData(); // Refetch everything to update status
+                }}
+            />
+        )}
     </div>
   );
 };
