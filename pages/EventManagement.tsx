@@ -167,9 +167,16 @@ const EventManagement: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Event Management</h1>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Event Management</h1>
+                {!editingEvent && (
+                    <Button onClick={() => setEditingEvent({})} className="w-full sm:w-auto">
+                        <PlusIcon className="w-5 h-5 mr-2" /> Create New Event
+                    </Button>
+                )}
+            </div>
 
-            {editingEvent ? (
+            {editingEvent && (
                 <Card title={editingEvent.id ? 'Edit Event' : 'Create New Event'}>
                     <form onSubmit={handleSave} className="space-y-4">
                         <InputField label="Event Title" name="title" value={editingEvent.title || ''} onChange={handleInputChange} required />
@@ -209,10 +216,6 @@ const EventManagement: React.FC = () => {
                         </div>
                     </form>
                 </Card>
-            ) : (
-                 <Button onClick={() => setEditingEvent({})} className="w-full sm:w-auto">
-                    <PlusIcon className="w-5 h-5 mr-2" /> Create New Event
-                </Button>
             )}
 
             <Card title="Existing Events">
@@ -258,9 +261,9 @@ const EventManagement: React.FC = () => {
                                             <p className="font-bold text-gray-900 dark:text-white truncate">{event.title}</p>
                                             <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString()} at {event.time}</p>
                                         </div>
-                                        <div className="mt-3 flex justify-end gap-2">
-                                            <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}><PencilAltIcon className="w-4 h-4" /> Edit</Button>
-                                            <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}><TrashIcon className="w-4 h-4" /> Delete</Button>
+                                        <div className="mt-3 flex flex-col sm:flex-row sm:justify-end gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}><PencilAltIcon className="w-4 h-4 mr-1" /> Edit</Button>
+                                            <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}><TrashIcon className="w-4 h-4 mr-1" /> Delete</Button>
                                         </div>
                                     </div>
                                 ))}

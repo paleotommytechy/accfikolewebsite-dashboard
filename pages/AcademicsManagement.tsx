@@ -465,10 +465,10 @@ const ManagerUI = <T extends { id: string; [key: string]: any; }>({ title, items
                             </div>
                             <div className="flex-shrink-0 w-full sm:w-auto flex items-center justify-end gap-2">
                                 <Button size="sm" variant="outline" onClick={() => onSetEditing(item)}>
-                                    <PencilAltIcon className="w-4 h-4" />
+                                    <PencilAltIcon className="w-4 h-4 mr-1" /> Edit
                                 </Button>
                                 <Button size="sm" variant="secondary" onClick={() => onDelete(item.id)}>
-                                    <TrashIcon className="w-4 h-4" />
+                                    <TrashIcon className="w-4 h-4 mr-1" /> Delete
                                 </Button>
                             </div>
                         </li>
