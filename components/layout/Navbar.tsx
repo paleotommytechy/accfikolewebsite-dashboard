@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -40,7 +39,7 @@ const Navbar: React.FC = () => {
   }, []);
   
   return (
-    <header className="bg-white dark:bg-dark shadow-sm h-16 flex items-center justify-between px-6 z-10 flex-shrink-0">
+    <header className="bg-white dark:bg-dark shadow-sm h-16 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
       <div className="flex items-center">
         <button onClick={toggleSidebar} className="text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md">
           <MenuIcon />

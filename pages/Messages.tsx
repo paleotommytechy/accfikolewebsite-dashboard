@@ -193,7 +193,7 @@ const Messages: React.FC = () => {
     
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Compose Message</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Compose Message</h1>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recipient Selection Panel */}
                 <Card className="lg:col-span-1 flex flex-col !p-0 lg:max-h-[calc(100vh-12rem)]">

@@ -140,7 +140,7 @@ const MediaManagement: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Media Management</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Media Management</h1>
 
             <Card title="Upload New Gallery Post">
                 <form onSubmit={handleSubmit} className="space-y-4">

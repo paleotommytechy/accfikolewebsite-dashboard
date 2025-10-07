@@ -625,7 +625,7 @@ const ResourceCategoryManager: React.FC = () => {
 const DeveloperSettings: React.FC = () => {
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Developer Settings</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Developer Settings</h1>
             <ScriptureManager />
             <CoinApprovalManager />
             <ResourceManager />

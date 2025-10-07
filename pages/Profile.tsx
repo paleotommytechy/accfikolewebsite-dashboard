@@ -182,7 +182,7 @@ const Profile: React.FC = () => {
 
   return (
     <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">{headerText}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">{headerText}</h1>
 
         <Card className="!p-0">
             <div className="h-32 bg-primary-500 rounded-t-lg"></div>

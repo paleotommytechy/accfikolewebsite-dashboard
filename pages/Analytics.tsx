@@ -161,7 +161,7 @@ const Analytics: React.FC = () => {
   return (
     <div className="space-y-8">
         <div className="animate-fade-in-up">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Leader Analytics</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Leader Analytics</h1>
             <p className="mt-2 text-lg text-gray-500 dark:text-gray-400">An overview of community health and engagement metrics.</p>
         </div>
 

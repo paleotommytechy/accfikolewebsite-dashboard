@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
@@ -134,7 +133,7 @@ const PrayerRequests: React.FC = () => {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Prayer Wall</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Prayer Wall</h1>
 
             <Card>
                 <form onSubmit={handleSubmit} className="space-y-3">

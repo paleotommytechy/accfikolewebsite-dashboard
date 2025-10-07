@@ -90,7 +90,7 @@ const ResourceLibrary: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Resource Library</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Resource Library</h1>
             
             <div className="flex flex-wrap gap-2">
                 <Button variant={activeCategory === 'All' ? 'primary' : 'outline'} onClick={() => setActiveCategory('All')}>All</Button>

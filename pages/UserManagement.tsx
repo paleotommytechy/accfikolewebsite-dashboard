@@ -171,7 +171,7 @@ const UserManagement: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">User Management</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">User Management</h1>
 
             <Card>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">

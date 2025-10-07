@@ -44,7 +44,7 @@ const PostEditor: React.FC = () => {
         }
     }, [postId, navigate, addToast]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setPost(prev => ({ ...prev, [name]: value }));
     };
@@ -77,14 +77,21 @@ const PostEditor: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
                 {postId ? 'Edit Post' : 'Create New Post'}
             </h1>
             <Card>
                 <form className="space-y-4">
                     <InputField label="Post Title" name="title" value={post.title} onChange={handleInputChange} placeholder="Enter a compelling title" required />
                     
-                    <TextAreaField label="Content" name="content" value={post.content} onChange={handleInputChange} rows={15} placeholder="Write your post content here... Supports basic markdown." required />
+                    <TextAreaField
+                        label="Content"
+                        name="content"
+                        value={post.content || ''}
+                        onChange={handleInputChange}
+                        placeholder="Write your post content here... (Markdown is supported)"
+                        rows={15}
+                    />
 
                     <InputField label="Featured Image URL" name="image_url" type="url" value={post.image_url || ''} onChange={handleInputChange} placeholder="https://example.com/image.jpg" />
 
@@ -112,12 +119,6 @@ const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label
         <input {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
     </div>
 );
-const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({ label, ...props }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <textarea {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-    </div>
-);
 const SelectField: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { label: string }> = ({ label, children, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
@@ -126,5 +127,12 @@ const SelectField: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { la
         </select>
     </div>
 );
+const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({ label, ...props }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+        <textarea {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+    </div>
+);
+
 
 export default PostEditor;

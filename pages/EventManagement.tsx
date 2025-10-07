@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
@@ -169,7 +167,7 @@ const EventManagement: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Event Management</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Event Management</h1>
 
             {editingEvent ? (
                 <Card title={editingEvent.id ? 'Edit Event' : 'Create New Event'}>
@@ -180,7 +178,7 @@ const EventManagement: React.FC = () => {
                             <InputField label="Time" name="time" type="time" value={editingEvent.time || ''} onChange={handleInputChange} required />
                         </div>
                         <InputField label="Location" name="location" value={editingEvent.location || ''} onChange={handleInputChange} required />
-                        <TextAreaField label="Description (Markdown supported)" name="description" value={editingEvent.description || ''} onChange={handleInputChange} rows={6} required />
+                        <TextAreaField label="Description" name="description" value={editingEvent.description || ''} onChange={handleInputChange} rows={6} required />
                         
                         <div>
                             <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Event Image</label>
@@ -260,14 +258,9 @@ const EventManagement: React.FC = () => {
                                             <p className="font-bold text-gray-900 dark:text-white truncate">{event.title}</p>
                                             <p className="text-sm text-gray-500">{new Date(event.date).toLocaleDateString()} at {event.time}</p>
                                         </div>
-                                        <hr className="my-3 border-gray-200 dark:border-gray-700" />
-                                        <div className="flex items-center justify-end space-x-2">
-                                            <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}>
-                                                <PencilAltIcon className="w-4 h-4 mr-1" /> Edit
-                                            </Button>
-                                            <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}>
-                                                <TrashIcon className="w-4 h-4 mr-1" /> Delete
-                                            </Button>
+                                        <div className="mt-3 flex justify-end gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => handleEditClick(event)}><PencilAltIcon className="w-4 h-4" /> Edit</Button>
+                                            <Button size="sm" variant="secondary" onClick={() => handleDelete(event)}><TrashIcon className="w-4 h-4" /> Delete</Button>
                                         </div>
                                     </div>
                                 ))}

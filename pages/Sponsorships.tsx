@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -100,7 +99,7 @@ const Sponsorships: React.FC = () => {
         <div className="space-y-12 animate-fade-in-up">
             <div className="text-center">
                 <HeartIcon className="w-16 h-16 mx-auto text-primary-500" />
-                <h1 className="text-4xl font-bold text-gray-800 dark:text-white mt-4">Partner With Our Mission</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-4">Partner With Our Mission</h1>
                 <p className="text-lg text-gray-600 dark:text-gray-300 mt-2 max-w-3xl mx-auto">
                     By sponsoring our events and ministries, you empower us to reach our campus and community with the message of hope and love. Join us in making a lasting impact.
                 </p>

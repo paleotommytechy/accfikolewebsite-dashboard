@@ -1,8 +1,4 @@
-
-
-
-
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
 const { BrowserRouter, HashRouter, Routes, Route, Navigate } = ReactRouterDOM;
@@ -10,32 +6,43 @@ import { AppProvider } from './context/AppContext';
 import { NotificationProvider } from './context/NotificationContext';
 import DashboardLayout from './components/ui/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Tasks from './pages/Tasks';
-import Leaderboard from './pages/Leaderboard';
-import Events from './pages/Events';
-import PrayerRequests from './pages/PrayerRequests';
-import Analytics from './pages/Analytics';
-import DeveloperSettings from './pages/DeveloperSettings';
-import Store from './pages/Store';
-import ChatHistory from './pages/ChatHistory';
-import UserManagement from './pages/UserManagement';
-import ChatConversation from './pages/ChatConversation';
-import Notifications from './pages/Notifications';
-import Giving from './pages/Giving';
-import Sponsorships from './pages/Sponsorships';
-import ResourceLibrary from './pages/ResourceLibrary';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import BlogManagement from './pages/BlogManagement';
-import PostEditor from './pages/PostEditor';
-import Gallery from './pages/Gallery';
-import MediaManagement from './pages/MediaManagement';
-import EventManagement from './pages/EventManagement';
-import Academics from './pages/Academics';
-import AcademicsManagement from './pages/AcademicsManagement';
+
+// --- LAZY-LOADED PAGES ---
+const Auth = lazy(() => import('./pages/Auth'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Events = lazy(() => import('./pages/Events'));
+const PrayerRequests = lazy(() => import('./pages/PrayerRequests'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const DeveloperSettings = lazy(() => import('./pages/DeveloperSettings'));
+const Store = lazy(() => import('./pages/Store'));
+const ChatHistory = lazy(() => import('./pages/ChatHistory'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const ChatConversation = lazy(() => import('./pages/ChatConversation'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Giving = lazy(() => import('./pages/Giving'));
+const Sponsorships = lazy(() => import('./pages/Sponsorships'));
+const ResourceLibrary = lazy(() => import('./pages/ResourceLibrary'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const BlogManagement = lazy(() => import('./pages/BlogManagement'));
+const PostEditor = lazy(() => import('./pages/PostEditor'));
+const Gallery = lazy(() => import('./pages/Gallery'));
+const MediaManagement = lazy(() => import('./pages/MediaManagement'));
+const EventManagement = lazy(() => import('./pages/EventManagement'));
+const Academics = lazy(() => import('./pages/Academics'));
+const AcademicsManagement = lazy(() => import('./pages/AcademicsManagement'));
+const Hymns = lazy(() => import('./pages/Hymns'));
+
+
+// --- SUSPENSE FALLBACK LOADER ---
+const FullPageLoader = () => (
+  <div className="flex h-screen items-center justify-center bg-light dark:bg-secondary">
+    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600"></div>
+  </div>
+);
 
 
 // Dynamically choose the router based on the environment.
@@ -50,100 +57,103 @@ function App(): React.ReactNode {
     <AppProvider>
       <NotificationProvider>
         <Router>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* FIX: Use a dedicated layout route for admin pages to resolve errors from nested ProtectedRoutes. */}
-            {/* Admin-only protected routes are defined first to ensure they are matched before the general user routes. */}
-            <Route 
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/user-management" element={<UserManagement />} />
-              <Route path="/developer-settings" element={<DeveloperSettings />} />
-            </Route>
-            
-            {/* Pro & Admin protected routes */}
-            <Route 
-              element={
-                <ProtectedRoute proOnly={true}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/event-management" element={<EventManagement />} />
-            </Route>
-
-            {/* Blog manager protected routes */}
-            <Route 
-              element={
-                <ProtectedRoute bloggerOnly={true}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/blog-management" element={<BlogManagement />} />
-              <Route path="/blog-management/editor" element={<PostEditor />} />
-              <Route path="/blog-management/editor/:postId" element={<PostEditor />} />
-            </Route>
-
-            {/* Media manager protected routes */}
-            <Route 
-              element={
-                <ProtectedRoute mediaOnly={true}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/media-management" element={<MediaManagement />} />
-            </Route>
-            
-            {/* Academics manager protected routes */}
-            <Route 
-              element={
-                <ProtectedRoute academicsOnly={true}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/academics-management" element={<AcademicsManagement />} />
-            </Route>
-
-            {/* General protected routes for all authenticated users */}
-            <Route 
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile/:userId?" element={<Profile />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/prayers" element={<PrayerRequests />} />
-              <Route path="/resources" element={<ResourceLibrary />} />
-              <Route path="/academics" element={<Academics />} />
-              <Route path="/gallery" element={<Gallery />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:postId" element={<BlogPost />} />
-              <Route path="/messages" element={<ChatHistory />} />
-              <Route path="/messages/:userId" element={<ChatConversation />} />
-              <Route path="/store" element={<Store />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/giving" element={<Giving />} />
-              <Route path="/sponsorships" element={<Sponsorships />} />
+          <Suspense fallback={<FullPageLoader />}>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
               
-              {/* Redirect from root and any other unmatched protected route to dashboard */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Route>
-          </Routes>
+              {/* FIX: Use a dedicated layout route for admin pages to resolve errors from nested ProtectedRoutes. */}
+              {/* Admin-only protected routes are defined first to ensure they are matched before the general user routes. */}
+              <Route 
+                element={
+                  <ProtectedRoute adminOnly={true}>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/developer-settings" element={<DeveloperSettings />} />
+              </Route>
+              
+              {/* Pro & Admin protected routes */}
+              <Route 
+                element={
+                  <ProtectedRoute proOnly={true}>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/event-management" element={<EventManagement />} />
+              </Route>
+
+              {/* Blog manager protected routes */}
+              <Route 
+                element={
+                  <ProtectedRoute bloggerOnly={true}>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/blog-management" element={<BlogManagement />} />
+                <Route path="/blog-management/editor" element={<PostEditor />} />
+                <Route path="/blog-management/editor/:postId" element={<PostEditor />} />
+              </Route>
+
+              {/* Media manager protected routes */}
+              <Route 
+                element={
+                  <ProtectedRoute mediaOnly={true}>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/media-management" element={<MediaManagement />} />
+              </Route>
+              
+              {/* Academics manager protected routes */}
+              <Route 
+                element={
+                  <ProtectedRoute academicsOnly={true}>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/academics-management" element={<AcademicsManagement />} />
+              </Route>
+
+              {/* General protected routes for all authenticated users */}
+              <Route 
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile/:userId?" element={<Profile />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/prayers" element={<PrayerRequests />} />
+                <Route path="/resources" element={<ResourceLibrary />} />
+                <Route path="/academics" element={<Academics />} />
+                <Route path="/gallery" element={<Gallery />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:postId" element={<BlogPost />} />
+                <Route path="/hymns" element={<Hymns />} />
+                <Route path="/messages" element={<ChatHistory />} />
+                <Route path="/messages/:userId" element={<ChatConversation />} />
+                <Route path="/store" element={<Store />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/giving" element={<Giving />} />
+                <Route path="/sponsorships" element={<Sponsorships />} />
+                
+                {/* Redirect from root and any other unmatched protected route to dashboard */}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Route>
+            </Routes>
+          </Suspense>
         </Router>
       </NotificationProvider>
     </AppProvider>
