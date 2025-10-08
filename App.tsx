@@ -36,6 +36,7 @@ const Academics = lazy(() => import('./pages/Academics'));
 const AcademicsManagement = lazy(() => import('./pages/AcademicsManagement'));
 const Hymns = lazy(() => import('./pages/Hymns'));
 const QuizEditor = lazy(() => import('./pages/QuizEditor'));
+const FinancialManagement = lazy(() => import('./pages/FinancialManagement'));
 
 
 // --- SUSPENSE FALLBACK LOADER ---
@@ -86,6 +87,17 @@ function App(): React.ReactNode {
                 }
               >
                 <Route path="/event-management" element={<EventManagement />} />
+              </Route>
+              
+              {/* Admin & Finance protected routes */}
+              <Route 
+                element={
+                  <ProtectedRoute financeOnly={true}>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/financial-management" element={<FinancialManagement />} />
               </Route>
 
               {/* Blog manager protected routes */}

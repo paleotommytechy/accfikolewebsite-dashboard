@@ -1,7 +1,3 @@
-
-
-
-
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -10,7 +6,7 @@ import { useAppContext } from '../../context/AppContext';
 import { NAV_LINKS, ADMIN_LINKS, BLOG_LINKS, MEDIA_LINKS, ACADEMICS_LINKS } from '../../constants';
 
 const Sidebar: React.FC = () => {
-  const { isSidebarOpen, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete } = useAppContext();
+  const { isSidebarOpen, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isFinance, isProfileComplete } = useAppContext();
 
   const linkClasses = "flex items-center py-2.5 px-4 rounded transition duration-200";
   const activeLinkClasses = "bg-primary-700 text-white";
@@ -111,13 +107,12 @@ const Sidebar: React.FC = () => {
           </>
         )}
 
-        {(isAdmin || isPro) && (
+        {(isAdmin || isPro || isFinance) && (
           <>
             <hr className="my-4 border-gray-700" />
             {ADMIN_LINKS.filter(link => {
-              // Show Event Management to Admins and Pros
               if (link.href === '/event-management') return isAdmin || isPro;
-              // Show other admin links only to Admins
+              if (link.href === '/financial-management') return isAdmin || isFinance;
               return isAdmin;
             }).map((link) => {
               const isDisabled = !isProfileComplete;

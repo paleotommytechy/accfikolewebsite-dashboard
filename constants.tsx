@@ -36,5 +36,6 @@ export const ADMIN_LINKS = [
   { name: 'Leader Analytics', href: '/analytics', icon: <ChartBarIcon /> },
   { name: 'User Management', href: '/user-management', icon: <UsersIcon /> },
   { name: 'Event Management', href: '/event-management', icon: <CalendarIcon /> },
+  { name: 'Financial Mgt.', href: '/financial-management', icon: <GiftIcon /> },
   { name: 'Developer Settings', href: '/developer-settings', icon: <CodeIcon /> },
 ];

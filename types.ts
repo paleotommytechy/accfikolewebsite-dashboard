@@ -326,3 +326,15 @@ export interface QuizAttempt {
     passed: boolean;
     created_at: string;
 }
+
+// --- NEW: Giving/Donation System ---
+export interface Donation {
+  id: string;
+  user_id: string;
+  amount: number;
+  fund_name: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  created_at: string;
+  confirmed_at: string | null;
+  profiles?: Pick<UserProfile, 'full_name' | 'avatar_url' | 'whatsapp'>;
+}

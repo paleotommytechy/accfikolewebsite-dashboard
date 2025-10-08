@@ -1,7 +1,3 @@
-
-
-
-
 import React from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -10,8 +6,8 @@ import { useAppContext } from '../../context/AppContext';
 
 // FIX: Made children prop optional to resolve TypeScript error in App.tsx.
 // NEW: Added bloggerOnly, mediaOnly, proOnly, and academicsOnly props.
-const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false, proOnly = false, academicsOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean, proOnly?: boolean, academicsOnly?: boolean }): React.ReactNode => {
-  const { currentUser, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isLoading, isProfileComplete } = useAppContext();
+const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, mediaOnly = false, proOnly = false, academicsOnly = false, financeOnly = false }: { children?: React.ReactNode, adminOnly?: boolean, bloggerOnly?: boolean, mediaOnly?: boolean, proOnly?: boolean, academicsOnly?: boolean, financeOnly?: boolean }): React.ReactNode => {
+  const { currentUser, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isFinance, isLoading, isProfileComplete } = useAppContext();
   const location = useLocation();
 
   if (isLoading) {
@@ -49,6 +45,10 @@ const ProtectedRoute = ({ children, adminOnly = false, bloggerOnly = false, medi
   }
   
   if (academicsOnly && !isAdmin && !isAcademicsManager) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (financeOnly && !isAdmin && !isFinance) {
     return <Navigate to="/dashboard" replace />;
   }
 

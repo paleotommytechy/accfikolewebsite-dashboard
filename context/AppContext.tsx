@@ -14,6 +14,7 @@ interface AppContextType {
   isMediaManager: boolean;
   isAcademicsManager: boolean;
   isPro: boolean;
+  isFinance: boolean;
   isProfileComplete: boolean;
   theme: Theme;
   toggleTheme: () => void;
@@ -31,6 +32,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isMediaManager, setIsMediaManager] = useState(false);
   const [isAcademicsManager, setIsAcademicsManager] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [isFinance, setIsFinance] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
@@ -87,6 +89,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isMediaManagerStatus = userRole === 'media';
         const isAcademicsManagerStatus = userRole === 'academics';
         const isProStatus = userRole === 'pro';
+        const isFinanceStatus = userRole === 'finance';
 
         const { data: profile, error: profileError } = profileResponse;
         if (profileError) {
@@ -127,6 +130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsMediaManager(isMediaManagerStatus);
         setIsAcademicsManager(isAcademicsManagerStatus);
         setIsPro(isProStatus);
+        setIsFinance(isFinanceStatus);
       } else {
         // No user session, clear all user-related state
         setCurrentUser(null);
@@ -135,6 +139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsMediaManager(false);
         setIsAcademicsManager(false);
         setIsPro(false);
+        setIsFinance(false);
         setIsProfileComplete(false);
       }
     } catch (e) {
@@ -149,6 +154,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsMediaManager(false);
       setIsAcademicsManager(false);
       setIsPro(false);
+      setIsFinance(false);
       setIsProfileComplete(false);
     } finally {
       setIsLoading(false);
@@ -189,11 +195,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isMediaManager,
     isAcademicsManager,
     isPro,
+    isFinance,
     isProfileComplete,
     theme,
     toggleTheme,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, toggleSidebar, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete, theme, toggleTheme, fetchCurrentUser]);
+  }), [isSidebarOpen, toggleSidebar, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isFinance, isProfileComplete, theme, toggleTheme, fetchCurrentUser]);
 
   return (
     <AppContext.Provider value={value}>

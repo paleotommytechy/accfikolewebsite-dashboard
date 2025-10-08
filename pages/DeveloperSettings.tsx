@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource, ResourceCategory, Quiz, QuizQuestion } from '../types';
 import Avatar from '../components/auth/Avatar';
-import { CheckIcon, PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
+import { CheckIcon, PlusIcon, PencilAltIcon, TrashIcon, ChatIcon, CheckCircleIcon, XCircleIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
 

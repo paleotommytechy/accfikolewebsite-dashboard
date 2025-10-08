@@ -164,6 +164,8 @@ const UserManagement: React.FC = () => {
                 return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300';
             case 'academics':
                 return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300';
+            case 'finance':
+                return 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300';
             default:
                 return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
         }
@@ -313,6 +315,7 @@ const UserManagement: React.FC = () => {
                                         <option value="blog">Blogger</option>
                                         <option value="media">Media</option>
                                         <option value="academics">Academics</option>
+                                        <option value="finance">Finance</option>
                                     </SelectField>
                                 </div>
                             </form>
