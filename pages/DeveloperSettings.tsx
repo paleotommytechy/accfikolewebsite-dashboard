@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
@@ -8,6 +8,10 @@ import Avatar from '../components/auth/Avatar';
 import { CheckIcon, PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
+const EditorLoadingSkeleton = () => <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 const ScriptureManager: React.FC = () => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -21,8 +25,8 @@ const ScriptureManager: React.FC = () => {
             if (!supabase || !date) return;
             
             // Clear previous state when date changes
-            setReference('');
-            setText('');
+            setReference(localStorage.getItem(`scripture-editor-reference-${date}`) || '');
+            setText(localStorage.getItem(`scripture-editor-text-${date}`) || '');
 
             const { data, error } = await supabase
                 .from('scripture_of_the_day')
@@ -33,6 +37,7 @@ const ScriptureManager: React.FC = () => {
             if (error) {
                 console.error("Error fetching scripture for date:", error);
             } else if (data) {
+                // If data exists, it overrides any local storage drafts
                 setReference(data.verse_reference);
                 setText(data.verse_text);
             }
@@ -62,7 +67,13 @@ const ScriptureManager: React.FC = () => {
             addToast('Error saving scripture: ' + error.message, 'error');
         } else {
             addToast('Scripture of the day saved successfully!', 'success');
+            localStorage.removeItem(`scripture-editor-reference-${date}`);
+            localStorage.removeItem(`scripture-editor-text-${date}`);
         }
+    };
+    
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
     };
 
     return (
@@ -76,21 +87,18 @@ const ScriptureManager: React.FC = () => {
                     onChange={e => setDate(e.target.value)}
                     required 
                 />
-                <InputField 
-                    label="Verse Reference" 
-                    placeholder="e.g., Jeremiah 29:11"
-                    value={reference}
-                    onChange={e => setReference(e.target.value)}
-                    required
-                />
-                 <TextAreaField
-                    label="Verse Text"
-                    placeholder="Enter the scripture text..."
-                    value={text}
-                    onChange={e => setText(e.target.value)}
-                    rows={4}
-                    required
-                />
+                <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Verse Reference</label>
+                    <Suspense fallback={<InputLoadingSkeleton />}>
+                        <AutoSaveField {...commonInputProps} as="input" placeholder="e.g., Jeremiah 29:11" value={reference} onChange={e => setReference(e.target.value)} required storageKey={`scripture-editor-reference-${date}`} />
+                    </Suspense>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Verse Text</label>
+                    <Suspense fallback={<EditorLoadingSkeleton />}>
+                        <AutoSaveField {...commonInputProps} as="textarea" placeholder="Enter the scripture text..." value={text} onChange={e => setText(e.target.value)} rows={4} required storageKey={`scripture-editor-text-${date}`} />
+                    </Suspense>
+                </div>
                 <div className="flex justify-end">
                     <Button type="submit">Save Scripture</Button>
                 </div>
@@ -274,6 +282,12 @@ const ChallengeManager: React.FC = () => {
     useEffect(() => {
         fetchChallenges();
     }, [fetchChallenges]);
+    
+    const clearChallengeLocalStorage = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`challenge-editor-title-${keyId}`);
+        localStorage.removeItem(`challenge-editor-details-${keyId}`);
+    };
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -285,6 +299,7 @@ const ChallengeManager: React.FC = () => {
         if (error) addToast('Error saving challenge: ' + error.message, 'error');
         else {
             addToast(`Challenge ${editingChallenge.id ? 'updated' : 'created'} successfully!`, 'success');
+            clearChallengeLocalStorage(editingChallenge.id);
             setEditingChallenge(null);
             fetchChallenges();
         }
@@ -298,6 +313,7 @@ const ChallengeManager: React.FC = () => {
             if (error) addToast('Error deleting challenge: ' + error.message, 'error');
             else {
                 addToast('Challenge deleted.', 'success');
+                clearChallengeLocalStorage(id);
                 fetchChallenges();
             }
         };
@@ -305,13 +321,32 @@ const ChallengeManager: React.FC = () => {
         showConfirm('Are you sure you want to delete this challenge?', confirmedDelete);
     };
     
+    const handleCancel = () => {
+        clearChallengeLocalStorage(editingChallenge?.id);
+        setEditingChallenge(null);
+    };
+    
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
+    };
+
     return (
         <Card title="Weekly Challenges Management">
             {editingChallenge ? (
                 <form onSubmit={handleSave} className="space-y-4 p-4 mb-6 border dark:border-gray-700 rounded-lg">
                     <h3 className="text-lg font-semibold">{editingChallenge.id ? 'Edit Challenge' : 'Create New Challenge'}</h3>
-                    <InputField label="Title" value={editingChallenge.title || ''} onChange={e => setEditingChallenge(p => ({...p, title: e.target.value}))} required />
-                    <TextAreaField label="Details" value={editingChallenge.details || ''} onChange={e => setEditingChallenge(p => ({...p, details: e.target.value}))} />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                            <AutoSaveField {...commonInputProps} as="input" value={editingChallenge.title || ''} onChange={e => setEditingChallenge(p => ({...p, title: e.target.value}))} required storageKey={`challenge-editor-title-${editingChallenge.id || 'new'}`} />
+                        </Suspense>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Details</label>
+                        <Suspense fallback={<EditorLoadingSkeleton />}>
+                            <AutoSaveField {...commonInputProps} as="textarea" value={editingChallenge.details || ''} onChange={e => setEditingChallenge(p => ({...p, details: e.target.value}))} storageKey={`challenge-editor-details-${editingChallenge.id || 'new'}`} />
+                        </Suspense>
+                    </div>
                     <InputField label="Coin Reward" type="number" value={editingChallenge.coin_reward || 50} onChange={e => setEditingChallenge(p => ({...p, coin_reward: parseInt(e.target.value, 10)}))} required />
                     <div className="grid grid-cols-2 gap-4">
                         <InputField label="Start Date" type="date" value={editingChallenge.start_date || ''} onChange={e => setEditingChallenge(p => ({...p, start_date: e.target.value}))} />
@@ -319,7 +354,7 @@ const ChallengeManager: React.FC = () => {
                     </div>
                     <div className="flex gap-2">
                         <Button type="submit">Save Challenge</Button>
-                        <Button variant="ghost" type="button" onClick={() => setEditingChallenge(null)}>Cancel</Button>
+                        <Button variant="ghost" type="button" onClick={handleCancel}>Cancel</Button>
                     </div>
                 </form>
             ) : (
@@ -360,6 +395,12 @@ const TaskManager: React.FC = () => {
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
+    
+    const clearTaskLocalStorage = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`task-editor-title-${keyId}`);
+        localStorage.removeItem(`task-editor-details-${keyId}`);
+    };
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -368,6 +409,7 @@ const TaskManager: React.FC = () => {
         if (error) addToast('Error saving task: ' + error.message, 'error');
         else {
             addToast(`Task ${editingTask.id ? 'updated' : 'created'} successfully!`, 'success');
+            clearTaskLocalStorage(editingTask.id);
             setEditingTask(null);
             fetchTasks();
         }
@@ -381,6 +423,7 @@ const TaskManager: React.FC = () => {
             if (error) addToast('Error deleting task: ' + error.message, 'error');
             else {
                 addToast('Task deleted.', 'success');
+                clearTaskLocalStorage(id);
                 fetchTasks();
             }
         };
@@ -407,13 +450,32 @@ const TaskManager: React.FC = () => {
         showConfirm('This will assign this task to all users for today. This action cannot be undone. Continue?', assignTask);
     };
     
+    const handleCancel = () => {
+        clearTaskLocalStorage(editingTask?.id);
+        setEditingTask(null);
+    };
+    
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
+    };
+
     return (
         <Card title="Tasks Management">
             {editingTask ? (
                 <form onSubmit={handleSave} className="space-y-4 p-4 mb-6 border dark:border-gray-700 rounded-lg">
                     <h3 className="text-lg font-semibold">{editingTask.id ? 'Edit Task' : 'Create New Task'}</h3>
-                    <InputField label="Title" value={editingTask.title || ''} onChange={e => setEditingTask(p => ({...p, title: e.target.value}))} required />
-                    <TextAreaField label="Details" value={editingTask.details || ''} onChange={e => setEditingTask(p => ({...p, details: e.target.value}))} />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                            <AutoSaveField {...commonInputProps} as="input" value={editingTask.title || ''} onChange={e => setEditingTask(p => ({...p, title: e.target.value}))} required storageKey={`task-editor-title-${editingTask.id || 'new'}`} />
+                        </Suspense>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Details</label>
+                        <Suspense fallback={<EditorLoadingSkeleton />}>
+                            <AutoSaveField {...commonInputProps} as="textarea" value={editingTask.details || ''} onChange={e => setEditingTask(p => ({...p, details: e.target.value}))} storageKey={`task-editor-details-${editingTask.id || 'new'}`} />
+                        </Suspense>
+                    </div>
                     <InputField label="Coin Reward" type="number" value={editingTask.coin_reward || 0} onChange={e => setEditingTask(p => ({...p, coin_reward: parseInt(e.target.value, 10)}))} required />
                     <div>
                         <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Frequency</label>
@@ -427,7 +489,7 @@ const TaskManager: React.FC = () => {
 
                     <div className="flex gap-2">
                         <Button type="submit">Save Task</Button>
-                        <Button variant="ghost" type="button" onClick={() => setEditingTask(null)}>Cancel</Button>
+                        <Button variant="ghost" type="button" onClick={handleCancel}>Cancel</Button>
                     </div>
                 </form>
             ) : (
@@ -481,6 +543,14 @@ const ResourceManager: React.FC = () => {
         fetchData();
     }, [fetchData]);
 
+    const clearResourceLocalStorage = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`resource-editor-title-${keyId}`);
+        localStorage.removeItem(`resource-editor-description-${keyId}`);
+        localStorage.removeItem(`resource-editor-url-${keyId}`);
+        localStorage.removeItem(`resource-editor-thumbnail_url-${keyId}`);
+    };
+    
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!supabase || !editingResource || !editingResource.title || !editingResource.url || !editingResource.category) {
@@ -492,6 +562,7 @@ const ResourceManager: React.FC = () => {
             addToast('Error saving resource: ' + error.message, 'error');
         } else {
             addToast(`Resource ${editingResource.id ? 'updated' : 'created'} successfully!`, 'success');
+            clearResourceLocalStorage(editingResource.id);
             setEditingResource(null);
             fetchData();
         }
@@ -505,27 +576,59 @@ const ResourceManager: React.FC = () => {
                 addToast('Error deleting resource: ' + error.message, 'error');
             } else {
                 addToast('Resource deleted.', 'success');
+                clearResourceLocalStorage(id);
                 fetchData();
             }
         });
     };
+    
+    const handleCancel = () => {
+        clearResourceLocalStorage(editingResource?.id);
+        setEditingResource(null);
+    };
+
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
+    };
+
+    const storageKeyId = editingResource?.id || 'new';
 
     return (
         <Card title="Resource Library Management">
             {editingResource ? (
                 <form onSubmit={handleSave} className="space-y-4 p-4 mb-6 border dark:border-gray-700 rounded-lg animate-fade-in-up">
                     <h3 className="text-lg font-semibold">{editingResource.id ? 'Edit Resource' : 'Create New Resource'}</h3>
-                    <InputField label="Title" value={editingResource.title || ''} onChange={e => setEditingResource(p => ({ ...p, title: e.target.value }))} required />
-                    <TextAreaField label="Description" value={editingResource.description || ''} onChange={e => setEditingResource(p => ({ ...p, description: e.target.value }))} />
-                    <InputField label="URL" type="url" placeholder="https://example.com/resource" value={editingResource.url || ''} onChange={e => setEditingResource(p => ({ ...p, url: e.target.value }))} required />
-                    <InputField label="Thumbnail Image URL (optional)" type="url" placeholder="https://example.com/image.png" value={editingResource.thumbnail_url || ''} onChange={e => setEditingResource(p => ({ ...p, thumbnail_url: e.target.value }))} />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                           <AutoSaveField {...commonInputProps} as="input" value={editingResource.title || ''} onChange={e => setEditingResource(p => ({ ...p, title: e.target.value }))} required storageKey={`resource-editor-title-${storageKeyId}`} />
+                        </Suspense>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                        <Suspense fallback={<EditorLoadingSkeleton />}>
+                           <AutoSaveField {...commonInputProps} as="textarea" value={editingResource.description || ''} onChange={e => setEditingResource(p => ({ ...p, description: e.target.value }))} storageKey={`resource-editor-description-${storageKeyId}`} />
+                        </Suspense>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">URL</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                           <AutoSaveField {...commonInputProps} as="input" type="url" placeholder="https://example.com/resource" value={editingResource.url || ''} onChange={e => setEditingResource(p => ({ ...p, url: e.target.value }))} required storageKey={`resource-editor-url-${storageKeyId}`} />
+                        </Suspense>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Thumbnail Image URL (optional)</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                           <AutoSaveField {...commonInputProps} as="input" type="url" placeholder="https://example.com/image.png" value={editingResource.thumbnail_url || ''} onChange={e => setEditingResource(p => ({ ...p, thumbnail_url: e.target.value }))} storageKey={`resource-editor-thumbnail_url-${storageKeyId}`} />
+                        </Suspense>
+                    </div>
                     <SelectField label="Category" value={editingResource.category || ''} onChange={e => setEditingResource(p => ({ ...p, category: e.target.value as Resource['category'] }))} required>
                         <option value="" disabled>Select a category</option>
                         {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
                     </SelectField>
                     <div className="flex gap-2">
                         <Button type="submit">Save Resource</Button>
-                        <Button variant="ghost" type="button" onClick={() => setEditingResource(null)}>Cancel</Button>
+                        <Button variant="ghost" type="button" onClick={handleCancel}>Cancel</Button>
                     </div>
                 </form>
             ) : (
@@ -562,6 +665,11 @@ const ResourceCategoryManager: React.FC = () => {
     }, [addToast]);
 
     useEffect(() => { fetchCategories(); }, [fetchCategories]);
+    
+    const clearCategoryLocalStorage = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`resource-category-editor-name-${keyId}`);
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -570,6 +678,7 @@ const ResourceCategoryManager: React.FC = () => {
         if (error) addToast(error.message, 'error');
         else {
             addToast(`Category ${editing.id ? 'updated' : 'created'}.`, 'success');
+            clearCategoryLocalStorage(editing.id);
             setEditing(null);
             fetchCategories();
         }
@@ -586,8 +695,14 @@ const ResourceCategoryManager: React.FC = () => {
             }
         } else {
             addToast('Category deleted.', 'success');
+            clearCategoryLocalStorage(id);
             fetchCategories();
         }
+    };
+    
+    const handleCancel = () => {
+        clearCategoryLocalStorage(editing?.id);
+        setEditing(null);
     };
 
     return (
@@ -596,9 +711,14 @@ const ResourceCategoryManager: React.FC = () => {
                 {editing ? (
                     <form onSubmit={handleSave} className="space-y-4 p-4 mb-4 border dark:border-gray-700 rounded-lg">
                         <h3 className="text-lg font-semibold">{editing.id ? 'Edit' : 'Create'} Category</h3>
-                        <InputField label="Category Name" value={editing?.name || ''} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} required />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Category Name</label>
+                            <Suspense fallback={<InputLoadingSkeleton />}>
+                                <AutoSaveField as="input" className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" value={editing?.name || ''} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} required storageKey={`resource-category-editor-name-${editing.id || 'new'}`} />
+                            </Suspense>
+                        </div>
                         <div className="flex gap-2 justify-end">
-                            <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                            <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
                             <Button type="submit">Save</Button>
                         </div>
                     </form>
@@ -642,6 +762,11 @@ const QuizManager: React.FC = () => {
     
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    const clearQuizLocalStorage = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`quiz-editor-title-${keyId}`);
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editing || !editing.title || !editing.challenge_id || !supabase) {
@@ -654,6 +779,7 @@ const QuizManager: React.FC = () => {
             else addToast(error.message, 'error');
         } else {
             addToast(`Quiz ${editing.id ? 'updated' : 'created'}.`, 'success');
+            clearQuizLocalStorage(editing.id);
             setEditing(null);
             fetchData();
         }
@@ -663,7 +789,12 @@ const QuizManager: React.FC = () => {
         if (!supabase) return;
         const { error } = await supabase.from('quizzes').delete().eq('id', id);
         if (error) addToast(error.message, 'error');
-        else { addToast('Quiz deleted.', 'success'); fetchData(); }
+        else { addToast('Quiz deleted.', 'success'); clearQuizLocalStorage(id); fetchData(); }
+    };
+    
+    const handleCancel = () => {
+        clearQuizLocalStorage(editing?.id);
+        setEditing(null);
     };
     
     return (
@@ -676,13 +807,18 @@ const QuizManager: React.FC = () => {
                              <option value="" disabled>Select a challenge</option>
                              {challenges.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                         </SelectField>
-                        <InputField label="Quiz Title" value={editing.title || ''} onChange={e => setEditing(p => ({ ...p, title: e.target.value }))} required />
+                        <div>
+                           <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Quiz Title</label>
+                           <Suspense fallback={<InputLoadingSkeleton />}>
+                               <AutoSaveField as="input" className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" value={editing.title || ''} onChange={e => setEditing(p => ({ ...p, title: e.target.value }))} required storageKey={`quiz-editor-title-${editing.id || 'new'}`} />
+                           </Suspense>
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                            <InputField label="Coin Reward" type="number" value={editing.coin_reward || 25} onChange={e => setEditing(p => ({ ...p, coin_reward: parseInt(e.target.value) }))} required />
                            <InputField label="Questions to Pass" type="number" value={editing.pass_threshold || 2} onChange={e => setEditing(p => ({ ...p, pass_threshold: parseInt(e.target.value) }))} required />
                         </div>
                         <div className="flex gap-2 justify-end">
-                            <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                            <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>
                             <Button type="submit">Save</Button>
                         </div>
                     </form>

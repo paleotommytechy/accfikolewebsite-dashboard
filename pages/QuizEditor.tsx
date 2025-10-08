@@ -80,8 +80,9 @@ const QuizEditor: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const clearLocalStorageForQuestion = (id: string | undefined) => {
-        const keyId = id || 'new';
+    const clearLocalStorageForQuestion = (questionId: string | undefined) => {
+        if (!quizId) return;
+        const keyId = questionId || 'new';
         localStorage.removeItem(`quiz-question-editor-text-${quizId}-${keyId}`);
         for (let i = 0; i < 4; i++) {
             localStorage.removeItem(`quiz-question-editor-option-${quizId}-${keyId}-${i}`);

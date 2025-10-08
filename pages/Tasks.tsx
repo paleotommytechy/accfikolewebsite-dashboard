@@ -8,6 +8,7 @@ import type { WeeklyChallenge, TaskAssignment, WeeklyParticipant, Verse, Quiz, Q
 import { TrophyIcon, ClockIcon, GiftIcon, SparklesIcon, UsersIcon, CheckCircleIcon, XCircleIcon, QuestionMarkCircleIcon } from '../components/ui/Icons';
 import { versePacks } from '../services/verses';
 import Avatar from '../components/auth/Avatar';
+import { marked } from 'marked';
 
 
 type TxStatus = 'pending' | 'approved' | 'rejected' | null;
@@ -138,10 +139,14 @@ const WeeklyGroupChallenge: React.FC<{
             </div>
             <div className="relative z-10">
                  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         <span className="text-sm uppercase font-bold text-primary-300 tracking-wider">Weekly Challenge</span>
                         <h3 className="text-2xl font-bold mt-1">{challenge.title}</h3>
-                        <p className="text-primary-200 mt-2 text-sm opacity-90">{challenge.details}</p>
+                        <div
+                            className="prose prose-sm prose-invert mt-2 opacity-90 max-w-none"
+                            dangerouslySetInnerHTML={{ __html: challenge.details ? marked.parse(challenge.details) : '' }}
+                        >
+                        </div>
                     </div>
 
                     <div className="flex-shrink-0 bg-white/20 backdrop-blur-sm p-3 rounded-lg text-center">
