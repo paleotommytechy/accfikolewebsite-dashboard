@@ -15,7 +15,8 @@
     "react-router-dom": "6",
     "@supabase/supabase-js": "2",
     "emoji-picker-react": "^4.9.2",
-    "marked": "^12.0.2"
+    "marked": "^12.0.2",
+    "@google/genai": "latest"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -7,6 +7,8 @@ import { useNotifier } from '../context/NotificationContext';
 import type { Post } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import { GoogleGenAI } from "@google/genai";
+import { CloudUploadIcon } from '../components/ui/Icons';
 
 const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
 const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
@@ -30,6 +32,7 @@ const PostEditor: React.FC = () => {
     });
     const [loading, setLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
     useEffect(() => {
         if (postId) {
@@ -53,6 +56,49 @@ const PostEditor: React.FC = () => {
         const { name, value } = e.target;
         setPost(prev => ({ ...prev, [name]: value }));
     };
+    
+    const dataUrlToBlob = (dataUrl: string): Blob => {
+        const arr = dataUrl.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        if (!mimeMatch) {
+            throw new Error('Invalid data URL');
+        }
+        const mime = mimeMatch[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    };
+
+    const handleGenerateImage = async () => {
+        if (!post.title) {
+            addToast('Please enter a title for the blog post first.', 'info');
+            return;
+        }
+        setIsGeneratingImage(true);
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            const response = await ai.models.generateImages({
+                model: 'imagen-4.0-generate-001',
+                prompt: `A cinematic, high-quality hero image for a blog post titled: "${post.title}". The image should be visually appealing and relevant to the title. No text in the image.`,
+                config: {
+                    numberOfImages: 1,
+                },
+            });
+            const base64ImageBytes = response.generatedImages[0].image.imageBytes;
+            const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
+            setPost(prev => ({...prev, image_url: imageUrl}));
+            addToast('Image generated successfully!', 'success');
+        } catch (error: any) {
+            console.error("Error generating image:", error);
+            addToast('Failed to generate image: ' + (error.message || 'Unknown error'), 'error');
+        } finally {
+            setIsGeneratingImage(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent, newStatus: 'draft' | 'published') => {
         e.preventDefault();
@@ -64,6 +110,26 @@ const PostEditor: React.FC = () => {
             status: newStatus,
             author_id: post.author_id || currentUser.id,
         };
+        
+        if (postData.image_url && postData.image_url.startsWith('data:image')) {
+            try {
+                const blob = dataUrlToBlob(postData.image_url);
+                const filePath = `public/blog_images/${currentUser.id}/${Date.now()}.png`;
+    
+                const { error: uploadError } = await supabase.storage
+                    .from('blog_images')
+                    .upload(filePath, blob);
+    
+                if (uploadError) throw uploadError;
+    
+                const { data } = supabase.storage.from('blog_images').getPublicUrl(filePath);
+                postData.image_url = data.publicUrl;
+            } catch (uploadError: any) {
+                addToast('Error uploading generated image: ' + uploadError.message, 'error');
+                setIsSubmitting(false);
+                return;
+            }
+        }
         
         const { error } = await supabase.from('posts').upsert(postData);
 
@@ -121,8 +187,24 @@ const PostEditor: React.FC = () => {
                            />
                         </Suspense>
                     </div>
+                    
+                    <div>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Featured Image URL</label>
+                            <Button type="button" size="sm" variant="outline" onClick={handleGenerateImage} disabled={isGeneratingImage || !post.title}>
+                                <CloudUploadIcon className="w-4 h-4 mr-2" />
+                                {isGeneratingImage ? 'Generating...' : 'Generate with AI'}
+                            </Button>
+                        </div>
+                        <InputField name="image_url" type="url" value={post.image_url || ''} onChange={handleInputChange} placeholder="https://example.com/image.jpg or generate one" />
+                        {post.image_url && (
+                            <div className="mt-4">
+                                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Image Preview:</p>
+                                <img src={post.image_url} alt="Post preview" className="w-full h-auto max-h-64 object-contain rounded-md border dark:border-gray-700 bg-gray-50 dark:bg-gray-800" />
+                            </div>
+                        )}
+                    </div>
 
-                    <InputField label="Featured Image URL" name="image_url" type="url" value={post.image_url || ''} onChange={handleInputChange} placeholder="https://example.com/image.jpg" />
 
                     <SelectField label="Category" name="category" value={post.category} onChange={handleInputChange}>
                         {POST_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -142,9 +224,9 @@ const PostEditor: React.FC = () => {
 };
 
 // Reusable form field components
-const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, ...props }) => (
+const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label?: string }> = ({ label, ...props }) => (
     <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+        {label && <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>}
         <input {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
     </div>
 );

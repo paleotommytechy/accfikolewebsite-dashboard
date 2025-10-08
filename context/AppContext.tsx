@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
+import React, { createContext, useState, useContext, useMemo, useEffect, useCallback } from 'react';
 import type { UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 
@@ -41,7 +41,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'light';
   });
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(prevTheme => {
         const newTheme = prevTheme === 'light' ? 'dark' : 'light';
         localStorage.setItem('theme', newTheme);
@@ -52,9 +52,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return newTheme;
     });
-  };
+  }, []);
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = useCallback(async () => {
     if (!supabase) {
       setIsLoading(false);
       return;
@@ -152,7 +152,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
 
   useEffect(() => {
@@ -171,12 +171,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         subscription.unsubscribe();
       };
     }
+  }, [fetchCurrentUser]);
+
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => !prev);
   }, []);
-
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
 
   const value = useMemo(() => ({
     isSidebarOpen,
@@ -192,7 +192,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     theme,
     toggleTheme,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete, theme]);
+  }), [isSidebarOpen, toggleSidebar, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete, theme, toggleTheme, fetchCurrentUser]);
 
   return (
     <AppContext.Provider value={value}>

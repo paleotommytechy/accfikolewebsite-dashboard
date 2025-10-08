@@ -300,7 +300,20 @@ if (!supabase) {
  *    -- === BLOG SYSTEM SETUP (NEW)                                                                ===
  *    -- ================================================================================================
  *    
- *    -- 1. Create posts table
+ *    -- 1. Create Storage Bucket for Blog Images:
+ *    -- Go to your Supabase project -> Storage -> Create bucket
+ *    -- Bucket name: blog_images
+ *    -- Check "Public bucket"
+ *    -- After creation, go to the new bucket's policies and add the following:
+ *
+ *    -- Policy Name: "Allow blog writers to manage blog images"
+ *    -- Allowed operations: select, insert, update, delete
+ *    -- Target roles: authenticated
+ *    -- USING expression (for SELECT): true
+ *    -- WITH CHECK expression (for INSERT, UPDATE, DELETE):
+ *    --   (bucket_id = 'blog_images') AND ( (select get_my_role()) IN ('admin', 'blog') )
+ *
+ *    -- 2. Create posts table
  *    CREATE TABLE IF NOT EXISTS public.posts (
  *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *        author_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -316,7 +329,7 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.posts IS 'Stores blog posts.';
  *
- *    -- 2. Create post_likes table
+ *    -- 3. Create post_likes table
  *    CREATE TABLE IF NOT EXISTS public.post_likes (
  *        post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
  *        user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -325,7 +338,7 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.post_likes IS 'Tracks user likes on posts.';
  *
- *    -- 3. Create post_comments table
+ *    -- 4. Create post_comments table
  *    CREATE TABLE IF NOT EXISTS public.post_comments (
  *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *        post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
@@ -335,7 +348,7 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.post_comments IS 'Stores comments on posts.';
  *
- *    -- 4. Create post_bookmarks table
+ *    -- 5. Create post_bookmarks table
  *    CREATE TABLE IF NOT EXISTS public.post_bookmarks (
  *        post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
  *        user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -344,13 +357,13 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.post_bookmarks IS 'Stores user bookmarks for posts.';
  *
- *    -- 5. Enable RLS on new tables
+ *    -- 6. Enable RLS on new tables
  *    ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
  *    ALTER TABLE public.post_likes ENABLE ROW LEVEL SECURITY;
  *    ALTER TABLE public.post_comments ENABLE ROW LEVEL SECURITY;
  *    ALTER TABLE public.post_bookmarks ENABLE ROW LEVEL SECURITY;
  *
- *    -- 6. RLS Policies for posts table
+ *    -- 7. RLS Policies for posts table
  *    DROP POLICY IF EXISTS "Public can view published posts" ON public.posts;
  *    CREATE POLICY "Public can view published posts" ON public.posts FOR SELECT USING (status = 'published');
  *
@@ -367,7 +380,7 @@ if (!supabase) {
  *    DROP POLICY IF EXISTS "Admins can delete any post, authors can delete their own" ON public.posts;
  *    CREATE POLICY "Admins can delete any post, authors can delete their own" ON public.posts FOR DELETE USING (public.get_my_role() = 'admin' OR auth.uid() = author_id);
  *
- *    -- 7. RLS Policies for interaction tables (likes, comments, bookmarks)
+ *    -- 8. RLS Policies for interaction tables (likes, comments, bookmarks)
  *    DROP POLICY IF EXISTS "Authenticated users can view all" ON public.post_likes;
  *    CREATE POLICY "Authenticated users can view all" ON public.post_likes FOR SELECT USING (auth.role() = 'authenticated');
  *    
@@ -386,7 +399,7 @@ if (!supabase) {
  *    DROP POLICY IF EXISTS "Users can manage their own bookmarks" ON public.post_bookmarks;
  *    CREATE POLICY "Users can manage their own bookmarks" ON public.post_bookmarks FOR ALL USING (auth.uid() = user_id);
  *
- *    -- 8. Trigger function to update post counts
+ *    -- 9. Trigger function to update post counts
  *    CREATE OR REPLACE FUNCTION update_post_counts()
  *    RETURNS TRIGGER AS $$
  *    BEGIN
@@ -407,7 +420,7 @@ if (!supabase) {
  *    END;
  *    $$ LANGUAGE plpgsql;
  *
- *    -- 9. Create triggers for post counts
+ *    -- 10. Create triggers for post counts
  *    DROP TRIGGER IF EXISTS on_like_insert ON public.post_likes;
  *    CREATE TRIGGER on_like_insert AFTER INSERT ON public.post_likes FOR EACH ROW EXECUTE FUNCTION update_post_counts();
  *    DROP TRIGGER IF EXISTS on_like_delete ON public.post_likes;
