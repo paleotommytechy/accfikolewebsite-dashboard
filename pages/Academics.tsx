@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
 import Card from '../components/ui/Card';
@@ -6,9 +6,8 @@ import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon } from '../components/u
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
 import Button from '../components/ui/Button';
-
-const StudyPlanner = lazy(() => import('../components/academics/StudyPlanner'));
-const CourseCompanion = lazy(() => import('../components/academics/CourseCompanion'));
+import StudyPlanner from '../components/academics/StudyPlanner';
+import CourseCompanion from '../components/academics/CourseCompanion';
 
 // Reusable Collapsible Component for nesting sections
 interface CollapsibleProps {
@@ -243,10 +242,8 @@ const Academics: React.FC = () => {
                 )}
             </Card>
             
-            <Suspense fallback={null}>
-                <StudyPlanner allCourses={allCoursesForPlanner} />
-                <CourseCompanion allCourses={allCoursesForPlanner} />
-            </Suspense>
+            <StudyPlanner allCourses={allCoursesForPlanner} />
+            <CourseCompanion allCourses={allCoursesForPlanner} />
         </div>
     );
 };
