@@ -5,6 +5,7 @@ import Card from '../components/ui/Card';
 import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon } from '../components/ui/Icons';
 
 const StudyPlanner = lazy(() => import('../components/academics/StudyPlanner'));
+const CourseCompanion = lazy(() => import('../components/academics/CourseCompanion'));
 
 // Reusable Collapsible Component for nesting sections
 interface CollapsibleProps {
@@ -120,14 +121,14 @@ const Academics: React.FC = () => {
         }));
 
         const uniCourses = coursesWithMaterials.filter(c => c.is_general && !c.faculty_id && !c.department_id);
-        const universityCoursesByLevel = uniCourses.reduce((acc, course) => {
+        const uniCoursesByLevel = uniCourses.reduce((acc, course) => {
             const level = course.level;
             if (!acc[level]) acc[level] = [];
             acc[level].push(course);
             return acc;
         }, {} as Record<number, (Course & { materials: CourseMaterial[] })[]>);
         
-        const groupedFaculties = faculties.map(faculty => {
+        const facs = faculties.map(faculty => {
             const facGeneralCourses = coursesWithMaterials.filter(c => c.faculty_id === faculty.id && !c.department_id);
             const facCoursesByLevel = facGeneralCourses.reduce((acc, course) => {
                 const level = course.level;
@@ -155,7 +156,7 @@ const Academics: React.FC = () => {
             return { ...faculty, facultyCoursesByLevel: facCoursesByLevel, departments: depts };
         });
 
-        return { universityCoursesByLevel, groupedFaculties, allCoursesForPlanner };
+        return { universityCoursesByLevel: uniCoursesByLevel, groupedFaculties: facs, allCoursesForPlanner };
 
     }, [faculties, departments, courses, materials, courseBorrowers]);
 
@@ -205,6 +206,7 @@ const Academics: React.FC = () => {
             
             <Suspense fallback={null}>
                 <StudyPlanner allCourses={allCoursesForPlanner} />
+                <CourseCompanion allCourses={allCoursesForPlanner} />
             </Suspense>
         </div>
     );
