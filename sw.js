@@ -1,4 +1,4 @@
-const CACHE_NAME = 'accf-dashboard-cache-v3';
+const CACHE_NAME = 'accf-dashboard-cache-v4';
 // These are the core files for the app shell.
 // More resources will be cached on the fly.
 const APP_SHELL_URLS = [
@@ -38,43 +38,45 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // We only want to handle GET requests. Ignore others, like Supabase API calls.
+  // Ignore non-GET requests and Supabase API calls.
   if (event.request.method !== 'GET' || event.request.url.includes('supabase.co')) {
     return;
   }
 
-  // Use a network-first strategy with a fallback for SPA navigation.
+  // Use a cache-first strategy for all assets.
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
+      // 1. Try to get the response from the cache.
+      const cachedResponse = await cache.match(event.request);
+      if (cachedResponse) {
+        // If found, return it.
+        return cachedResponse;
+      }
+
+      // 2. If not in cache, fetch from the network.
       try {
-        // 1. Try to fetch from the network first.
         const networkResponse = await fetch(event.request);
         
-        // 2. If successful, cache the response and return it.
-        if (networkResponse.ok) {
-          cache.put(event.request, networkResponse.clone());
+        // 3. Cache the new response and return it.
+        // This condition ensures we only cache valid responses.
+        if (networkResponse && networkResponse.status === 200) {
+           cache.put(event.request, networkResponse.clone());
+        } else if (event.request.url.startsWith('https://esm.sh/')) {
+           // Also cache CDN dependencies which might not have standard response types
+           cache.put(event.request, networkResponse.clone());
         }
-        return networkResponse;
 
+        return networkResponse;
       } catch (error) {
-        // 3. If the network fails, try to serve from the cache.
-        console.log('[Service Worker] Network request failed, trying cache for:', event.request.url);
-        const cachedResponse = await cache.match(event.request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        
-        // 4. If it's a navigation request and not in cache, serve the app shell.
-        // This is the key to fixing the SPA 404 issue.
+        // 4. If network fails and it's a navigation request, serve the SPA fallback.
+        console.log('[Service Worker] Network request failed for:', event.request.url);
         if (event.request.mode === 'navigate') {
-          console.log('[Service Worker] Serving index.html as fallback for navigation.');
           const appShell = await cache.match('/index.html');
           if (appShell) {
             return appShell;
           }
         }
-        
-        // 5. If it's another type of asset and not in the cache, the request will fail.
+        // For other assets, the fetch will fail if not in cache, which is expected offline behavior.
         return new Response('Content not available offline.', {
           status: 404,
           statusText: 'Not Found',
@@ -84,6 +86,7 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
 
 // --- PUSH NOTIFICATION LOGIC ---
 
