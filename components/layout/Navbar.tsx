@@ -9,7 +9,7 @@ import Avatar from '../auth/Avatar';
 import { supabase } from '../../lib/supabaseClient';
 
 const Navbar: React.FC = () => {
-  const { toggleSidebar, currentUser } = useAppContext();
+  const { toggleSidebar, currentUser, theme, toggleTheme } = useAppContext();
   const { notifications, unreadCount } = useNotifier();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -17,11 +17,6 @@ const Navbar: React.FC = () => {
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   
-  // Simple dark mode toggle for demonstration
-  const toggleDarkMode = () => {
-    document.documentElement.classList.toggle('dark');
-  };
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,9 +43,8 @@ const Navbar: React.FC = () => {
       </div>
 
       <div className="flex items-center space-x-2 sm:space-x-4">
-        <button onClick={toggleDarkMode} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
-          <SunIcon className="hidden dark:block" />
-          <MoonIcon className="dark:hidden" />
+        <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
 
         {/* Notification Bell */}

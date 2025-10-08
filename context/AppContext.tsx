@@ -2,6 +2,8 @@ import React, { createContext, useState, useContext, useMemo, useEffect } from '
 import type { UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 
+type Theme = 'light' | 'dark';
+
 interface AppContextType {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -13,6 +15,8 @@ interface AppContextType {
   isAcademicsManager: boolean;
   isPro: boolean;
   isProfileComplete: boolean;
+  theme: Theme;
+  toggleTheme: () => void;
   refreshCurrentUser: () => Promise<void>;
 }
 
@@ -28,6 +32,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAcademicsManager, setIsAcademicsManager] = useState(false);
   const [isPro, setIsPro] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        return 'dark';
+      }
+    }
+    return 'light';
+  });
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => {
+        const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+        localStorage.setItem('theme', newTheme);
+        if (newTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        return newTheme;
+    });
+  };
 
   const fetchCurrentUser = async () => {
     if (!supabase) {
@@ -164,8 +189,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isAcademicsManager,
     isPro,
     isProfileComplete,
+    theme,
+    toggleTheme,
     refreshCurrentUser: fetchCurrentUser,
-  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete]);
+  }), [isSidebarOpen, currentUser, isLoading, isAdmin, isBlogger, isMediaManager, isAcademicsManager, isPro, isProfileComplete, theme]);
 
   return (
     <AppContext.Provider value={value}>
