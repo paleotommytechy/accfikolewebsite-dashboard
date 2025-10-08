@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';
@@ -8,6 +8,9 @@ import Avatar from '../components/auth/Avatar';
 import { supabase } from '../lib/supabaseClient';
 import type { UserProfile } from '../types';
 import { ChatIcon } from '../components/ui/Icons';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 // A read-only component to display a piece of user info
 const InfoItem: React.FC<{label: string, value: string | null | undefined}> = ({label, value}) => (
@@ -23,21 +26,56 @@ const ProfileEditor: React.FC<{
     isEditing: boolean;
     onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
 }> = ({ profile, isEditing, onInputChange }) => {
+    const commonProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-200 dark:disabled:bg-gray-800",
+        disabled: !isEditing,
+    };
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField label="Full Name" name="full_name" value={profile.full_name || ''} onChange={onInputChange} disabled={!isEditing} />
-            <InputField label="Fellowship Position" name="fellowship_position" value={profile.fellowship_position || ''} onChange={onInputChange} disabled={!isEditing} />
-            <InputField label="Department" name="department" value={profile.department || ''} onChange={onInputChange} disabled={!isEditing} />
+            <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</label>
+                <Suspense fallback={<InputLoadingSkeleton />}>
+                    <AutoSaveField {...commonProps} as="input" name="full_name" value={profile.full_name || ''} onChange={onInputChange} storageKey={`profile-editor-full_name-${profile.id}`} />
+                </Suspense>
+            </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Fellowship Position</label>
+                <Suspense fallback={<InputLoadingSkeleton />}>
+                    <AutoSaveField {...commonProps} as="input" name="fellowship_position" value={profile.fellowship_position || ''} onChange={onInputChange} storageKey={`profile-editor-fellowship_position-${profile.id}`} />
+                </Suspense>
+            </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Department</label>
+                <Suspense fallback={<InputLoadingSkeleton />}>
+                    <AutoSaveField {...commonProps} as="input" name="department" value={profile.department || ''} onChange={onInputChange} storageKey={`profile-editor-department-${profile.id}`} />
+                </Suspense>
+            </div>
             <SelectField label="Gender" name="gender" value={profile.gender || ''} onChange={onInputChange} disabled={!isEditing}>
                 <option value="" disabled>Select gender...</option>
                 <option>Male</option>
                 <option>Female</option>
                 <option>Other</option>
             </SelectField>
-            <InputField label="Birthday (MM-DD)" name="dob" value={profile.dob || ''} onChange={onInputChange} disabled={!isEditing} />
+             <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Birthday (MM-DD)</label>
+                <Suspense fallback={<InputLoadingSkeleton />}>
+                    <AutoSaveField {...commonProps} as="input" name="dob" value={profile.dob || ''} onChange={onInputChange} storageKey={`profile-editor-dob-${profile.id}`} />
+                </Suspense>
+            </div>
             <InputField label="Email" name="email" value={profile.email} onChange={onInputChange} disabled={true} type="email" />
-            <InputField label="WhatsApp" name="whatsapp" value={profile.whatsapp || ''} onChange={onInputChange} disabled={!isEditing} type="tel" />
-            <InputField label="Hotline" name="hotline" value={profile.hotline || ''} onChange={onInputChange} disabled={!isEditing} type="tel" />
+             <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">WhatsApp</label>
+                <Suspense fallback={<InputLoadingSkeleton />}>
+                    <AutoSaveField {...commonProps} as="input" type="tel" name="whatsapp" value={profile.whatsapp || ''} onChange={onInputChange} storageKey={`profile-editor-whatsapp-${profile.id}`} />
+                </Suspense>
+            </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Hotline</label>
+                <Suspense fallback={<InputLoadingSkeleton />}>
+                    <AutoSaveField {...commonProps} as="input" type="tel" name="hotline" value={profile.hotline || ''} onChange={onInputChange} storageKey={`profile-editor-hotline-${profile.id}`} />
+                </Suspense>
+            </div>
         </div>
     );
 };
@@ -122,6 +160,13 @@ const Profile: React.FC = () => {
         if (error) throw error;
         
         addToast('Profile saved successfully!', 'success');
+        
+        // Clear autosaved data from localStorage
+        const fieldsToClear = ['full_name', 'fellowship_position', 'department', 'dob', 'whatsapp', 'hotline'];
+        fieldsToClear.forEach(field => {
+            localStorage.removeItem(`profile-editor-${field}-${id}`);
+        });
+
         await refreshCurrentUser();
         setIsEditing(false);
     } catch (error: any) {

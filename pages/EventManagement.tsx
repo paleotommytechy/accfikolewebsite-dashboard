@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
@@ -7,20 +7,9 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { CalendarIcon, PencilAltIcon, TrashIcon, PlusIcon, CloudUploadIcon, XIcon } from '../components/ui/Icons';
 
-// Reusable form field components
-const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, ...props }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <input {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-    </div>
-);
-const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({ label, ...props }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <textarea {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-    </div>
-);
-
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
+const EditorLoadingSkeleton = () => <div className="w-full h-36 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 const EventManagement: React.FC = () => {
     const [events, setEvents] = useState<Event[]>([]);
@@ -51,7 +40,17 @@ const EventManagement: React.FC = () => {
         fetchEvents();
     }, [fetchEvents]);
     
+    const clearLocalStorage = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`event-editor-title-${keyId}`);
+        localStorage.removeItem(`event-editor-date-${keyId}`);
+        localStorage.removeItem(`event-editor-time-${keyId}`);
+        localStorage.removeItem(`event-editor-location-${keyId}`);
+        localStorage.removeItem(`event-editor-description-${keyId}`);
+    };
+
     const resetFormState = () => {
+        clearLocalStorage(editingEvent?.id);
         setEditingEvent(null);
         setImageFile(null);
         setImagePreview(null);
@@ -164,6 +163,9 @@ const EventManagement: React.FC = () => {
         setEditingEvent(prev => (prev ? { ...prev, [name]: value } : null));
     };
 
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
+    };
 
     return (
         <div className="space-y-6">
@@ -179,13 +181,41 @@ const EventManagement: React.FC = () => {
             {editingEvent && (
                 <Card title={editingEvent.id ? 'Edit Event' : 'Create New Event'}>
                     <form onSubmit={handleSave} className="space-y-4">
-                        <InputField label="Event Title" name="title" value={editingEvent.title || ''} onChange={handleInputChange} required />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InputField label="Date" name="date" type="date" value={editingEvent.date || ''} onChange={handleInputChange} required />
-                            <InputField label="Time" name="time" type="time" value={editingEvent.time || ''} onChange={handleInputChange} required />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Event Title</label>
+                            <Suspense fallback={<InputLoadingSkeleton />}>
+                                <AutoSaveField {...commonInputProps} as="input" name="title" value={editingEvent.title || ''} onChange={handleInputChange} required storageKey={`event-editor-title-${editingEvent.id || 'new'}`} />
+                            </Suspense>
                         </div>
-                        <InputField label="Location" name="location" value={editingEvent.location || ''} onChange={handleInputChange} required />
-                        <TextAreaField label="Description" name="description" value={editingEvent.description || ''} onChange={handleInputChange} rows={6} required />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Date</label>
+                                <Suspense fallback={<InputLoadingSkeleton />}>
+                                    <AutoSaveField {...commonInputProps} as="input" name="date" type="date" value={editingEvent.date || ''} onChange={handleInputChange} required storageKey={`event-editor-date-${editingEvent.id || 'new'}`} />
+                                </Suspense>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Time</label>
+                                <Suspense fallback={<InputLoadingSkeleton />}>
+                                    <AutoSaveField {...commonInputProps} as="input" name="time" type="time" value={editingEvent.time || ''} onChange={handleInputChange} required storageKey={`event-editor-time-${editingEvent.id || 'new'}`} />
+                                </Suspense>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Location</label>
+                            <Suspense fallback={<InputLoadingSkeleton />}>
+                                <AutoSaveField {...commonInputProps} as="input" name="location" value={editingEvent.location || ''} onChange={handleInputChange} required storageKey={`event-editor-location-${editingEvent.id || 'new'}`} />
+                            </Suspense>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Description</label>
+                             <Suspense fallback={<EditorLoadingSkeleton />}>
+                                <AutoSaveField {...commonInputProps} as="textarea" name="description" value={editingEvent.description || ''} onChange={handleInputChange} rows={6} required storageKey={`event-editor-description-${editingEvent.id || 'new'}`} />
+                            </Suspense>
+                        </div>
                         
                         <div>
                             <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Event Image</label>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
@@ -7,6 +7,9 @@ import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';
 import type { PrayerRequest } from '../types';
 import { SparklesIcon, TrashIcon, HeartIcon } from '../components/ui/Icons';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const EditorLoadingSkeleton = () => <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 const timeAgo = (dateString: string) => {
   if (!dateString) return '';
@@ -96,6 +99,7 @@ const PrayerRequests: React.FC = () => {
             addToast('Error submitting request: ' + error.message, 'error');
         } else {
             addToast('Your prayer request has been shared.', 'success');
+            localStorage.removeItem(`new-prayer-request-content-${currentUser.id}`);
             setNewRequest('');
             fetchRequests();
         }
@@ -138,14 +142,18 @@ const PrayerRequests: React.FC = () => {
             <Card>
                 <form onSubmit={handleSubmit} className="space-y-3">
                     <h2 className="text-xl font-semibold">Share a Prayer Request</h2>
-                    <textarea 
-                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 transition"
-                        rows={3}
-                        placeholder="What can we pray for you about? Your name and profile picture will be shared with your request."
-                        value={newRequest}
-                        onChange={(e) => setNewRequest(e.target.value)}
-                        disabled={submitting}
-                    ></textarea>
+                    <Suspense fallback={<EditorLoadingSkeleton />}>
+                        <AutoSaveField
+                            as="textarea"
+                            storageKey={`new-prayer-request-content-${currentUser?.id}`}
+                            className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500 transition"
+                            rows={3}
+                            placeholder="What can we pray for you about? Your name and profile picture will be shared with your request."
+                            value={newRequest}
+                            onChange={(e) => setNewRequest(e.target.value)}
+                            disabled={submitting}
+                        />
+                    </Suspense>
                     <div className="text-right">
                         <Button type="submit" disabled={!newRequest.trim() || submitting}>
                             {submitting ? 'Sharing...' : 'Share Request'}

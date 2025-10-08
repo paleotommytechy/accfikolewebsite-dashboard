@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
@@ -17,6 +17,10 @@ const { useSearchParams } = ReactRouterDOM;
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
+const EditorLoadingSkeleton = () => <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 interface Recipient {
   id: string;
@@ -132,6 +136,8 @@ const Messages: React.FC = () => {
             addToast(`Message sent to ${selectedRecipients.size} recipient(s).`, 'success');
         }
 
+        localStorage.removeItem('broadcast-message-subject');
+        localStorage.removeItem('broadcast-message-content');
         setSelectedRecipients(new Set());
         setSubject('');
         setMessage('');
@@ -283,14 +289,18 @@ const Messages: React.FC = () => {
                     <Card className="flex-1 flex flex-col !p-0 lg:h-[calc(100vh-12rem)] min-h-[500px]">
                          <div className="p-4 border-b dark:border-gray-700">
                             <label htmlFor="subject" className="sr-only">Subject</label>
-                             <input
-                                id="subject"
-                                type="text"
-                                placeholder="Message Subject"
-                                value={subject}
-                                onChange={e => setSubject(e.target.value)}
-                                className="w-full text-lg font-semibold bg-transparent border-none focus:ring-0 p-0"
-                            />
+                            <Suspense fallback={<InputLoadingSkeleton />}>
+                                <AutoSaveField
+                                    id="subject"
+                                    as="input"
+                                    storageKey="broadcast-message-subject"
+                                    type="text"
+                                    placeholder="Message Subject"
+                                    value={subject}
+                                    onChange={e => setSubject(e.target.value)}
+                                    className="w-full text-lg font-semibold bg-transparent border-none focus:ring-0 p-0"
+                                />
+                            </Suspense>
                         </div>
 
                         <div className="flex flex-col flex-1">
@@ -300,12 +310,16 @@ const Messages: React.FC = () => {
                                 <EditorButton icon={<UnderlineIcon />} />
                                 <EditorButton icon={<ListIcon />} />
                             </div>
-                            <textarea
-                                placeholder="Type your message here..."
-                                value={message}
-                                onChange={e => setMessage(e.target.value)}
-                                className="flex-1 w-full p-4 bg-transparent border-none focus:ring-0 resize-none"
-                            ></textarea>
+                            <Suspense fallback={<EditorLoadingSkeleton />}>
+                                <AutoSaveField
+                                    as="textarea"
+                                    storageKey="broadcast-message-content"
+                                    placeholder="Type your message here..."
+                                    value={message}
+                                    onChange={e => setMessage(e.target.value)}
+                                    className="flex-1 w-full p-4 bg-transparent border-none focus:ring-0 resize-none"
+                                />
+                            </Suspense>
                         </div>
 
                         <div className="p-4 border-t dark:border-gray-700 flex justify-end">

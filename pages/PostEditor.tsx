@@ -1,5 +1,5 @@
 // This is a new file: pages/PostEditor.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
@@ -7,6 +7,11 @@ import { useNotifier } from '../context/NotificationContext';
 import type { Post } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
+const EditorLoadingSkeleton = () => <div className="w-full h-[360px] bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
+
 
 const POST_CATEGORIES: Post['category'][] = ['Devotional', 'Bible Study', 'Announcement', 'Other'];
 
@@ -66,6 +71,9 @@ const PostEditor: React.FC = () => {
             addToast('Error saving post: ' + error.message, 'error');
         } else {
             addToast(`Post successfully ${newStatus === 'published' ? 'published' : 'saved as draft'}!`, 'success');
+            // Clear autosaved content from localStorage
+            localStorage.removeItem(`post-editor-title-${postId || 'new'}`);
+            localStorage.removeItem(`post-editor-content-${postId || 'new'}`);
             navigate('/blog-management');
         }
         setIsSubmitting(false);
@@ -82,16 +90,37 @@ const PostEditor: React.FC = () => {
             </h1>
             <Card>
                 <form className="space-y-4">
-                    <InputField label="Post Title" name="title" value={post.title} onChange={handleInputChange} placeholder="Enter a compelling title" required />
-                    
-                    <TextAreaField
-                        label="Content"
-                        name="content"
-                        value={post.content || ''}
-                        onChange={handleInputChange}
-                        placeholder="Write your post content here... (Markdown is supported)"
-                        rows={15}
-                    />
+                     <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Post Title</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                            <AutoSaveField
+                                as="input"
+                                storageKey={`post-editor-title-${postId || 'new'}`}
+                                name="title"
+                                value={post.title || ''}
+                                onChange={handleInputChange}
+                                placeholder="Enter a compelling title"
+                                required
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                            />
+                        </Suspense>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Content</label>
+                        <Suspense fallback={<EditorLoadingSkeleton />}>
+                            <AutoSaveField
+                                as="textarea"
+                                storageKey={`post-editor-content-${postId || 'new'}`}
+                                name="content"
+                                value={post.content || ''}
+                                onChange={handleInputChange}
+                                placeholder="Write your post content here... (Markdown is supported)"
+                                rows={15}
+                                className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                           />
+                        </Suspense>
+                    </div>
 
                     <InputField label="Featured Image URL" name="image_url" type="url" value={post.image_url || ''} onChange={handleInputChange} placeholder="https://example.com/image.jpg" />
 
@@ -125,12 +154,6 @@ const SelectField: React.FC<React.SelectHTMLAttributes<HTMLSelectElement> & { la
         <select {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500">
             {children}
         </select>
-    </div>
-);
-const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }> = ({ label, ...props }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <textarea {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
     </div>
 );
 

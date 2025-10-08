@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Quiz, QuizQuestion, WeeklyChallenge } from '../types';
@@ -7,20 +7,9 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { ArrowLeftIcon, PencilAltIcon, PlusIcon, TrashIcon } from '../components/ui/Icons';
 
-// Reusable form fields
-const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & {label: string}> = ({label, ...props}) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <input {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-    </div>
-);
-const TextAreaField: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement> & {label: string}> = ({label, ...props}) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <textarea {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-    </div>
-);
-
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
+const EditorLoadingSkeleton = () => <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 const QuizEditor: React.FC = () => {
     const { quizId } = useParams<{ quizId: string }>();
@@ -91,7 +80,16 @@ const QuizEditor: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const clearLocalStorageForQuestion = (id: string | undefined) => {
+        const keyId = id || 'new';
+        localStorage.removeItem(`quiz-question-editor-text-${quizId}-${keyId}`);
+        for (let i = 0; i < 4; i++) {
+            localStorage.removeItem(`quiz-question-editor-option-${quizId}-${keyId}-${i}`);
+        }
+    };
+    
     const resetForm = () => {
+        clearLocalStorageForQuestion(editing?.id);
         setEditing(null);
         setOptions(['', '', '', '']);
         setCorrectOption(0);
@@ -130,6 +128,7 @@ const QuizEditor: React.FC = () => {
                 addToast(error.message, 'error');
             } else {
                 addToast('Question deleted.', 'success');
+                clearLocalStorageForQuestion(id);
                 fetchQuizData();
             }
         });
@@ -141,9 +140,15 @@ const QuizEditor: React.FC = () => {
         setOptions(newOptions);
     };
 
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
+    };
+
     if (loading || !quiz) {
         return <div className="text-center p-8">Loading Quiz Editor...</div>;
     }
+
+    const storageKeyId = editing?.id || 'new';
 
     return (
         <div className="space-y-6">
@@ -158,10 +163,20 @@ const QuizEditor: React.FC = () => {
             <Card>
                 <form onSubmit={handleSave} className="space-y-4 p-4 mb-6 border-b dark:border-gray-700">
                     <h2 className="text-xl font-semibold">{editing?.id ? 'Edit Question' : 'Add New Question'}</h2>
-                    <TextAreaField label="Question Text" value={editing?.question_text || ''} onChange={e => setEditing(p => ({...p, question_text: e.target.value}))} required rows={3} />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Question Text</label>
+                        <Suspense fallback={<EditorLoadingSkeleton />}>
+                            <AutoSaveField {...commonInputProps} as="textarea" value={editing?.question_text || ''} onChange={e => setEditing(p => ({...p, question_text: e.target.value}))} required rows={3} storageKey={`quiz-question-editor-text-${quizId}-${storageKeyId}`} />
+                        </Suspense>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[0, 1, 2, 3].map(i => (
-                            <InputField key={i} label={`Option ${i + 1}`} value={options[i]} onChange={e => handleOptionChange(i, e.target.value)} required />
+                            <div key={i}>
+                                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{`Option ${i + 1}`}</label>
+                                <Suspense fallback={<InputLoadingSkeleton />}>
+                                    <AutoSaveField {...commonInputProps} as="input" value={options[i]} onChange={e => handleOptionChange(i, e.target.value)} required storageKey={`quiz-question-editor-option-${quizId}-${storageKeyId}-${i}`} />
+                                </Suspense>
+                            </div>
                         ))}
                     </div>
                     <div>

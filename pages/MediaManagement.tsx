@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
@@ -6,6 +6,9 @@ import type { GalleryPost } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { CloudUploadIcon, TrashIcon, XIcon } from '../components/ui/Icons';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 const MediaManagement: React.FC = () => {
     // Component State
@@ -64,6 +67,10 @@ const MediaManagement: React.FC = () => {
         setMoreImagesUrl('');
         setFiles([]);
         setPreviews([]);
+        // Clear autosaved data
+        localStorage.removeItem('media-management-title');
+        localStorage.removeItem('media-management-category');
+        localStorage.removeItem('media-management-moreImagesUrl');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -138,6 +145,10 @@ const MediaManagement: React.FC = () => {
         });
     };
 
+    const commonInputProps = {
+        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+    };
+
     return (
         <div className="space-y-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Media Management</h1>
@@ -145,10 +156,25 @@ const MediaManagement: React.FC = () => {
             <Card title="Upload New Gallery Post">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InputField label="Title" value={title} onChange={e => setTitle(e.target.value)} required />
-                        <InputField label="Category" placeholder="e.g., Sunday Service" value={category} onChange={e => setCategory(e.target.value)} required />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Title</label>
+                            <Suspense fallback={<InputLoadingSkeleton />}>
+                                <AutoSaveField {...commonInputProps} as="input" value={title} onChange={e => setTitle(e.target.value)} required storageKey="media-management-title" />
+                            </Suspense>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Category</label>
+                            <Suspense fallback={<InputLoadingSkeleton />}>
+                                <AutoSaveField {...commonInputProps} as="input" placeholder="e.g., Sunday Service" value={category} onChange={e => setCategory(e.target.value)} required storageKey="media-management-category" />
+                            </Suspense>
+                        </div>
                     </div>
-                    <InputField label="Link for More Images (Optional)" placeholder="Telegram, Google Drive, etc." value={moreImagesUrl} onChange={e => setMoreImagesUrl(e.target.value)} />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Link for More Images (Optional)</label>
+                        <Suspense fallback={<InputLoadingSkeleton />}>
+                            <AutoSaveField {...commonInputProps} as="input" placeholder="Telegram, Google Drive, etc." value={moreImagesUrl} onChange={e => setMoreImagesUrl(e.target.value)} storageKey="media-management-moreImagesUrl" />
+                        </Suspense>
+                    </div>
                     
                     <div>
                         <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Images (up to 3)</label>
@@ -203,12 +229,5 @@ const MediaManagement: React.FC = () => {
         </div>
     );
 };
-
-const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & {label: string}> = ({label, ...props}) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-        <input {...props} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-    </div>
-);
 
 export default MediaManagement;

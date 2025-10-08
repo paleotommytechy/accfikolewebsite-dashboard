@@ -1,5 +1,5 @@
 // This is a new file: pages/BlogPost.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
@@ -10,6 +10,9 @@ import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
 import { HeartIcon, ChatIcon, ShareIcon, BookmarkIcon, SendIcon } from '../components/ui/Icons';
 import { marked } from 'marked';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const EditorLoadingSkeleton = () => <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>;
 
 const BlogPost: React.FC = () => {
     const { postId } = useParams<{ postId: string }>();
@@ -77,6 +80,7 @@ const BlogPost: React.FC = () => {
         if (error) {
             addToast('Failed to post comment: ' + error.message, 'error');
         } else {
+            localStorage.removeItem(`new-comment-content-${post.id}-${currentUser.id}`);
             setNewComment('');
             // The new comment will be added via the real-time subscription.
             // Notify post author if it's not their own post
@@ -224,13 +228,17 @@ const BlogPost: React.FC = () => {
                     <form onSubmit={handleCommentSubmit} className="flex items-start gap-4">
                         <Avatar src={currentUser?.avatar_url} alt={currentUser?.full_name || 'You'} />
                         <div className="flex-1">
-                            <textarea
-                                value={newComment}
-                                onChange={e => setNewComment(e.target.value)}
-                                placeholder="Add a comment..."
-                                className="w-full bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border-transparent focus:ring-primary-500 focus:border-primary-500"
-                                rows={2}
-                            />
+                            <Suspense fallback={<EditorLoadingSkeleton />}>
+                                <AutoSaveField
+                                    as="textarea"
+                                    storageKey={`new-comment-content-${postId}-${currentUser?.id}`}
+                                    value={newComment}
+                                    onChange={e => setNewComment(e.target.value)}
+                                    placeholder="Add a comment..."
+                                    className="w-full bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border-transparent focus:ring-primary-500 focus:border-primary-500"
+                                    rows={2}
+                                />
+                            </Suspense>
                             <Button type="submit" className="mt-2" disabled={!newComment.trim()}>
                                 <SendIcon className="w-4 h-4 mr-2" /> Post Comment
                             </Button>
