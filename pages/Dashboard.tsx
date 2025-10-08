@@ -346,7 +346,6 @@ const Dashboard: React.FC = () => {
           .eq('assignee_id', currentUser.id)
           .gte('created_at', todayStart.toISOString())
           .lte('created_at', todayEnd.toISOString())
-          .eq('tasks.frequency', 'daily')
           .limit(3);
         if (error) {
             console.error('Error fetching tasks', error.message);

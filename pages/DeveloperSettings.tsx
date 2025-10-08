@@ -431,7 +431,7 @@ const TaskManager: React.FC = () => {
         showConfirm('Are you sure? This will delete the task and all its assignments.', confirmedDelete);
     };
 
-    const handleAssignDaily = (id: string) => {
+    const handleAssignTask = (id: string) => {
         if (!supabase) return;
 
         const assignTask = async () => {
@@ -447,7 +447,7 @@ const TaskManager: React.FC = () => {
             }
         };
         
-        showConfirm('This will assign this task to all users for today. This action cannot be undone. Continue?', assignTask);
+        showConfirm('This will assign this task to all users. This action cannot be undone. Continue?', assignTask);
     };
     
     const handleCancel = () => {
@@ -485,8 +485,6 @@ const TaskManager: React.FC = () => {
                             <option value="once">Once</option>
                         </select>
                     </div>
-                    <InputField label="Due Date (optional)" type="date" value={editingTask.due_date || ''} onChange={e => setEditingTask(p => ({...p, due_date: e.target.value}))} />
-
                     <div className="flex gap-2">
                         <Button type="submit">Save Task</Button>
                         <Button variant="ghost" type="button" onClick={handleCancel}>Cancel</Button>
@@ -504,9 +502,9 @@ const TaskManager: React.FC = () => {
                             <p className="text-sm text-yellow-500">{t.coin_reward} coins</p>
                         </div>
                         <div className="space-x-2 flex-shrink-0">
-                            {t.frequency === 'daily' && (
-                                <Button size="sm" variant="outline" onClick={() => handleAssignDaily(t.id)} disabled={assigningTaskId === t.id}>
-                                    {assigningTaskId === t.id ? 'Assigning...' : 'Assign Daily'}
+                            {(t.frequency === 'daily' || t.frequency === 'once') && (
+                                <Button size="sm" variant="outline" onClick={() => handleAssignTask(t.id)} disabled={assigningTaskId === t.id}>
+                                    {assigningTaskId === t.id ? 'Assigning...' : 'Assign Now'}
                                 </Button>
                             )}
                             <Button size="sm" variant="outline" onClick={() => setEditingTask(t)}>Edit</Button>

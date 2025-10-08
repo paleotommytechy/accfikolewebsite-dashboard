@@ -21,7 +21,6 @@ export interface Task {
   title: string;
   frequency: 'daily' | 'once' | 'weekly';
   details: string | null;
-  due_date: string | null;
   created_at: string;
   updated_at: string | null;
   coin_reward: number;
@@ -35,6 +34,7 @@ export interface TaskAssignment {
     status: 'assigned' | 'done';
     completed_at: string | null;
     created_at: string;
+    due_date: string | null;
     tasks?: Task; // for joins
 }
 

@@ -177,12 +177,12 @@ const WeeklyGroupChallenge: React.FC<{
     );
 };
 
-const MyDailyTasks: React.FC<{
+const MyTasksComponent: React.FC<{
     tasks: TaskAssignment[],
     onTaskAction: (assignment: TaskAssignment) => void
 }> = ({ tasks, onTaskAction }) => {
     return (
-        <Card title="My Daily Tasks">
+        <Card title="Today's Tasks">
             <div className="space-y-4">
             {tasks.length > 0 ? tasks.map(assignment => (
                 <div key={assignment.id} className={`p-4 rounded-lg border ${assignment.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-dark border-gray-200 dark:border-gray-700'}`}>
@@ -208,7 +208,7 @@ const MyDailyTasks: React.FC<{
                         </div>
                     </div>
                 </div>
-            )) : <p className="text-gray-500">No daily tasks assigned for today. Great job!</p>}
+            )) : <p className="text-gray-500">No tasks assigned for today. Great job!</p>}
             </div>
         </Card>
     );
@@ -563,7 +563,7 @@ const Tasks: React.FC = () => {
             setQuizAttempt(null);
         }
 
-        // Fetch daily task assignments for today
+        // Fetch task assignments for today
         const todayStart = new Date();
         todayStart.setHours(0,0,0,0);
         const todayEnd = new Date();
@@ -574,8 +574,7 @@ const Tasks: React.FC = () => {
             .select('*, tasks(*)')
             .eq('assignee_id', currentUser.id)
             .gte('created_at', todayStart.toISOString())
-            .lte('created_at', todayEnd.toISOString())
-            .eq('tasks.frequency', 'daily');
+            .lte('created_at', todayEnd.toISOString());
 
         if (assignmentsError) console.error("Error fetching task assignments", assignmentsError);
         else setAssignments(assignmentsData as TaskAssignment[] || []);
@@ -712,7 +711,7 @@ const Tasks: React.FC = () => {
             onJoin={handleJoinChallenge} 
             onStartQuiz={() => setIsQuizModalOpen(true)}
         />
-        <MyDailyTasks tasks={assignments} onTaskAction={handleTaskAction} />
+        <MyTasksComponent tasks={assignments} onTaskAction={handleTaskAction} />
 
         {focusSessionTask && (
             <FocusSessionModal 
