@@ -459,11 +459,11 @@ const ManagerUI = <T extends { id: string; [key: string]: any; }>({ title, items
 
                 <ul className="space-y-2">
                     {items.map(item => (
-                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col md:flex-row md:items-center gap-3">
                             <div className="flex-grow w-full min-w-0">
                                 {renderItem(item)}
                             </div>
-                            <div className="flex-shrink-0 w-full sm:w-auto flex items-center justify-end gap-2">
+                            <div className="flex-shrink-0 w-full md:w-auto flex items-center justify-end gap-2">
                                 <Button size="sm" variant="outline" onClick={() => onSetEditing(item)}>
                                     <PencilAltIcon className="w-4 h-4 mr-1" /> Edit
                                 </Button>

@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Faculty, Department, Course, CourseMaterial, CourseBorrower } from '../types';
 import Card from '../components/ui/Card';
 import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon } from '../components/ui/Icons';
+
+const StudyPlanner = lazy(() => import('../components/academics/StudyPlanner'));
 
 // Reusable Collapsible Component for nesting sections
 interface CollapsibleProps {
@@ -102,21 +104,30 @@ const Academics: React.FC = () => {
         fetchAllData();
     }, []);
 
-    const { universityCoursesByLevel, groupedFaculties } = useMemo(() => {
+    const { universityCoursesByLevel, groupedFaculties, allCoursesForPlanner } = useMemo(() => {
         const coursesWithMaterials = courses.map(course => ({
             ...course,
             materials: materials.filter(m => m.course_id === course.id)
         }));
+        
+        const allCoursesForPlanner = courses.map(course => ({
+            id: course.id,
+            name: course.name,
+            code: course.code,
+            materials: materials
+                .filter(m => m.course_id === course.id)
+                .map(m => ({ title: m.title, type: m.type }))
+        }));
 
         const uniCourses = coursesWithMaterials.filter(c => c.is_general && !c.faculty_id && !c.department_id);
-        const uniCoursesByLevel = uniCourses.reduce((acc, course) => {
+        const universityCoursesByLevel = uniCourses.reduce((acc, course) => {
             const level = course.level;
             if (!acc[level]) acc[level] = [];
             acc[level].push(course);
             return acc;
         }, {} as Record<number, (Course & { materials: CourseMaterial[] })[]>);
         
-        const facs = faculties.map(faculty => {
+        const groupedFaculties = faculties.map(faculty => {
             const facGeneralCourses = coursesWithMaterials.filter(c => c.faculty_id === faculty.id && !c.department_id);
             const facCoursesByLevel = facGeneralCourses.reduce((acc, course) => {
                 const level = course.level;
@@ -134,7 +145,6 @@ const Academics: React.FC = () => {
                 const deptCoursesByLevel = allDeptCourses.reduce((acc, course) => {
                     const level = course.level;
                     if (!acc[level]) acc[level] = [];
-                    // Add isBorrowed flag to differentiate in UI
                     const courseWithFlag = { ...course, isBorrowed: borrowedCourseIds.has(course.id) };
                     acc[level].push(courseWithFlag);
                     return acc;
@@ -145,7 +155,7 @@ const Academics: React.FC = () => {
             return { ...faculty, facultyCoursesByLevel: facCoursesByLevel, departments: depts };
         });
 
-        return { universityCoursesByLevel: uniCoursesByLevel, groupedFaculties: facs };
+        return { universityCoursesByLevel, groupedFaculties, allCoursesForPlanner };
 
     }, [faculties, departments, courses, materials, courseBorrowers]);
 
@@ -192,6 +202,10 @@ const Academics: React.FC = () => {
                     </>
                 )}
             </Card>
+            
+            <Suspense fallback={null}>
+                <StudyPlanner allCourses={allCoursesForPlanner} />
+            </Suspense>
         </div>
     );
 };
