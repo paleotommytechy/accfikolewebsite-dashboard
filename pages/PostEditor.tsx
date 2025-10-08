@@ -7,7 +7,6 @@ import { useNotifier } from '../context/NotificationContext';
 import type { Post } from '../types';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { GoogleGenAI } from "@google/genai";
 import { CloudUploadIcon } from '../components/ui/Icons';
 
 const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
@@ -80,16 +79,19 @@ const PostEditor: React.FC = () => {
         }
         setIsGeneratingImage(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            const response = await ai.models.generateImages({
-                model: 'imagen-4.0-generate-001',
-                prompt: `A cinematic, high-quality hero image for a blog post titled: "${post.title}". The image should be visually appealing and relevant to the title. No text in the image.`,
-                config: {
-                    numberOfImages: 1,
-                },
+            const apiResponse = await fetch('/api/generate-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: post.title }),
             });
-            const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-            const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
+
+            if (!apiResponse.ok) {
+                const errorData = await apiResponse.json();
+                throw new Error(errorData.message || 'Failed to generate image');
+            }
+
+            const { base64Image } = await apiResponse.json();
+            const imageUrl = `data:image/png;base64,${base64Image}`;
             setPost(prev => ({...prev, image_url: imageUrl}));
             addToast('Image generated successfully!', 'success');
         } catch (error: any) {
