@@ -759,7 +759,7 @@ if (!supabase) {
  *            created_at,
  *            is_unread,
  *            row_number() over(partition by other_user_id order by created_at desc) as rn
- *        from conversations
+ *        from ranked_conversations
  *    ),
  *    latest_messages as (
  *        select
@@ -1014,6 +1014,98 @@ if (!supabase) {
  *    CREATE POLICY "Admins and academics managers can manage academic data" ON public.courses FOR ALL USING (public.get_my_role() IN ('admin', 'academics'));
  *    CREATE POLICY "Admins and academics managers can manage academic data" ON public.course_materials FOR ALL USING (public.get_my_role() IN ('admin', 'academics'));
  *    CREATE POLICY "Admins and academics managers can manage academic data" ON public.course_borrowers FOR ALL USING (public.get_my_role() IN ('admin', 'academics'));
+ *
+ *    -- ================================================================================================
+ *    -- === COMMUNITY MATERIALS (USER UPLOADS) SETUP                                                 ===
+ *    -- ================================================================================================
+ *
+ *    -- ========= STEP 1: Create the new user_course_materials table =========
+ *    -- This table will store materials uploaded by any authenticated user.
+ *    CREATE TABLE IF NOT EXISTS public.user_course_materials (
+ *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+ *        uploader_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ *        course_id uuid NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
+ *        title text NOT NULL,
+ *        file_url text NOT NULL,
+ *        file_path text NOT NULL, -- Storing path for easier storage management
+ *        description text,
+ *        created_at timestamp with time zone DEFAULT now()
+ *    );
+ *    COMMENT ON TABLE public.user_course_materials IS 'Stores course materials uploaded by users.';
+ *
+ *
+ *    -- ========= STEP 2: Enable RLS and add policies for the new table =========
+ *    ALTER TABLE public.user_course_materials ENABLE ROW LEVEL SECURITY;
+ *
+ *    -- Clear any old policies to prevent conflicts
+ *    DROP POLICY IF EXISTS "Authenticated users can view all user materials" ON public.user_course_materials;
+ *    DROP POLICY IF EXISTS "Users can manage their own uploaded materials" ON public.user_course_materials;
+ *    DROP POLICY IF EXISTS "Users can upload their own materials" ON public.user_course_materials;
+ *
+ *
+ *    -- Allow all authenticated users to view all community-uploaded materials.
+ *    CREATE POLICY "Authenticated users can view all user materials" ON public.user_course_materials
+ *    FOR SELECT TO authenticated USING (true);
+ *
+ *    -- Allow users to upload materials, ensuring they set themselves as the uploader.
+ *    CREATE POLICY "Users can upload their own materials" ON public.user_course_materials
+ *    FOR INSERT TO authenticated WITH CHECK (auth.uid() = uploader_id);
+ *
+ *    -- Allow users to update or delete only the materials they uploaded. Admins/academics can also manage.
+ *    -- Policy to allow users to UPDATE their own uploaded materials
+ *    CREATE POLICY "Users can update their own uploaded materials" ON public.user_course_materials
+ *    FOR UPDATE TO authenticated
+ *    USING (
+ *      (auth.uid() = uploader_id) OR (get_my_role() IN ('admin', 'academics'))
+ *    );
+ *
+ *    -- Policy to allow users to DELETE their own uploaded materials
+ *    CREATE POLICY "Users can delete their own uploaded materials" ON public.user_course_materials
+ *    FOR DELETE TO authenticated
+ *    USING (
+ *      (auth.uid() = uploader_id) OR (get_my_role() IN ('admin', 'academics'))
+ *    );
+ *
+ *
+ *    -- ========= STEP 3: Revert changes to the admin 'course_materials' table =========
+ *    -- This removes the 'file_upload' option from the admin-managed materials table.
+ *    ALTER TABLE public.course_materials DROP CONSTRAINT IF EXISTS course_materials_type_check;
+ *    ALTER TABLE public.course_materials ADD CONSTRAINT course_materials_type_check 
+ *    CHECK (type IN ('pdf_link', 'drive_folder', 'video_link', 'text'));
+ *
+ *
+ *    -- ========= STEP 4: Update Storage Bucket Policies for 'course_materials' =========
+ *    -- This allows any user to upload files into a folder named with their own user ID.
+ *    -- NOTE: Ensure a public bucket named 'course_materials' exists in your Supabase storage.
+ *
+ *    -- First, clear existing policies on the bucket to avoid conflicts.
+ *    DROP POLICY IF EXISTS "Allow authenticated read access" ON storage.objects;
+ *    DROP POLICY IF EXISTS "Allow academics and admins to manage course materials" ON storage.objects;
+ *    DROP POLICY IF EXISTS "Allow authenticated users to upload their own files" ON storage.objects;
+ *    DROP POLICY IF EXISTS "Allow users to delete their own files" ON storage.objects;
+ *
+ *    -- Allow all authenticated users to view/download any file in the bucket.
+ *    CREATE POLICY "Allow authenticated read access"
+ *    ON storage.objects FOR SELECT
+ *    TO authenticated
+ *    USING ( bucket_id = 'course_materials' );
+ *
+ *    -- Allow any authenticated user to upload files into a folder named with their user ID.
+ *    -- The path will look like `public/user-id-goes-here/filename.pdf`
+ *    CREATE POLICY "Allow authenticated users to upload their own files"
+ *    ON storage.objects FOR INSERT
+ *    TO authenticated
+ *    WITH CHECK ( bucket_id = 'course_materials' AND (storage.foldername(name))[1] = 'public' AND (storage.foldername(name))[2] = auth.uid()::text );
+ *
+ *    -- Allow users to delete files from their own folder.
+ *    -- Admins/academics managers can also delete any file.
+ *    CREATE POLICY "Allow users to delete their own files"
+ *    ON storage.objects FOR DELETE
+ *    TO authenticated
+ *    USING (
+ *      bucket_id = 'course_materials' AND 
+ *      ( ((storage.foldername(name))[1] = 'public' AND (storage.foldername(name))[2] = auth.uid()::text) OR get_my_role() IN ('admin', 'academics') )
+ *    );
  *
  *    ```
  */

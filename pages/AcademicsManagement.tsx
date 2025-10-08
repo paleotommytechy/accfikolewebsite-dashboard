@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { Faculty, Department, Course, CourseMaterial, CourseBorrower } from '../types';
+import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
 import { useNotifier } from '../context/NotificationContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
+import Avatar from '../components/auth/Avatar';
 
-type Tab = 'Faculties' | 'Departments' | 'Courses' | 'Materials' | 'Borrowed Courses';
+type Tab = 'Faculties' | 'Departments' | 'Courses' | 'Materials' | 'Borrowed Courses' | 'User Materials';
 
 const AcademicsManagement: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>('Faculties');
@@ -16,7 +17,7 @@ const AcademicsManagement: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Academics Management</h1>
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-4 sm:space-x-6 overflow-x-auto" aria-label="Tabs">
-                    {(['Faculties', 'Departments', 'Courses', 'Materials', 'Borrowed Courses'] as Tab[]).map(tab => (
+                    {(['Faculties', 'Departments', 'Courses', 'Materials', 'Borrowed Courses', 'User Materials'] as Tab[]).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -38,6 +39,7 @@ const AcademicsManagement: React.FC = () => {
                 {activeTab === 'Courses' && <CoursesManager />}
                 {activeTab === 'Materials' && <MaterialsManager />}
                 {activeTab === 'Borrowed Courses' && <BorrowedCoursesManager />}
+                {activeTab === 'User Materials' && <UserMaterialsManager />}
             </div>
         </div>
     );
@@ -422,6 +424,66 @@ const BorrowedCoursesManager: React.FC = () => {
             )}
             onSave={handleSave}
         />
+    );
+};
+
+const UserMaterialsManager: React.FC = () => {
+    const [materials, setMaterials] = useState<(UserCourseMaterial & { courses: { code: string, name: string }, profiles: { full_name: string, avatar_url: string } })[]>([]);
+    const { addToast, showConfirm } = useNotifier();
+
+    const fetchMaterials = useCallback(async () => {
+        if (!supabase) return;
+        const { data, error } = await supabase
+            .from('user_course_materials')
+            .select('*, courses(code, name), profiles(full_name, avatar_url)')
+            .order('created_at', { ascending: false });
+        if (error) addToast(error.message, 'error');
+        else setMaterials(data as any || []);
+    }, [addToast]);
+
+    useEffect(() => { fetchMaterials(); }, [fetchMaterials]);
+
+    const handleDelete = (material: typeof materials[0]) => {
+        showConfirm(`Are you sure you want to delete "${material.title}"? This will also remove the file from storage.`, async () => {
+            if (!supabase) return;
+            // 1. Delete from storage
+            const { error: storageError } = await supabase.storage.from('course_materials').remove([material.file_path]);
+            if (storageError) {
+                addToast('Could not delete file from storage: ' + storageError.message, 'error');
+                // We can choose to continue or stop. Let's continue to delete DB record.
+            }
+            // 2. Delete from database
+            const { error: dbError } = await supabase.from('user_course_materials').delete().eq('id', material.id);
+            if (dbError) addToast('Error deleting database record: ' + dbError.message, 'error');
+            else {
+                addToast('Material deleted successfully.', 'success');
+                fetchMaterials();
+            }
+        });
+    };
+
+    return (
+        <Card title="User-Uploaded Materials">
+            {materials.length > 0 ? (
+                <ul className="space-y-2">
+                    {materials.map(item => (
+                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col md:flex-row md:items-center gap-3">
+                            <div className="flex-grow w-full min-w-0">
+                                <p className="font-semibold text-gray-800 dark:text-white truncate">{item.title}</p>
+                                <p className="text-sm text-gray-500">
+                                    For: {item.courses.code || 'N/A'} | Uploaded by: {item.profiles.full_name || '...'}
+                                </p>
+                            </div>
+                            <div className="flex-shrink-0 w-full md:w-auto flex items-center justify-end gap-2">
+                                <Button size="sm" variant="secondary" onClick={() => handleDelete(item)}>
+                                    <TrashIcon className="w-4 h-4 mr-1" /> Delete
+                                </Button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : <p className="text-center text-gray-500 py-4">No community materials uploaded yet.</p>}
+        </Card>
     );
 };
 

@@ -268,6 +268,19 @@ export interface CourseMaterial {
   created_at: string;
 }
 
+// --- NEW: Community-Uploaded Materials ---
+export interface UserCourseMaterial {
+  id: string;
+  uploader_id: string;
+  course_id: string;
+  title: string;
+  file_url: string;
+  file_path: string;
+  description: string | null;
+  created_at: string;
+  profiles?: Pick<UserProfile, 'full_name' | 'avatar_url'>; // For uploader details
+}
+
 export interface CourseBorrower {
     id: string;
     course_id: string;

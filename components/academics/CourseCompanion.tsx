@@ -1,6 +1,6 @@
 // This is a new file: components/academics/CourseCompanion.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatIcon, XIcon, SendIcon } from '../ui/Icons';
+import { ChatIcon, XIcon, SendIcon, CloudUploadIcon } from '../ui/Icons';
 import Avatar from '../auth/Avatar';
 import { useAppContext } from '../../context/AppContext';
 import { marked } from 'marked';
@@ -18,11 +18,13 @@ const CourseCompanion: React.FC<CourseCompanionProps> = ({ allCourses }) => {
     const { currentUser } = useAppContext();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { sender: 'ai', text: "Hello! I'm your AI Course Companion. Ask me anything about your course materials, and I'll do my best to help you understand." }
+        { sender: 'ai', text: "Hello! I'm your AI Course Companion. Ask me anything about your course materials, or upload a document to discuss it." }
     ]);
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,23 +45,66 @@ const CourseCompanion: React.FC<CourseCompanionProps> = ({ allCourses }) => {
         return `Course: ${relevantCourse.name} (${relevantCourse.code})\nMaterials:\n${materialList}`;
     };
 
+    const fileToBase64 = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = (error) => reject(error);
+        });
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setSelectedFile(file);
+            setUserInput(`Summarize the key points of "${file.name}".`);
+        }
+    };
+    
+    const removeSelectedFile = () => {
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+        setUserInput(''); // Clear prompt when file is removed
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const prompt = userInput.trim();
-        if (!prompt || isLoading) return;
+        if ((!prompt && !selectedFile) || isLoading) return;
 
-        const userMessage: ChatMessage = { sender: 'user', text: prompt };
+        const currentFile = selectedFile;
+        // If there's a file but no text, create a default prompt for the message history
+        const userMessageText = (currentFile && !prompt) 
+            ? `Analyze the attached file: ${currentFile.name}` 
+            : prompt;
+
+        const userMessage: ChatMessage = { sender: 'user', text: userMessageText };
         setMessages(prev => [...prev, userMessage]);
+        
         setUserInput('');
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
         setIsLoading(true);
 
-        const courseContext = findCourseContext(prompt);
-
         try {
+            const apiBody: any = { userPrompt: userMessageText };
+
+            if (currentFile) {
+                const base64Data = await fileToBase64(currentFile);
+                apiBody.fileData = base64Data;
+                apiBody.mimeType = currentFile.type;
+            } else {
+                apiBody.courseContext = findCourseContext(prompt);
+            }
+            
             const response = await fetch('/api/course-companion', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userPrompt: prompt, courseContext }),
+                body: JSON.stringify(apiBody),
             });
 
             if (!response.ok) {
@@ -76,7 +121,7 @@ const CourseCompanion: React.FC<CourseCompanionProps> = ({ allCourses }) => {
             setIsLoading(false);
         }
     };
-
+    
     return (
         <>
             <button
@@ -140,16 +185,34 @@ const CourseCompanion: React.FC<CourseCompanionProps> = ({ allCourses }) => {
                             <div ref={messagesEndRef} />
                         </div>
 
+                        {selectedFile && (
+                            <div className="px-4 py-2 border-t dark:border-gray-700 flex-shrink-0">
+                                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex items-center justify-between text-sm">
+                                    <p className="truncate text-gray-700 dark:text-gray-200">
+                                        <CloudUploadIcon className="w-4 h-4 inline-block mr-2" />
+                                        {selectedFile.name}
+                                    </p>
+                                    <button onClick={removeSelectedFile} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                                        <XIcon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="p-4 border-t dark:border-gray-700 flex-shrink-0 flex items-center gap-2">
+                            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="w-10 h-10 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex-shrink-0">
+                                <CloudUploadIcon className="w-5 h-5" />
+                            </button>
                             <input
                                 type="text"
                                 value={userInput}
                                 onChange={e => setUserInput(e.target.value)}
-                                placeholder="Ask about your course materials..."
+                                placeholder={selectedFile ? 'Ask a question about your file...' : 'Ask about your course materials...'}
                                 className="w-full bg-gray-100 dark:bg-gray-700 border-transparent rounded-full px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 disabled={isLoading}
                             />
-                            <button type="submit" className="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-sm hover:bg-blue-700 transition-colors flex-shrink-0 disabled:opacity-50" disabled={isLoading || !userInput.trim()}>
+                            <button type="submit" className="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-full shadow-sm hover:bg-blue-700 transition-colors flex-shrink-0 disabled:opacity-50" disabled={isLoading || (!userInput.trim() && !selectedFile)}>
                                 <SendIcon className="w-5 h-5" />
                             </button>
                         </form>

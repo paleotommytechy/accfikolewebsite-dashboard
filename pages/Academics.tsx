@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { Faculty, Department, Course, CourseMaterial, CourseBorrower } from '../types';
+import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
 import Card from '../components/ui/Card';
 import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon } from '../components/ui/Icons';
+import { useNotifier } from '../context/NotificationContext';
+import { useAppContext } from '../context/AppContext';
+import Button from '../components/ui/Button';
 
 const StudyPlanner = lazy(() => import('../components/academics/StudyPlanner'));
 const CourseCompanion = lazy(() => import('../components/academics/CourseCompanion'));
@@ -35,26 +38,55 @@ const Collapsible: React.FC<CollapsibleProps> = ({ title, children, defaultOpen 
 };
 
 // Component to render a list of courses, grouped by level
-const CourseLevelGroup: React.FC<{ coursesByLevel: Record<number, (Course & { materials: CourseMaterial[], isBorrowed?: boolean })[]> }> = ({ coursesByLevel }) => (
+const CourseLevelGroup: React.FC<{ coursesByLevel: Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed?: boolean })[]> }> = ({ coursesByLevel }) => (
     <div className="pl-4">
         {Object.entries(coursesByLevel).sort(([a], [b]) => Number(a) - Number(b)).map(([level, coursesInLevel]) => (
             <Collapsible key={level} title={<span className="text-base font-medium">{level} Level</span>}>
                 <div className="pl-4 space-y-4">
-                    {(coursesInLevel as (Course & { materials: CourseMaterial[], isBorrowed?: boolean })[]).map(course => (
+                    {(coursesInLevel as (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed?: boolean })[]).map(course => (
                         <div key={course.id} className="pt-2">
                             <h4 className="font-semibold">{course.code} - {course.name} {course.isBorrowed && <span className="text-xs font-normal bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full ml-2">Borrowed</span>}</h4>
-                            <ul className="pl-4 mt-2 space-y-2">
-                                {course.materials.map(mat => (
-                                    <li key={mat.id}>
-                                        <a href={mat.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary-600 hover:underline">
-                                            <ExternalLinkIcon className="w-4 h-4" />
-                                            <span>{mat.title} ({mat.type.replace(/_/g, ' ')})</span>
-                                        </a>
-                                        {mat.description && <p className="text-xs text-gray-500 pl-6">{mat.description}</p>}
-                                    </li>
-                                ))}
-                                {course.materials.length === 0 && <li className="text-xs text-gray-500 italic">No materials uploaded yet.</li>}
-                            </ul>
+                            
+                            {course.materials.length > 0 && (
+                                <>
+                                    <h5 className="text-sm font-semibold mt-2 text-gray-600 dark:text-gray-400">Official Materials</h5>
+                                    <ul className="pl-4 mt-2 space-y-2">
+                                        {course.materials.map(mat => (
+                                            <li key={mat.id}>
+                                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary-600 hover:underline">
+                                                    <ExternalLinkIcon className="w-4 h-4" />
+                                                    <span>{mat.title} ({mat.type.replace(/_/g, ' ')})</span>
+                                                </a>
+                                                {mat.description && <p className="text-xs text-gray-500 pl-6">{mat.description}</p>}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
+
+                            {course.userMaterials.length > 0 && (
+                                <>
+                                    <h5 className="text-sm font-semibold mt-3 text-gray-600 dark:text-gray-400">Community Materials</h5>
+                                    <ul className="pl-4 mt-2 space-y-2">
+                                        {course.userMaterials.map(um => (
+                                            <li key={um.id}>
+                                                <a href={um.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                                                    <ExternalLinkIcon className="w-4 h-4" />
+                                                    <span>{um.title}</span>
+                                                </a>
+                                                <p className="text-xs text-gray-500 pl-6">
+                                                    Uploaded by {um.profiles?.full_name || '...'}
+                                                    {um.description && ` - ${um.description}`}
+                                                </p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
+
+                            {course.materials.length === 0 && course.userMaterials.length === 0 && (
+                                <p className="text-xs text-gray-500 italic pl-4 mt-2">No materials uploaded yet.</p>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -69,55 +101,62 @@ const Academics: React.FC = () => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [courses, setCourses] = useState<Course[]>([]);
     const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+    const [userMaterials, setUserMaterials] = useState<UserCourseMaterial[]>([]);
     const [courseBorrowers, setCourseBorrowers] = useState<CourseBorrower[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchAllData = async () => {
-            if (!supabase) return;
-            setLoading(true);
-            try {
-                const [facultyRes, departmentRes, courseRes, materialRes, borrowerRes] = await Promise.all([
-                    supabase.from('faculties').select('*').order('name'),
-                    supabase.from('departments').select('*').order('name'),
-                    supabase.from('courses').select('*').order('level, code'),
-                    supabase.from('course_materials').select('*').order('title'),
-                    supabase.from('course_borrowers').select('*')
-                ]);
+    const fetchAllData = useCallback(async () => {
+        if (!supabase) return;
+        setLoading(true);
+        try {
+            const [facultyRes, departmentRes, courseRes, materialRes, userMaterialRes, borrowerRes] = await Promise.all([
+                supabase.from('faculties').select('*').order('name'),
+                supabase.from('departments').select('*').order('name'),
+                supabase.from('courses').select('*').order('level, code'),
+                supabase.from('course_materials').select('*').order('title'),
+                supabase.from('user_course_materials').select('*, profiles:uploader_id(full_name, avatar_url)').order('created_at', { ascending: false }),
+                supabase.from('course_borrowers').select('*')
+            ]);
 
-                if (facultyRes.error) throw facultyRes.error;
-                if (departmentRes.error) throw departmentRes.error;
-                if (courseRes.error) throw courseRes.error;
-                if (materialRes.error) throw materialRes.error;
-                if (borrowerRes.error) throw borrowerRes.error;
+            if (facultyRes.error) throw facultyRes.error;
+            if (departmentRes.error) throw departmentRes.error;
+            if (courseRes.error) throw courseRes.error;
+            if (materialRes.error) throw materialRes.error;
+            if (userMaterialRes.error) throw userMaterialRes.error;
+            if (borrowerRes.error) throw borrowerRes.error;
 
-                setFaculties(facultyRes.data || []);
-                setDepartments(departmentRes.data || []);
-                setCourses(courseRes.data || []);
-                setMaterials(materialRes.data || []);
-                setCourseBorrowers(borrowerRes.data || []);
-            } catch (error: any) {
-                console.error("Error fetching academic data:", error.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAllData();
+            setFaculties(facultyRes.data || []);
+            setDepartments(departmentRes.data || []);
+            setCourses(courseRes.data || []);
+            setMaterials(materialRes.data || []);
+            setUserMaterials((userMaterialRes.data as UserCourseMaterial[]) || []);
+            setCourseBorrowers(borrowerRes.data || []);
+        } catch (error: any) {
+            console.error("Error fetching academic data:", error.message);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchAllData();
+    }, [fetchAllData]);
 
     const { universityCoursesByLevel, groupedFaculties, allCoursesForPlanner } = useMemo(() => {
         const coursesWithMaterials = courses.map(course => ({
             ...course,
-            materials: materials.filter(m => m.course_id === course.id)
+            materials: materials.filter(m => m.course_id === course.id),
+            userMaterials: userMaterials.filter(um => um.course_id === course.id),
         }));
         
         const allCoursesForPlanner = courses.map(course => ({
             id: course.id,
             name: course.name,
             code: course.code,
-            materials: materials
-                .filter(m => m.course_id === course.id)
-                .map(m => ({ title: m.title, type: m.type }))
+            materials: [
+                ...materials.filter(m => m.course_id === course.id).map(m => ({ title: m.title, type: m.type })),
+                ...userMaterials.filter(um => um.course_id === course.id).map(um => ({ title: um.title, type: 'User Upload' }))
+            ]
         }));
 
         const uniCourses = coursesWithMaterials.filter(c => c.is_general && !c.faculty_id && !c.department_id);
@@ -126,7 +165,7 @@ const Academics: React.FC = () => {
             if (!acc[level]) acc[level] = [];
             acc[level].push(course);
             return acc;
-        }, {} as Record<number, (Course & { materials: CourseMaterial[] })[]>);
+        }, {} as Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[] })[]>);
         
         const facs = faculties.map(faculty => {
             const facGeneralCourses = coursesWithMaterials.filter(c => c.faculty_id === faculty.id && !c.department_id);
@@ -135,7 +174,7 @@ const Academics: React.FC = () => {
                 if (!acc[level]) acc[level] = [];
                 acc[level].push(course);
                 return acc;
-            }, {} as Record<number, (Course & { materials: CourseMaterial[] })[]>);
+            }, {} as Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[] })[]>);
 
             const depts = departments.filter(d => d.faculty_id === faculty.id).map(dept => {
                 const departmentalCourses = coursesWithMaterials.filter(c => c.department_id === dept.id);
@@ -149,7 +188,7 @@ const Academics: React.FC = () => {
                     const courseWithFlag = { ...course, isBorrowed: borrowedCourseIds.has(course.id) };
                     acc[level].push(courseWithFlag);
                     return acc;
-                }, {} as Record<number, (Course & { materials: CourseMaterial[], isBorrowed: boolean })[]>);
+                }, {} as Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed: boolean })[]>);
 
                 return { ...dept, coursesByLevel: deptCoursesByLevel };
             });
@@ -158,7 +197,7 @@ const Academics: React.FC = () => {
 
         return { universityCoursesByLevel: uniCoursesByLevel, groupedFaculties: facs, allCoursesForPlanner };
 
-    }, [faculties, departments, courses, materials, courseBorrowers]);
+    }, [faculties, departments, courses, materials, userMaterials, courseBorrowers]);
 
 
     if (loading) {

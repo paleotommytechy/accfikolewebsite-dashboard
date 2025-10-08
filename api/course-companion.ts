@@ -8,10 +8,10 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { userPrompt, courseContext } = req.body;
+    const { userPrompt, courseContext, fileData, mimeType } = req.body;
 
-    if (!userPrompt || !courseContext) {
-      return res.status(400).json({ message: 'User prompt and course context are required.' });
+    if (!userPrompt) {
+      return res.status(400).json({ message: 'User prompt is required.' });
     }
 
     const apiKey = process.env.API_KEY;
@@ -22,13 +22,30 @@ export default async function handler(req: any, res: any) {
     
     const ai = new GoogleGenAI({ apiKey });
     
-    const systemInstruction = `You are an AI Course Companion for a Christian university fellowship. Your role is to act as a helpful tutor. Based on the user's question and the provided course materials, answer their query concisely. You can summarize topics, explain concepts, or help locate information within the provided materials. If the materials don't contain the answer, politely state that the information is not available in the provided context. Format your answers clearly using Markdown, but do not use H1 or H2 markdown tags.`;
+    const systemInstruction = `You are an AI Course Companion for the All Christian Campus Fellowship Ikole Ekiti chapter at Federal University of Oye Ekiti. Your role is to act as a helpful tutor. Based on the user's question and the provided course materials, answer their query concisely. You can summarize topics, explain concepts, or help locate information within the provided materials. If the materials don't contain the answer, politely state that the information is not available in the provided context. Format your answers clearly using Markdown, but do not use H1 or H2 markdown tags.`;
     
-    const fullPrompt = `## System Instruction:\n${systemInstruction}\n\n## User Question:\n${userPrompt}\n\n## Available Course Materials for Context:\n${courseContext}`;
+    let contents: any;
+
+    if (fileData && mimeType) {
+        // Multimodal request with a file
+        contents = {
+            parts: [
+                { text: userPrompt },
+                { inlineData: { data: fileData, mimeType } }
+            ]
+        };
+    } else {
+        // Text-only request using course context from the database
+        const fullPrompt = `${userPrompt}\n\nUse the following context if relevant:\n${courseContext || 'No specific course materials were found for this question.'}`;
+        contents = fullPrompt;
+    }
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: fullPrompt,
+        contents: contents,
+        config: {
+            systemInstruction: systemInstruction
+        }
     });
     
     const answer = response.text;
