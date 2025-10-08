@@ -34,11 +34,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        return 'dark';
+      const storedTheme = localStorage.getItem('theme');
+      if (storedTheme === 'dark' || storedTheme === 'light') {
+        return storedTheme;
       }
     }
-    return 'light';
+    return 'light'; // Default to light theme
   });
 
   const toggleTheme = useCallback(() => {

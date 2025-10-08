@@ -459,7 +459,7 @@ const ManagerUI = <T extends { id: string; [key: string]: any; }>({ title, items
 
                 <ul className="space-y-2">
                     {items.map(item => (
-                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                        <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex-grow w-full min-w-0">
                                 {renderItem(item)}
                             </div>
