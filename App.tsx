@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -23,7 +24,6 @@ const UserManagement = lazy(() => import('./pages/UserManagement'));
 const ChatConversation = lazy(() => import('./pages/ChatConversation'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Giving = lazy(() => import('./pages/Giving'));
-const Sponsorships = lazy(() => import('./pages/Sponsorships'));
 const ResourceLibrary = lazy(() => import('./pages/ResourceLibrary'));
 const Blog = lazy(() => import('./pages/Blog'));
 const BlogPost = lazy(() => import('./pages/BlogPost'));
@@ -160,7 +160,6 @@ function App(): React.ReactNode {
                 <Route path="/store" element={<Store />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/giving" element={<Giving />} />
-                <Route path="/sponsorships" element={<Sponsorships />} />
                 
                 {/* Redirect from root and any other unmatched protected route to dashboard */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
