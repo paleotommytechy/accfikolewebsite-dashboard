@@ -908,6 +908,44 @@ if (!supabase) {
  *    order by l.last_message_at desc;
  *    $$;
  *
+ *    -- ================================================================================================
+ *    -- === CHAT MEDIA (VOICE NOTES) SETUP (NEW)                                                     ===
+ *    -- ================================================================================================
+ *
+ *    -- 1. Create Storage Bucket for Chat Media:
+ *    --    - Go to your Supabase project -> Storage.
+ *    --    - Click "Create bucket".
+ *    --    - Enter Bucket name: chat_media
+ *    --    - IMPORTANT: Check the "Public bucket" option.
+ *    --    - Click "Create bucket".
+ *
+ *    -- 2. SQL Policies for 'chat_media' bucket (run these in the SQL Editor after creating the bucket)
+ *
+ *    -- This policy allows any logged-in user to view/download any file in the chat media bucket.
+ *    DROP POLICY IF EXISTS "Allow authenticated read access on chat media" ON storage.objects;
+ *    CREATE POLICY "Allow authenticated read access on chat media"
+ *    ON storage.objects FOR SELECT
+ *    TO authenticated
+ *    USING ( bucket_id = 'chat_media' );
+ *
+ *    -- This policy allows a logged-in user to upload files into a folder named with their own user ID.
+ *    -- Example path: `a1b2c3d4-e5f6/audio.webm`
+ *    DROP POLICY IF EXISTS "Allow authenticated users to upload their own chat media" ON storage.objects;
+ *    CREATE POLICY "Allow authenticated users to upload their own chat media"
+ *    ON storage.objects FOR INSERT
+ *    TO authenticated
+ *    WITH CHECK ( bucket_id = 'chat_media' AND (storage.foldername(name))[1] = auth.uid()::text );
+ *
+ *    -- This policy allows a user to delete media files from their own folder.
+ *    DROP POLICY IF EXISTS "Allow users to delete their own chat media" ON storage.objects;
+ *    CREATE POLICY "Allow users to delete their own chat media"
+ *    ON storage.objects FOR DELETE
+ *    TO authenticated
+ *    USING (
+ *      bucket_id = 'chat_media' AND 
+ *      ( (storage.foldername(name))[1] = auth.uid()::text )
+ *    );
+ *
  *    -- This function aggregates various metrics for the leader analytics dashboard.
  *    -- It should be called from a secure, admin-only context.
  *    -- The `security definer` setting allows it to bypass RLS to count across all users.

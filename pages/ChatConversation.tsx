@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -6,7 +5,7 @@ const { useParams, Link, useNavigate } = ReactRouterDOM;
 import { useAppContext } from '../context/AppContext';
 import Avatar from '../components/auth/Avatar';
 import Button from '../components/ui/Button';
-import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, SendIcon, XIcon, StopIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon, CopyIcon, TrashIcon } from '../components/ui/Icons';
+import { ArrowLeftIcon, PhoneIcon, VideoCameraIcon, InformationCircleIcon, EmojiIcon, PaperclipIcon, CameraIcon, MicrophoneIcon, SendIcon, XIcon, UserIcon, CoinIcon, StarIcon, UsersIcon, ChatIcon, CopyIcon, TrashIcon, PauseIcon, PlayIcon, StopIcon } from '../components/ui/Icons';
 import type { Message, UserProfile } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useNotifier } from '../context/NotificationContext';
@@ -107,6 +106,87 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, isLoading, on
     );
 };
 
+// --- NEW: Custom Audio Player Component ---
+const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [duration, setDuration] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+
+    const formatTimeValue = (time: number) => {
+        if (isNaN(time) || time === Infinity) return '00:00';
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const setAudioData = () => {
+            setDuration(audio.duration);
+            setCurrentTime(audio.currentTime);
+        };
+        const setAudioTime = () => setCurrentTime(audio.currentTime);
+        const handleEnded = () => {
+            setIsPlaying(false);
+            setCurrentTime(0);
+        };
+
+        audio.addEventListener('loadedmetadata', setAudioData);
+        audio.addEventListener('timeupdate', setAudioTime);
+        audio.addEventListener('ended', handleEnded);
+
+        return () => {
+            audio.removeEventListener('loadedmetadata', setAudioData);
+            audio.removeEventListener('timeupdate', setAudioTime);
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, []);
+
+    const togglePlayPause = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (isPlaying) {
+            audio.pause();
+        } else {
+            audio.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+    
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = Number(e.target.value);
+        setCurrentTime(audio.currentTime);
+    };
+
+    return (
+        <div className="flex items-center gap-3 w-64 text-white">
+            <audio ref={audioRef} src={src} preload="metadata" />
+            <button onClick={togglePlayPause} className="bg-white/20 hover:bg-white/40 rounded-full p-2 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-white/50">
+                {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5" />}
+            </button>
+            <div className="flex-grow flex flex-col justify-center gap-1">
+                <input
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-white"
+                />
+                <div className="flex justify-between text-xs font-mono">
+                    <span>{formatTimeValue(currentTime)}</span>
+                    <span>{formatTimeValue(duration)}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const ChatConversation: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
@@ -119,11 +199,13 @@ const ChatConversation: React.FC = () => {
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: Message } | null>(null);
     
-    // Voice Note State
-    const [isRecording, setIsRecording] = useState(false);
+    // --- Voice Note State ---
+    type RecordingStatus = 'idle' | 'recording' | 'paused';
+    const [recordingStatus, setRecordingStatus] = useState<RecordingStatus>('idle');
     const [recordingTime, setRecordingTime] = useState(0);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordingIntervalRef = useRef<number | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -313,63 +395,91 @@ const ChatConversation: React.FC = () => {
         }
     };
     
-    const handleToggleRecording = async () => {
-        if (isRecording) {
-            // Stop recording
-            mediaRecorderRef.current?.stop();
-            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-            setIsRecording(false);
-        } else {
-            // Start recording
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const recorder = new MediaRecorder(stream);
-                mediaRecorderRef.current = recorder;
-                const audioChunks: Blob[] = [];
+    // --- Voice Note Handlers ---
+    const startRecording = async () => {
+        if (!currentUser) return;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+            (recorder as any)._wasCancelled = false; // Custom flag
+            mediaRecorderRef.current = recorder;
+            audioChunksRef.current = [];
 
-                recorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
+            recorder.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
 
-                recorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    // Only upload and send if duration is at least 1 second
-                    if (recordingTime >= 1) {
-                         const filePath = `audio/${currentUser?.id}/${Date.now()}.webm`;
-                        
-                        addToast('Uploading voice note...', 'info');
-                        const { error: uploadError } = await supabase.storage
-                            .from('chat_media') // Make sure this bucket exists with public access
-                            .upload(filePath, audioBlob);
+            recorder.onstop = async () => {
+                const wasCancelled = (mediaRecorderRef.current as any)._wasCancelled;
+                stream.getTracks().forEach(track => track.stop()); // Clean up mic access
+                
+                if (wasCancelled) return;
+                
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                audioChunksRef.current = [];
 
-                        if (uploadError) {
-                            throw uploadError;
-                        }
+                if (recordingTime < 1) {
+                    addToast('Recording was too short.', 'info');
+                    return;
+                }
 
-                        const { data: { publicUrl } } = supabase.storage.from('chat_media').getPublicUrl(filePath);
+                try {
+                    addToast('Uploading voice note...', 'info');
+                    const filePath = `${currentUser.id}/${Date.now()}.webm`;
+                    const { error: uploadError } = await supabase.storage.from('chat_media').upload(filePath, audioBlob);
+                    if (uploadError) throw uploadError;
 
-                        if(publicUrl) {
-                            await sendMediaMessage(publicUrl, 'audio');
-                        }
+                    const { data } = supabase.storage.from('chat_media').getPublicUrl(filePath);
+                    if (data.publicUrl) {
+                        await sendMediaMessage(data.publicUrl, 'audio');
+                    } else {
+                        throw new Error("Could not get public URL for the file.");
                     }
-                    // Clean up stream tracks
-                    stream.getTracks().forEach(track => track.stop());
-                    setRecordingTime(0);
-                };
+                } catch (err: any) {
+                    console.error("Failed to upload/send voice note:", err);
+                    addToast(`Error sending voice note: ${err.message}`, 'error');
+                }
+            };
 
-                recorder.start();
-                setIsRecording(true);
-                setRecordingTime(0);
-                recordingIntervalRef.current = window.setInterval(() => {
-                    setRecordingTime(prevTime => prevTime + 1);
-                }, 1000);
+            recorder.start();
+            setRecordingStatus('recording');
+            setRecordingTime(0);
+            recordingIntervalRef.current = window.setInterval(() => setRecordingTime(prev => prev + 1), 1000);
 
-            } catch (err) {
-                console.error("Error accessing microphone:", err);
-                addToast('Microphone access denied. Please enable it in your browser settings.', 'error');
-            }
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            addToast('Microphone access denied. Please enable it in your browser settings.', 'error');
         }
     };
+    
+    const stopRecording = () => {
+        mediaRecorderRef.current?.stop();
+        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+        setRecordingStatus('idle');
+    };
+    
+    const pauseRecording = () => {
+        mediaRecorderRef.current?.pause();
+        setRecordingStatus('paused');
+        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    };
+
+    const resumeRecording = () => {
+        mediaRecorderRef.current?.resume();
+        setRecordingStatus('recording');
+        recordingIntervalRef.current = window.setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+    };
+    
+    const cancelRecording = () => {
+        if (mediaRecorderRef.current) {
+            (mediaRecorderRef.current as any)._wasCancelled = true;
+            mediaRecorderRef.current.stop();
+        }
+        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+        setRecordingStatus('idle');
+        setRecordingTime(0);
+    };
+    
 
     const handleCopy = (text: string | null) => {
         if (text) {
@@ -462,7 +572,7 @@ const ChatConversation: React.FC = () => {
 
                             <div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${groupClass} ${isSent ? 'bg-chat-light-bubble-sent dark:bg-chat-bubble-sent text-chat-light-text-primary dark:text-chat-text-primary' : 'bg-chat-light-bubble-received dark:bg-chat-bubble-received text-chat-light-text-primary dark:text-chat-text-primary shadow-sm'}`}>
                                 {msg.message_type === 'audio' && msg.media_url ? (
-                                    <audio controls src={msg.media_url} className="w-full h-10" />
+                                    <AudioPlayer src={msg.media_url} />
                                 ) : (
                                     <p className="text-sm break-words">{msg.text}</p>
                                 )}
@@ -507,43 +617,62 @@ const ChatConversation: React.FC = () => {
                         <EmojiPicker onEmojiClick={onEmojiClick} />
                     </div>
                 )}
-                <form onSubmit={handleSendMessage} className="flex items-end gap-1 sm:gap-2 bg-chat-light-panel dark:bg-chat-panel p-1 sm:p-2 rounded-xl">
-                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
-                    {!isRecording &&
-                        <div className="flex items-center gap-0">
-                            <button type="button" onClick={() => setShowEmojiPicker(p => !p)} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full"><EmojiIcon className="w-6 h-6" /></button>
-                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full hidden sm:block"><PaperclipIcon className="w-6 h-6" /></button>
-                            <button type="button" onClick={handleCamera} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full hidden sm:block"><CameraIcon className="w-6 h-6" /></button>
-                        </div>
-                    }
-                    {isRecording ? (
-                        <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-2xl h-[46px]">
-                             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse mr-2"></div>
-                             <span className="font-mono text-red-500 font-semibold">{formatRecordingTime(recordingTime)}</span>
-                        </div>
-                    ) : (
-                        <textarea
-                            ref={textareaRef}
-                            rows={1}
-                            placeholder="Type a message"
-                            value={newMessage}
-                            onChange={e => setNewMessage(e.target.value)}
-                            className="flex-grow bg-gray-100 dark:bg-gray-800 text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none focus:ring-0 rounded-2xl resize-none max-h-32 sm:max-h-40 py-2 px-3"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendMessage(e);
-                                }
-                            }}
-                        />
-                    )}
-                     {newMessage.trim() ? (
+                <form onSubmit={handleSendMessage} className="flex items-end gap-1 sm:gap-2">
+                    <div className="flex-grow flex items-end gap-2 bg-gray-100 dark:bg-gray-800 rounded-2xl px-2">
+                        {recordingStatus === 'idle' && (
+                            <>
+                                <button type="button" onClick={() => setShowEmojiPicker(p => !p)} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full flex-shrink-0"><EmojiIcon className="w-6 h-6" /></button>
+                                <textarea
+                                    ref={textareaRef}
+                                    rows={1}
+                                    placeholder="Type a message"
+                                    value={newMessage}
+                                    onChange={e => setNewMessage(e.target.value)}
+                                    className="flex-grow bg-transparent text-chat-light-text-primary dark:text-chat-text-primary placeholder-chat-light-text-secondary dark:placeholder-chat-text-secondary border-none focus:ring-0 resize-none max-h-32 sm:max-h-40 py-2.5 px-2"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage(e);
+                                        }
+                                    }}
+                                />
+                                <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-chat-light-text-secondary dark:text-chat-text-secondary hover:text-primary-500 rounded-full flex-shrink-0"><PaperclipIcon className="w-6 h-6" /></button>
+                            </>
+                        )}
+                        {recordingStatus !== 'idle' && (
+                             <div className="w-full flex items-center justify-between h-[46px] px-2">
+                                <button type="button" onClick={cancelRecording} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full">
+                                    <TrashIcon className="w-5 h-5" />
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 bg-red-500 rounded-full ${recordingStatus === 'recording' ? 'animate-pulse' : ''}`}></div>
+                                    <span className="font-mono text-red-500 font-semibold">{formatRecordingTime(recordingTime)}</span>
+                                </div>
+                                {recordingStatus === 'recording' ? (
+                                    <button type="button" onClick={pauseRecording} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full">
+                                        <PauseIcon className="w-6 h-6" />
+                                    </button>
+                                ) : (
+                                    <button type="button" onClick={resumeRecording} className="p-2 text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-full">
+                                        <MicrophoneIcon className="w-6 h-6" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {recordingStatus !== 'idle' ? (
+                        <button type="button" onClick={stopRecording} className="w-11 h-11 flex items-center justify-center bg-green-500 text-white rounded-full shadow-sm hover:bg-green-600 transition-colors flex-shrink-0">
+                            <SendIcon className="w-5 h-5" />
+                        </button>
+                    ) : newMessage.trim() ? (
                         <button type="submit" className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
                             <SendIcon className="w-5 h-5" />
                         </button>
                     ) : (
-                        <button type="button" onClick={handleToggleRecording} className={`w-11 h-11 flex items-center justify-center text-white rounded-full shadow-sm transition-colors flex-shrink-0 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-primary-500 hover:bg-primary-600'}`}>
-                           {isRecording ? <StopIcon className="w-6 h-6" /> : <MicrophoneIcon className="w-6 h-6" />}
+                        <button type="button" onClick={startRecording} className="w-11 h-11 flex items-center justify-center bg-primary-500 text-white rounded-full shadow-sm hover:bg-primary-600 transition-colors flex-shrink-0">
+                           <MicrophoneIcon className="w-6 h-6" />
                         </button>
                     )}
                 </form>

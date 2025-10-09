@@ -326,7 +326,7 @@ const QuizModal: React.FC<QuizModalProps> = ({ quiz, onClose, onComplete }) => {
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [answers, setAnswers] = useState<(number | null)[]>([]);
-    const [currentStep, setCurrentStep] = useState(0); 
+    const [currentStep, setCurrentStep] = useState(0);
     const [finalResult, setFinalResult] = useState<{ score: number; passed: boolean } | null>(null);
 
     useEffect(() => {
@@ -350,33 +350,49 @@ const QuizModal: React.FC<QuizModalProps> = ({ quiz, onClose, onComplete }) => {
         const newAnswers = [...answers];
         newAnswers[currentStep] = optionIndex;
         setAnswers(newAnswers);
-
-        setTimeout(() => {
-            const nextStep = currentStep + 1;
-            if (nextStep < questions.length) {
-                setCurrentStep(nextStep);
-            } else {
-                // Quiz is finished, calculate and show results
-                const score = newAnswers.reduce((acc, answer, index) => {
-                    return answer === questions[index].correct_option_index ? acc + 1 : acc;
-                }, 0);
-                const passed = score >= quiz.pass_threshold;
-                setFinalResult({ score, passed });
-            }
-        }, 300);
     };
-    
+
     const handleModalCloseAndComplete = () => {
         if (finalResult) {
             onComplete(finalResult);
         } else {
-            onClose(); // Should not happen, but as a fallback
+            onClose();
         }
     };
-    
+
+    const handleSubmit = () => {
+        // Ensure all questions are answered before submitting
+        if (answers.some(a => a === null)) {
+            addToast('Please answer all questions before submitting.', 'error');
+            return;
+        }
+        const score = answers.reduce((acc, answer, index) => {
+            return answer === questions[index].correct_option_index ? acc + 1 : acc;
+        }, 0);
+        const passed = score >= quiz.pass_threshold;
+        setFinalResult({ score, passed });
+    };
+
+    const handleNext = () => {
+        if (currentStep < questions.length - 1) {
+            setCurrentStep(currentStep + 1);
+        } else {
+            handleSubmit();
+        }
+    };
+
+    const handlePrevious = () => {
+        if (currentStep > 0) {
+            setCurrentStep(currentStep - 1);
+        }
+    };
+
     if (loading) {
         return <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"><p className="text-white">Loading Quiz...</p></div>
     }
+
+    const isLastQuestion = currentStep === questions.length - 1;
+    const currentAnswerSelected = answers[currentStep] !== null;
 
     return (
          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in-up" style={{ animationDuration: '200ms' }}>
@@ -411,11 +427,23 @@ const QuizModal: React.FC<QuizModalProps> = ({ quiz, onClose, onComplete }) => {
                                 <button
                                     key={index}
                                     onClick={() => handleAnswer(index)}
-                                    className="w-full text-left p-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:bg-primary-50 dark:hover:bg-primary-900/40 hover:border-primary-500 transition-colors"
+                                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                                        answers[currentStep] === index
+                                            ? 'bg-primary-100 dark:bg-primary-900/40 border-primary-500'
+                                            : 'border-gray-300 dark:border-gray-600 hover:bg-primary-50 dark:hover:bg-primary-900/40 hover:border-primary-500'
+                                    }`}
                                 >
                                     {option}
                                 </button>
                             ))}
+                        </div>
+                        <div className="mt-6 flex justify-between">
+                            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0}>
+                                Previous
+                            </Button>
+                            <Button onClick={handleNext} disabled={!currentAnswerSelected}>
+                                {isLastQuestion ? 'Submit' : 'Next'}
+                            </Button>
                         </div>
                     </div>
                 ) : (
