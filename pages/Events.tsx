@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import type { Event } from '../types';
-import { ClockIcon, LocationMarkerIcon, CalendarIcon } from '../components/ui/Icons';
+import { ClockIcon, LocationMarkerIcon, CalendarIcon, CheckCircleIcon } from '../components/ui/Icons';
+import { useNotifier } from '../context/NotificationContext';
 
 // Array of placeholder images for visual variety
 const placeholderImages = [
@@ -15,7 +16,14 @@ const placeholderImages = [
     'https://images.unsplash.com/photo-1488998427799-e3362cec87c3?q=80&w=800&auto=format&fit=crop'
 ];
 
-const EventCard: React.FC<{ event: Event; index: number }> = ({ event, index }) => {
+const EventCard: React.FC<{
+    event: Event;
+    index: number;
+    isRsvpd: boolean;
+    isProcessing: boolean;
+    onRsvp: () => void;
+    onCancelRsvp: () => void;
+}> = ({ event, index, isRsvpd, isProcessing, onRsvp, onCancelRsvp }) => {
     const eventDate = new Date(event.date);
     const day = eventDate.getUTCDate(); // Use UTC to avoid timezone issues
     const month = eventDate.toLocaleString('default', { month: 'short', timeZone: 'UTC' });
@@ -55,7 +63,27 @@ const EventCard: React.FC<{ event: Event; index: number }> = ({ event, index }) 
                 </div>
                 
                 <div className="mt-auto">
-                    <Button size="md" className="w-full">RSVP Now</Button>
+                    {isRsvpd ? (
+                        <Button
+                            variant="secondary"
+                            size="md"
+                            className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                            onClick={onCancelRsvp}
+                            disabled={isProcessing}
+                        >
+                            <CheckCircleIcon className="w-5 h-5 mr-2" />
+                            {isProcessing ? 'Cancelling...' : "You're Going!"}
+                        </Button>
+                    ) : (
+                        <Button
+                            size="md"
+                            className="w-full"
+                            onClick={onRsvp}
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? 'RSVPing...' : 'RSVP Now'}
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>
@@ -64,28 +92,86 @@ const EventCard: React.FC<{ event: Event; index: number }> = ({ event, index }) 
 
 const Events: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const { isAdmin, isPro } = useAppContext();
+  const { isAdmin, isPro, currentUser } = useAppContext();
+  const { addToast, showConfirm } = useNotifier();
   const [loading, setLoading] = useState(true);
+  const [rsvps, setRsvps] = useState<Set<string>>(new Set());
+  const [processingRsvpId, setProcessingRsvpId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      if (!supabase) return;
+    const fetchEventsAndRsvps = async () => {
+      if (!supabase || !currentUser) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('date', { ascending: true })
-        .limit(5); // Show only the 5 latest/upcoming events
+
+      const [eventsRes, rsvpsRes] = await Promise.all([
+          supabase
+              .from('events')
+              .select('*')
+              .order('date', { ascending: true })
+              .limit(5),
+          supabase
+              .from('event_rsvps')
+              .select('event_id')
+              .eq('user_id', currentUser.id)
+      ]);
       
-      if (error) {
-        console.error("Error fetching events", error);
+      if (eventsRes.error) {
+        console.error("Error fetching events", eventsRes.error);
       } else {
-        setEvents(data || []);
+        setEvents(eventsRes.data || []);
+      }
+
+      if (rsvpsRes.error) {
+        console.error("Error fetching RSVPs", rsvpsRes.error);
+      } else {
+        const rsvpSet = new Set(rsvpsRes.data.map(r => r.event_id));
+        setRsvps(rsvpSet);
       }
       setLoading(false);
     };
-    fetchEvents();
-  }, []);
+    fetchEventsAndRsvps();
+  }, [currentUser]);
+
+  const handleRsvp = async (eventId: string) => {
+    if (!supabase || !currentUser) return;
+    setProcessingRsvpId(eventId);
+    const { error } = await supabase.from('event_rsvps').insert({
+        event_id: eventId,
+        user_id: currentUser.id,
+    });
+    if (error) {
+        addToast('Error RSVPing: ' + error.message, 'error');
+    } else {
+        addToast("You've RSVP'd successfully!", 'success');
+        setRsvps(prev => new Set(prev).add(eventId));
+    }
+    setProcessingRsvpId(null);
+  };
+
+  const handleCancelRsvp = (eventId: string) => {
+    showConfirm('Are you sure you want to cancel your RSVP for this event?', async () => {
+        if (!supabase || !currentUser) return;
+        setProcessingRsvpId(eventId);
+        const { error } = await supabase.from('event_rsvps').delete().match({
+            event_id: eventId,
+            user_id: currentUser.id,
+        });
+        if (error) {
+            addToast('Error cancelling RSVP: ' + error.message, 'error');
+        } else {
+            addToast('Your RSVP has been cancelled.', 'info');
+            setRsvps(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(eventId);
+                return newSet;
+            });
+        }
+        setProcessingRsvpId(null);
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -113,7 +199,15 @@ const Events: React.FC = () => {
         ) : events.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {events.map((event, index) => (
-                    <EventCard key={event.id} event={event} index={index} />
+                    <EventCard 
+                        key={event.id} 
+                        event={event} 
+                        index={index} 
+                        isRsvpd={rsvps.has(event.id)}
+                        isProcessing={processingRsvpId === event.id}
+                        onRsvp={() => handleRsvp(event.id)}
+                        onCancelRsvp={() => handleCancelRsvp(event.id)}
+                    />
                 ))}
             </div>
         ) : (

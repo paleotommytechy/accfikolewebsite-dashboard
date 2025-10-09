@@ -388,6 +388,33 @@ if (!supabase) {
  *    CREATE POLICY "Admins and pros can manage events" ON public.events
  *    FOR ALL USING (public.get_my_role() IN ('admin', 'pro'))
  *    WITH CHECK (public.get_my_role() IN ('admin', 'pro'));
+ *    
+ *    -- ================================================================================================
+ *    -- === EVENT RSVP SYSTEM (NEW)                                                                  ===
+ *    -- ================================================================================================
+ *
+ *    -- 1. Create event_rsvps table
+ *    CREATE TABLE IF NOT EXISTS public.event_rsvps (
+ *        event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+ *        user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ *        created_at timestamp with time zone DEFAULT now(),
+ *        PRIMARY KEY (event_id, user_id)
+ *    );
+ *    COMMENT ON TABLE public.event_rsvps IS 'Tracks user RSVPs for events.';
+ *
+ *    -- 2. Enable RLS
+ *    ALTER TABLE public.event_rsvps ENABLE ROW LEVEL SECURITY;
+ *
+ *    -- 3. RLS Policies
+ *    -- Allow authenticated users to view all RSVPs (useful for seeing who is coming)
+ *    DROP POLICY IF EXISTS "Authenticated users can view RSVPs" ON public.event_rsvps;
+ *    CREATE POLICY "Authenticated users can view RSVPs" ON public.event_rsvps
+ *    FOR SELECT TO authenticated USING (true);
+ *
+ *    -- Allow users to manage their own RSVPs (insert and delete)
+ *    DROP POLICY IF EXISTS "Users can manage their own RSVPs" ON public.event_rsvps;
+ *    CREATE POLICY "Users can manage their own RSVPs" ON public.event_rsvps
+ *    FOR ALL USING (auth.uid() = user_id);
  *
  *    -- ================================================================================================
  *    -- === BLOG SYSTEM SETUP (NEW)                                                                ===
