@@ -418,11 +418,6 @@ const ChatConversation: React.FC = () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 audioChunksRef.current = [];
 
-                if (recordingTime < 1) {
-                    addToast('Recording was too short.', 'info');
-                    return;
-                }
-
                 try {
                     addToast('Uploading voice note...', 'info');
                     const filePath = `${currentUser.id}/${Date.now()}.webm`;
