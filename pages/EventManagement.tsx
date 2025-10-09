@@ -91,7 +91,7 @@ const EventManagement: React.FC = () => {
                 .upload(filePath, imageFile);
 
             if (uploadError) {
-                addToast('Error uploading image: ' + uploadError.message, 'error');
+                addToast(`Error uploading to bucket 'event_images': ${uploadError.message}`, 'error');
                 return;
             }
             

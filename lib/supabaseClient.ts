@@ -340,16 +340,29 @@ if (!supabase) {
  *    -- Go to your Supabase project -> Storage -> Create bucket
  *    -- Bucket name: event_images
  *    -- Check "Public bucket"
- *    -- After creation, go to the new bucket's policies and add the following:
  *
- *    -- Policy Name: "Allow admins and pros to manage event images"
- *    -- Allowed operations: select, insert, update, delete
- *    -- Target roles: authenticated
- *    -- USING expression (for SELECT): true
- *    -- WITH CHECK expression (for INSERT, UPDATE, DELETE):
- *    --   (bucket_id = 'event_images') AND ( (select get_my_role()) IN ('admin', 'pro') )
+ *    -- 2. SQL Policies for 'event_images' bucket (run these in the SQL Editor)
+ *    -- [FIX] This policy is now more robust. It allows authorized users to upload to a path starting with `public/{their_user_id}/`.
+ *    DROP POLICY IF EXISTS "Event image insert policy" ON storage.objects;
+ *    CREATE POLICY "Event image insert policy" ON storage.objects FOR INSERT TO authenticated WITH CHECK (
+ *        bucket_id = 'event_images'
+ *        AND (select get_my_role()) IN ('admin', 'pro')
+ *        AND name LIKE 'public/' || auth.uid()::text || '/%'
+ *    );
  *
- *    -- 2. Create events table
+ *    -- This policy allows admins and pro members to update any image in the bucket.
+ *    DROP POLICY IF EXISTS "Event image update policy" ON storage.objects;
+ *    CREATE POLICY "Event image update policy" ON storage.objects FOR UPDATE TO authenticated USING (
+ *        bucket_id = 'event_images' AND (select get_my_role()) IN ('admin', 'pro')
+ *    );
+ *
+ *    -- This policy allows admins and pro members to delete any image in the bucket.
+ *    DROP POLICY IF EXISTS "Event image delete policy" ON storage.objects;
+ *    CREATE POLICY "Event image delete policy" ON storage.objects FOR DELETE TO authenticated USING (
+ *        bucket_id = 'event_images' AND (select get_my_role()) IN ('admin', 'pro')
+ *    );
+ *
+ *    -- 3. Create events table
  *    CREATE TABLE IF NOT EXISTS public.events (
  *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *        title text NOT NULL,
@@ -362,10 +375,10 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.events IS 'Stores fellowship events information.';
  *
- *    -- 3. Enable RLS
+ *    -- 4. Enable RLS
  *    ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
  *
- *    -- 4. RLS Policies for events
+ *    -- 5. RLS Policies for events
  *    DROP POLICY IF EXISTS "Authenticated users can view events" ON public.events;
  *    CREATE POLICY "Authenticated users can view events" ON public.events
  *    FOR SELECT TO authenticated USING (true);
@@ -384,16 +397,27 @@ if (!supabase) {
  *    -- Go to your Supabase project -> Storage -> Create bucket
  *    -- Bucket name: blog_images
  *    -- Check "Public bucket"
- *    -- After creation, go to the new bucket's policies and add the following:
+ *    
+ *    -- 2. SQL Policies for 'blog_images' bucket (run these in the SQL Editor)
+ *    -- [FIX] This policy is now more robust. It allows authorized users to upload to a path starting with `public/blog_images/{their_user_id}/`.
+ *    DROP POLICY IF EXISTS "Blog image insert policy" ON storage.objects;
+ *    CREATE POLICY "Blog image insert policy" ON storage.objects FOR INSERT TO authenticated WITH CHECK (
+ *        bucket_id = 'blog_images'
+ *        AND (select get_my_role()) IN ('admin', 'blog')
+ *        AND name LIKE 'public/blog_images/' || auth.uid()::text || '/%'
+ *    );
  *
- *    -- Policy Name: "Allow blog writers to manage blog images"
- *    -- Allowed operations: select, insert, update, delete
- *    -- Target roles: authenticated
- *    -- USING expression (for SELECT): true
- *    -- WITH CHECK expression (for INSERT, UPDATE, DELETE):
- *    --   (bucket_id = 'blog_images') AND ( (select get_my_role()) IN ('admin', 'blog') )
+ *    DROP POLICY IF EXISTS "Blog image update policy" ON storage.objects;
+ *    CREATE POLICY "Blog image update policy" ON storage.objects FOR UPDATE TO authenticated USING (
+ *        bucket_id = 'blog_images' AND (select get_my_role()) IN ('admin', 'blog')
+ *    );
+ *    
+ *    DROP POLICY IF EXISTS "Blog image delete policy" ON storage.objects;
+ *    CREATE POLICY "Blog image delete policy" ON storage.objects FOR DELETE TO authenticated USING (
+ *        bucket_id = 'blog_images' AND (select get_my_role()) IN ('admin', 'blog')
+ *    );
  *
- *    -- 2. Create posts table
+ *    -- 3. Create posts table
  *    CREATE TABLE IF NOT EXISTS public.posts (
  *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *        author_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -409,7 +433,7 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.posts IS 'Stores blog posts.';
  *
- *    -- 3. Create post_likes table
+ *    -- 4. Create post_likes table
  *    CREATE TABLE IF NOT EXISTS public.post_likes (
  *        post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
  *        user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -418,7 +442,7 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.post_likes IS 'Tracks user likes on posts.';
  *
- *    -- 4. Create post_comments table
+ *    -- 5. Create post_comments table
  *    CREATE TABLE IF NOT EXISTS public.post_comments (
  *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *        post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
@@ -428,7 +452,7 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.post_comments IS 'Stores comments on posts.';
  *
- *    -- 5. Create post_bookmarks table
+ *    -- 6. Create post_bookmarks table
  *    CREATE TABLE IF NOT EXISTS public.post_bookmarks (
  *        post_id uuid NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
  *        user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -437,13 +461,13 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.post_bookmarks IS 'Stores user bookmarks for posts.';
  *
- *    -- 6. Enable RLS on new tables
+ *    -- 7. Enable RLS on new tables
  *    ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
  *    ALTER TABLE public.post_likes ENABLE ROW LEVEL SECURITY;
  *    ALTER TABLE public.post_comments ENABLE ROW LEVEL SECURITY;
  *    ALTER TABLE public.post_bookmarks ENABLE ROW LEVEL SECURITY;
  *
- *    -- 7. RLS Policies for posts table
+ *    -- 8. RLS Policies for posts table
  *    DROP POLICY IF EXISTS "Public can view published posts" ON public.posts;
  *    CREATE POLICY "Public can view published posts" ON public.posts FOR SELECT USING (status = 'published');
  *
@@ -460,7 +484,7 @@ if (!supabase) {
  *    DROP POLICY IF EXISTS "Admins can delete any post, authors can delete their own" ON public.posts;
  *    CREATE POLICY "Admins can delete any post, authors can delete their own" ON public.posts FOR DELETE USING (public.get_my_role() = 'admin' OR auth.uid() = author_id);
  *
- *    -- 8. RLS Policies for interaction tables (likes, comments, bookmarks)
+ *    -- 9. RLS Policies for interaction tables (likes, comments, bookmarks)
  *    DROP POLICY IF EXISTS "Authenticated users can view all" ON public.post_likes;
  *    CREATE POLICY "Authenticated users can view all" ON public.post_likes FOR SELECT USING (auth.role() = 'authenticated');
  *    
@@ -479,7 +503,7 @@ if (!supabase) {
  *    DROP POLICY IF EXISTS "Users can manage their own bookmarks" ON public.post_bookmarks;
  *    CREATE POLICY "Users can manage their own bookmarks" ON public.post_bookmarks FOR ALL USING (auth.uid() = user_id);
  *
- *    -- 9. Trigger function to update post counts
+ *    -- 10. Trigger function to update post counts
  *    CREATE OR REPLACE FUNCTION update_post_counts()
  *    RETURNS TRIGGER AS $$
  *    BEGIN
@@ -500,7 +524,7 @@ if (!supabase) {
  *    END;
  *    $$ LANGUAGE plpgsql;
  *
- *    -- 10. Create triggers for post counts
+ *    -- 11. Create triggers for post counts
  *    DROP TRIGGER IF EXISTS on_like_insert ON public.post_likes;
  *    CREATE TRIGGER on_like_insert AFTER INSERT ON public.post_likes FOR EACH ROW EXECUTE FUNCTION update_post_counts();
  *    DROP TRIGGER IF EXISTS on_like_delete ON public.post_likes;
@@ -518,16 +542,27 @@ if (!supabase) {
  *    -- Go to your Supabase project -> Storage -> Create bucket
  *    -- Bucket name: gallery_images
  *    -- Check "Public bucket"
- *    -- After creation, go to the new bucket's policies and add the following:
  *
- *    -- Policy Name: "Allow media and admins to manage gallery images"
- *    -- Allowed operations: select, insert, update, delete
- *    -- Target roles: authenticated
- *    -- USING expression (for SELECT): true
- *    -- WITH CHECK expression (for INSERT, UPDATE, DELETE):
- *    --   (bucket_id = 'gallery_images') AND ( (select get_my_role()) IN ('admin', 'media') )
+ *    -- 2. SQL Policies for 'gallery_images' bucket (run these in the SQL Editor)
+ *    -- [FIX] This policy is now more robust. It allows authorized users to upload to a path starting with `public/{their_user_id}/`.
+ *    DROP POLICY IF EXISTS "Gallery image insert policy" ON storage.objects;
+ *    CREATE POLICY "Gallery image insert policy" ON storage.objects FOR INSERT TO authenticated WITH CHECK (
+ *        bucket_id = 'gallery_images'
+ *        AND (select get_my_role()) IN ('admin', 'media')
+ *        AND name LIKE 'public/' || auth.uid()::text || '/%'
+ *    );
+ *    
+ *    DROP POLICY IF EXISTS "Gallery image update policy" ON storage.objects;
+ *    CREATE POLICY "Gallery image update policy" ON storage.objects FOR UPDATE TO authenticated USING (
+ *        bucket_id = 'gallery_images' AND (select get_my_role()) IN ('admin', 'media')
+ *    );
+ *    
+ *    DROP POLICY IF EXISTS "Gallery image delete policy" ON storage.objects;
+ *    CREATE POLICY "Gallery image delete policy" ON storage.objects FOR DELETE TO authenticated USING (
+ *        bucket_id = 'gallery_images' AND (select get_my_role()) IN ('admin', 'media')
+ *    );
  *
- *    -- 2. Create gallery_posts table
+ *    -- 3. Create gallery_posts table
  *    CREATE TABLE IF NOT EXISTS public.gallery_posts (
  *        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *        author_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -539,10 +574,10 @@ if (!supabase) {
  *    );
  *    COMMENT ON TABLE public.gallery_posts IS 'Stores posts for the media gallery.';
  *
- *    -- 3. Enable RLS
+ *    -- 4. Enable RLS
  *    ALTER TABLE public.gallery_posts ENABLE ROW LEVEL SECURITY;
  *
- *    -- 4. RLS Policies
+ *    -- 5. RLS Policies
  *    DROP POLICY IF EXISTS "Public can view gallery posts" ON public.gallery_posts;
  *    CREATE POLICY "Public can view gallery posts" ON public.gallery_posts FOR SELECT USING (true);
  *

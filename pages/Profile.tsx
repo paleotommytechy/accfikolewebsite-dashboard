@@ -204,7 +204,7 @@ const Profile: React.FC = () => {
         addToast('Avatar updated successfully!', 'success');
         await refreshCurrentUser();
     } catch (error: any) {
-        addToast('Error uploading avatar: ' + error.message, 'error');
+        addToast(`Error uploading to bucket 'avatars': ${error.message}`, 'error');
     } finally {
         setIsUploading(false);
     }

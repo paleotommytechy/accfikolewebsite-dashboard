@@ -127,7 +127,7 @@ const PostEditor: React.FC = () => {
                 const { data } = supabase.storage.from('blog_images').getPublicUrl(filePath);
                 postData.image_url = data.publicUrl;
             } catch (uploadError: any) {
-                addToast('Error uploading generated image: ' + uploadError.message, 'error');
+                addToast(`Error uploading to bucket 'blog_images': ${uploadError.message}`, 'error');
                 setIsSubmitting(false);
                 return;
             }

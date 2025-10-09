@@ -109,7 +109,7 @@ const MediaManagement: React.FC = () => {
             fetchPosts();
 
         } catch (error: any) {
-            addToast('Error creating post: ' + error.message, 'error');
+            addToast(`Error during upload/save to 'gallery_images': ${error.message}.`, 'error');
         } finally {
             setIsSubmitting(false);
         }
