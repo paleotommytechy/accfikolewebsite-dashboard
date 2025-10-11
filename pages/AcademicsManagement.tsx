@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
@@ -471,7 +470,7 @@ const UserMaterialsManager: React.FC = () => {
                         <li key={item.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 flex flex-col md:flex-row md:items-center gap-3">
                             <div className="flex-grow w-full min-w-0">
                                 <p className="font-semibold text-gray-800 dark:text-white truncate">{item.title}</p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 truncate">
                                     For: {item.courses.code || 'N/A'} | Uploaded by: {item.profiles.full_name || '...'}
                                 </p>
                             </div>
