@@ -154,7 +154,7 @@ const DailyTasks: React.FC<{ tasks: TaskAssignment[] }> = ({ tasks }) => {
 
 const MyProgressCard: React.FC<{ user: UserProfile }> = ({ user }) => {
   // Mock XP calculation for visual representation
-  const xpForNextLevel = 1000;
+  const xpForNextLevel = 500;
   const currentXp = user.coins % xpForNextLevel;
   const progressPercentage = (currentXp / xpForNextLevel) * 100;
 
@@ -300,7 +300,7 @@ const MiniLeaderboard: React.FC<{leaderboard: Partial<UserProfile>[]}> = ({leade
 };
 
 const WebsiteCtaCard: React.FC = () => (
-    <Card className="bg-gradient-to-r from-secondary to-gray-800 text-white animate-fade-in-up">
+    <Card className="bg-primary-600 text-white animate-fade-in-up">
         <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
                 <ExternalLinkIcon className="w-6 h-6 text-white" />

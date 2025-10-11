@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { ChevronDownIcon, ChatIcon, BookOpenIcon } from '../components/ui/Icons';
+import { ChevronDownIcon, ChatIcon, BookOpenIcon, EmailIcon } from '../components/ui/Icons';
 import { useNavigate } from 'react-router-dom';
 
 const faqs = [
@@ -82,10 +82,24 @@ const Help: React.FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
                     <div>
                         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Contact an Admin</h2>
-                        <p className="text-gray-600 dark:text-gray-300 mt-2 mb-4">Have a specific question or need direct assistance? Send a message to the fellowship administrators.</p>
-                        <Button onClick={() => navigate('/messages')} className="w-full sm:w-auto">
-                            <ChatIcon className="w-5 h-5 mr-2"/> Contact Admins
-                        </Button>
+                        <p className="text-gray-600 dark:text-gray-300 mt-2 mb-4">Have a specific question or need direct assistance? Reach out to the fellowship administrators via WhatsApp or Email.</p>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <Button 
+                                href="https://wa.me/2349028168649" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="w-full sm:w-auto flex-1 bg-green-500 hover:bg-green-600 text-white"
+                            >
+                                <ChatIcon className="w-5 h-5 mr-2"/> Contact via WhatsApp
+                            </Button>
+                            <Button 
+                                href="mailto:accfikolechapter001@gmail.com?subject=Admin Support Request"
+                                variant="outline"
+                                className="w-full sm:w-auto flex-1"
+                            >
+                                <EmailIcon className="w-5 h-5 mr-2"/> Contact via Email
+                            </Button>
+                        </div>
                     </div>
                      <div className="border-t md:border-t-0 md:border-l pt-6 md:pt-0 md:pl-6 dark:border-gray-700">
                         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Send Feedback</h2>
