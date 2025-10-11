@@ -1,7 +1,7 @@
 
 // This is a new file: pages/BlogPost.tsx
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import { useNotifier } from '../context/NotificationContext';
@@ -15,8 +15,20 @@ import { marked } from 'marked';
 const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
 const EditorLoadingSkeleton = () => <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>;
 
+const slugify = (text: string) => {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+};
+
 const BlogPost: React.FC = () => {
-    const { postId } = useParams<{ postId: string }>();
+    const { postId, slug } = useParams<{ postId: string, slug: string }>();
+    const navigate = useNavigate();
     const { currentUser } = useAppContext();
     const { addToast } = useNotifier();
 
@@ -27,19 +39,25 @@ const BlogPost: React.FC = () => {
     const [isLiked, setIsLiked] = useState(false);
     const [isBookmarked, setIsBookmarked] = useState(false);
 
-    // SEO Effect
+    // SEO & Canonical URL Effect
     useEffect(() => {
         if (!post) return;
         
+        // --- On-Page SEO ---
         const originalTitle = document.title;
         const metaDescription = document.querySelector('meta[name="description"]');
         const originalDescriptionContent = metaDescription ? metaDescription.getAttribute('content') : null;
 
-        // Set new title and description
         document.title = `${post.title} - ACCF Ikole Blog`;
         if (metaDescription) {
             const excerpt = post.content.substring(0, 160).replace(/\n/g, ' ').trim() + '...';
             metaDescription.setAttribute('content', excerpt);
+        }
+        
+        // --- Canonical URL Enforcement ---
+        const correctSlug = slugify(post.title);
+        if (slug && correctSlug && slug !== correctSlug) {
+            navigate(`/blog/${post.id}/${correctSlug}`, { replace: true });
         }
 
         // Cleanup function
@@ -49,7 +67,7 @@ const BlogPost: React.FC = () => {
                 metaDescription.setAttribute('content', originalDescriptionContent);
             }
         };
-    }, [post]);
+    }, [post, slug, navigate]);
 
     const fetchPostAndInteractions = useCallback(async () => {
         if (!supabase || !postId) return;
@@ -114,7 +132,7 @@ const BlogPost: React.FC = () => {
                     user_id: post.author_id,
                     type: 'comment',
                     message: `${currentUser.full_name || 'Someone'} commented on your post: "${post.title}"`,
-                    link: `/blog/${post.id}`,
+                    link: `/blog/${post.id}/${slugify(post.title)}`,
                     metadata: { postId: post.id, commenterId: currentUser.id }
                 });
                 if (notificationError) {
@@ -163,7 +181,7 @@ const BlogPost: React.FC = () => {
                         user_id: post.author_id,
                         type: 'like',
                         message: `${currentUser.full_name || 'Someone'} liked your post: "${post.title}"`,
-                        link: `/blog/${post.id}`,
+                        link: `/blog/${post.id}/${slugify(post.title)}`,
                         metadata: { postId: post.id, likerId: currentUser.id }
                     });
                     if (notificationError) {

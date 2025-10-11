@@ -81,6 +81,36 @@ const PrayerRequests: React.FC = () => {
         fetchRequests();
     }, [fetchRequests]);
 
+    // --- Real-time Subscription ---
+    useEffect(() => {
+        if (!supabase) return;
+
+        const channel = supabase
+            .channel('public:prayer_requests')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'prayer_requests' },
+                (payload) => {
+                    if (payload.eventType === 'INSERT') {
+                        const newReq = payload.new as PrayerRequest;
+                        setRequests(prev => [newReq, ...prev]);
+                    } else if (payload.eventType === 'UPDATE') {
+                        const updatedReq = payload.new as PrayerRequest;
+                        setRequests(prev => prev.map(r => r.id === updatedReq.id ? updatedReq : r));
+                    } else if (payload.eventType === 'DELETE') {
+                        const deletedReq = payload.old as { id: string };
+                        setRequests(prev => prev.filter(r => r.id !== deletedReq.id));
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newRequest.trim() || !currentUser || !supabase) return;
@@ -101,7 +131,7 @@ const PrayerRequests: React.FC = () => {
             addToast('Your prayer request has been shared.', 'success');
             localStorage.removeItem(`new-prayer-request-content-${currentUser.id}`);
             setNewRequest('');
-            fetchRequests();
+            // No need to fetch, real-time will update the UI
         }
         setSubmitting(false);
     };
@@ -130,7 +160,7 @@ const PrayerRequests: React.FC = () => {
                 addToast('Failed to delete request: ' + error.message, 'error');
             } else {
                 addToast('Prayer request deleted.', 'success');
-                setRequests(prev => prev.filter(r => r.id !== request.id));
+                // No need to manually filter state, real-time will handle it
             }
         });
     };

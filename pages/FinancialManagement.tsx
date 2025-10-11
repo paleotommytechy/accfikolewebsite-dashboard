@@ -35,6 +35,23 @@ const FinancialManagement: React.FC = () => {
         fetchDonations();
     }, [fetchDonations]);
 
+    // --- Real-time Subscription ---
+    useEffect(() => {
+        if (!supabase) return;
+        const channel = supabase
+            .channel('public:donations')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'donations' }, payload => {
+                // A new donation was created, refetch the list to show it in the queue.
+                addToast('A new donation has been recorded.', 'info');
+                fetchDonations();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchDonations]);
+
     const handleUpdateStatus = async (donationId: string, status: 'confirmed' | 'rejected') => {
         if (!supabase || !currentUser) return;
         const { error } = await supabase.rpc('update_donation_status', {

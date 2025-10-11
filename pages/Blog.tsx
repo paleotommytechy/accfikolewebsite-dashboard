@@ -8,12 +8,22 @@ import Avatar from '../components/auth/Avatar';
 import { BookOpenIcon, ChatIcon, HeartIcon, SearchIcon, ChevronDownIcon } from '../components/ui/Icons';
 import Button from '../components/ui/Button';
 
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+};
+
 const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     const excerpt = post.content.substring(0, 150) + (post.content.length > 150 ? '...' : '');
     const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format=fit=crop";
 
     return (
-        <Link to={`/blog/${post.id}`} className="block group">
+        <Link to={`/blog/${post.id}/${slugify(post.title)}`} className="block group">
             <Card className="flex flex-col h-full !p-0 overflow-hidden transition-shadow hover:shadow-xl">
                 <img src={post.image_url || defaultImage} alt={post.title} className="w-full h-48 object-cover" />
                 <div className="p-5 flex flex-col flex-grow">

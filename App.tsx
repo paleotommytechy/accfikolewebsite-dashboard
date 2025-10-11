@@ -154,7 +154,7 @@ function App(): React.ReactNode {
                 <Route path="/academics" element={<Academics />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/blog" element={<Blog />} />
-                <Route path="/blog/:postId" element={<BlogPost />} />
+                <Route path="/blog/:postId/:slug" element={<BlogPost />} />
                 <Route path="/hymns" element={<Hymns />} />
                 <Route path="/messages" element={<ChatHistory />} />
                 <Route path="/messages/:userId" element={<ChatConversation />} />

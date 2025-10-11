@@ -167,6 +167,24 @@ const CoinApprovalManager: React.FC = () => {
         fetchTransactions();
     }, [fetchTransactions]);
 
+    // --- Real-time Subscription ---
+    useEffect(() => {
+        if (!supabase) return;
+        const channel = supabase
+            .channel('public:coin_transactions')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'coin_transactions' }, payload => {
+                // A new transaction was created, refetch the list to show it in the queue.
+                if (payload.new.status === 'pending') {
+                    fetchTransactions();
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchTransactions]);
+
     const getSourceName = (tx: CoinTransaction): string => {
         if (tx.source_type === 'task' && tx.tasks) {
             return tx.tasks.title;
