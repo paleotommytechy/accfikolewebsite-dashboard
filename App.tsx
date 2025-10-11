@@ -1,5 +1,5 @@
 
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
 const { BrowserRouter, HashRouter, Routes, Route, Navigate } = ReactRouterDOM;
@@ -9,34 +9,35 @@ import DashboardLayout from './components/ui/DashboardLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // --- LAZY-LOADED PAGES ---
-const Auth = lazy(() => import('./pages/Auth'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Profile = lazy(() => import('./pages/Profile'));
-const Tasks = lazy(() => import('./pages/Tasks'));
-const Leaderboard = lazy(() => import('./pages/Leaderboard'));
-const Events = lazy(() => import('./pages/Events'));
-const PrayerRequests = lazy(() => import('./pages/PrayerRequests'));
-const Analytics = lazy(() => import('./pages/Analytics'));
-const DeveloperSettings = lazy(() => import('./pages/DeveloperSettings'));
-const Store = lazy(() => import('./pages/Store'));
-const ChatHistory = lazy(() => import('./pages/ChatHistory'));
-const UserManagement = lazy(() => import('./pages/UserManagement'));
-const ChatConversation = lazy(() => import('./pages/ChatConversation'));
-const Notifications = lazy(() => import('./pages/Notifications'));
-const Giving = lazy(() => import('./pages/Giving'));
-const ResourceLibrary = lazy(() => import('./pages/ResourceLibrary'));
-const Blog = lazy(() => import('./pages/Blog'));
-const BlogPost = lazy(() => import('./pages/BlogPost'));
-const BlogManagement = lazy(() => import('./pages/BlogManagement'));
-const PostEditor = lazy(() => import('./pages/PostEditor'));
-const Gallery = lazy(() => import('./pages/Gallery'));
-const MediaManagement = lazy(() => import('./pages/MediaManagement'));
-const EventManagement = lazy(() => import('./pages/EventManagement'));
-const Academics = lazy(() => import('./pages/Academics'));
-const AcademicsManagement = lazy(() => import('./pages/AcademicsManagement'));
-const Hymns = lazy(() => import('./pages/Hymns'));
-const QuizEditor = lazy(() => import('./pages/QuizEditor'));
-const FinancialManagement = lazy(() => import('./pages/FinancialManagement'));
+import Auth from './pages/Auth';
+import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import Tasks from './pages/Tasks';
+import Leaderboard from './pages/Leaderboard';
+import Events from './pages/Events';
+import PrayerRequests from './pages/PrayerRequests';
+import Analytics from './pages/Analytics';
+import DeveloperSettings from './pages/DeveloperSettings';
+import Store from './pages/Store';
+import ChatHistory from './pages/ChatHistory';
+import UserManagement from './pages/UserManagement';
+import ChatConversation from './pages/ChatConversation';
+import Notifications from './pages/Notifications';
+import Giving from './pages/Giving';
+import ResourceLibrary from './pages/ResourceLibrary';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
+import BlogManagement from './pages/BlogManagement';
+import PostEditor from './pages/PostEditor';
+import Gallery from './pages/Gallery';
+import MediaManagement from './pages/MediaManagement';
+import EventManagement from './pages/EventManagement';
+import Academics from './pages/Academics';
+import AcademicsManagement from './pages/AcademicsManagement';
+import Hymns from './pages/Hymns';
+import QuizEditor from './pages/QuizEditor';
+import FinancialManagement from './pages/FinancialManagement';
+import Help from './pages/Help';
 
 
 // --- SUSPENSE FALLBACK LOADER ---
@@ -160,6 +161,7 @@ function App(): React.ReactNode {
                 <Route path="/store" element={<Store />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/giving" element={<Giving />} />
+                <Route path="/help" element={<Help />} />
                 
                 {/* Redirect from root and any other unmatched protected route to dashboard */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />

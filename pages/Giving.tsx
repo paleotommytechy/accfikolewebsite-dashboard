@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -119,7 +120,7 @@ const Giving: React.FC = () => {
         <div className="max-w-2xl mx-auto space-y-8 animate-fade-in-up">
             <div className="text-center">
                 <GiftIcon className="w-16 h-16 mx-auto text-primary-500" />
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-4">Giving & Tithes</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white mt-4">Giving</h1>
                 <p className="text-lg text-gray-600 dark:text-gray-300 mt-2">
                     "Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver." - 2 Corinthians 9:7
                 </p>

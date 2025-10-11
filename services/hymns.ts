@@ -2,6 +2,7 @@ export interface Hymn {
   id: number;
   title: string;
   lyrics: string;
+  audioUrl: string;
 }
 
 export const hymns: Hymn[] = [
@@ -27,6 +28,7 @@ The Lord has promised good to me,
 His Word my hope secures;
 He will my Shield and Portion be,
 As long as life endures.`,
+    audioUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e3/Amazing_Grace_by_the_US_Air_Force_Band_Strolling_Strings.mp3',
   },
   {
     id: 2,
@@ -52,6 +54,7 @@ Great things He hath taught us, great things He hath done,
 And great our rejoicing through Jesus the Son;
 But purer, and higher, and greater will be
 Our wonder, our transport, when Jesus we see.`,
+    audioUrl: 'https://www.hymnal.net/Hymns/Hymnal/mp3/h0039.mp3',
   },
   {
     id: 3,
@@ -76,6 +79,7 @@ Pardon for sin and a peace that endureth,
 Thine own dear presence to cheer and to guide;
 Strength for today and bright hope for tomorrow,
 Blessings all mine, with ten thousand beside!`,
+    audioUrl: 'https://www.hymnal.net/Hymns/Hymnal/mp3/h0030.mp3',
   },
   {
     id: 4,
@@ -99,6 +103,7 @@ When Christ shall come with shout of acclamation
 And take me home, what joy shall fill my heart!
 Then I shall bow in humble adoration
 And there proclaim, my God, how great Thou art!`,
+    audioUrl: 'https://www.hymnal.net/Hymns/Hymnal/mp3/h0077.mp3',
   },
   {
     id: 5,
@@ -122,5 +127,6 @@ Perfect submission, all is at rest,
 I in my Savior am happy and blest;
 Watching and waiting, looking above,
 Filled with His goodness, lost in His love.`,
+    audioUrl: 'https://www.hymnal.net/Hymns/Hymnal/mp3/h0572.mp3',
   },
 ];

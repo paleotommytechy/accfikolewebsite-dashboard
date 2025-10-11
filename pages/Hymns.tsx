@@ -1,11 +1,109 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import { hymns, Hymn } from '../services/hymns';
-import { SearchIcon, ChevronDownIcon, MusicNoteIcon } from '../components/ui/Icons';
+import { SearchIcon, ChevronDownIcon, MusicNoteIcon, PlayIcon, PauseIcon } from '../components/ui/Icons';
 
+// --- Custom Audio Player Component ---
+interface CustomAudioPlayerProps {
+    src: string;
+    isPlaying: boolean;
+    onPlay: () => void;
+    onPause: () => void;
+}
+
+const CustomAudioPlayer: React.FC<CustomAudioPlayerProps> = ({ src, isPlaying, onPlay, onPause }) => {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [duration, setDuration] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+
+    // Effect to control playback from parent state
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        if (isPlaying) {
+            audio.play().catch(e => console.error("Error playing audio:", e));
+        } else {
+            audio.pause();
+        }
+    }, [isPlaying]);
+
+    // Effect for setting up audio event listeners
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        
+        const setAudioData = () => setDuration(audio.duration);
+        const setAudioTime = () => setCurrentTime(audio.currentTime);
+        const handleEnded = () => {
+            onPause();
+            setCurrentTime(0);
+        };
+
+        audio.addEventListener('loadeddata', setAudioData);
+        audio.addEventListener('timeupdate', setAudioTime);
+        audio.addEventListener('ended', handleEnded);
+
+        // Reset state when src changes
+        setDuration(0);
+        setCurrentTime(0);
+
+        return () => {
+            audio.removeEventListener('loadeddata', setAudioData);
+            audio.removeEventListener('timeupdate', setAudioTime);
+            audio.removeEventListener('ended', handleEnded);
+        };
+    }, [src, onPause]);
+    
+    const togglePlayPause = () => {
+        if (isPlaying) {
+            onPause();
+        } else {
+            onPlay();
+        }
+    };
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (audioRef.current) {
+            audioRef.current.currentTime = Number(e.target.value);
+            setCurrentTime(audioRef.current.currentTime);
+        }
+    };
+    
+    const formatTime = (time: number) => {
+        if (isNaN(time) || time === Infinity) return '00:00';
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="flex items-center gap-4 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+            <audio ref={audioRef} src={src} preload="metadata" />
+            <button onClick={togglePlayPause} className="bg-primary-500 text-white rounded-full p-2 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-transform hover:scale-110">
+                {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5" />}
+            </button>
+            <div className="flex-grow flex items-center gap-3">
+                <span className="text-xs font-mono text-gray-600 dark:text-gray-300">{formatTime(currentTime)}</span>
+                <input
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                />
+                <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{formatTime(duration)}</span>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Hymns Component ---
 const Hymns: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeHymnId, setActiveHymnId] = useState<number | null>(null);
+    const [playingHymnId, setPlayingHymnId] = useState<number | null>(null);
 
     const filteredHymns = useMemo(() => {
         if (!searchTerm) return hymns;
@@ -15,7 +113,7 @@ const Hymns: React.FC = () => {
         );
     }, [searchTerm]);
 
-    const toggleHymn = (id: number) => {
+    const toggleHymnLyrics = (id: number) => {
         setActiveHymnId(prevId => (prevId === id ? null : id));
     };
 
@@ -40,7 +138,7 @@ const Hymns: React.FC = () => {
                         {filteredHymns.map((hymn, index) => (
                             <div key={hymn.id}>
                                 <button
-                                    onClick={() => toggleHymn(hymn.id)}
+                                    onClick={() => toggleHymnLyrics(hymn.id)}
                                     className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                     aria-expanded={activeHymnId === hymn.id}
                                 >
@@ -52,17 +150,15 @@ const Hymns: React.FC = () => {
                                 </button>
                                 {activeHymnId === hymn.id && (
                                     <div className="p-4 bg-gray-50 dark:bg-gray-800/50 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
-                                        {/* 
-                                          Placeholder for audio player.
-                                          If you have audio files, you can add an <audio> element here.
-                                          Example:
-                                          <div className="mb-4">
-                                              <audio controls className="w-full">
-                                                  <source src={`/audio/hymn_${hymn.id}.mp3`} type="audio/mpeg" />
-                                                  Your browser does not support the audio element.
-                                              </audio>
-                                          </div>
-                                        */}
+                                        <div className="mb-4">
+                                            <CustomAudioPlayer
+                                                key={hymn.id} // Add key to re-mount component on hymn change
+                                                src={hymn.audioUrl}
+                                                isPlaying={playingHymnId === hymn.id}
+                                                onPlay={() => setPlayingHymnId(hymn.id)}
+                                                onPause={() => setPlayingHymnId(null)}
+                                            />
+                                        </div>
                                         <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans">
                                             {hymn.lyrics}
                                         </pre>

@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Post } from '../types';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
-import { BookOpenIcon, ChatIcon, HeartIcon } from '../components/ui/Icons';
+import { BookOpenIcon, ChatIcon, HeartIcon, SearchIcon, ChevronDownIcon } from '../components/ui/Icons';
+import Button from '../components/ui/Button';
 
 const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     const excerpt = post.content.substring(0, 150) + (post.content.length > 150 ? '...' : '');
-    const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format&fit=crop";
+    const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format=fit=crop";
 
     return (
         <Link to={`/blog/${post.id}`} className="block group">
@@ -40,6 +42,11 @@ const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 const Blog: React.FC = () => {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortOption, setSortOption] = useState('newest');
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const POSTS_PER_PAGE = 6;
 
     useEffect(() => {
         const fetchPosts = async () => {
@@ -61,24 +68,109 @@ const Blog: React.FC = () => {
         fetchPosts();
     }, []);
 
+    const processedPosts = useMemo(() => {
+        let filtered = posts.filter(post =>
+            post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            post.profiles.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        switch (sortOption) {
+            case 'oldest':
+                filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                break;
+            case 'title-asc':
+                filtered.sort((a, b) => a.title.localeCompare(b.title));
+                break;
+            case 'title-desc':
+                filtered.sort((a, b) => b.title.localeCompare(a.title));
+                break;
+            case 'author-asc':
+                filtered.sort((a, b) => (a.profiles.full_name || '').localeCompare(b.profiles.full_name || ''));
+                break;
+            case 'newest':
+            default:
+                filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                break;
+        }
+
+        return filtered;
+    }, [posts, searchTerm, sortOption]);
+
+    const paginatedPosts = useMemo(() => {
+        const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+        return processedPosts.slice(startIndex, startIndex + POSTS_PER_PAGE);
+    }, [processedPosts, currentPage]);
+    
+    const totalPages = Math.ceil(processedPosts.length / POSTS_PER_PAGE);
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+        window.scrollTo(0, 0);
+    };
+
     return (
         <div className="space-y-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Fellowship Blog</h1>
             
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-grow">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search posts..."
+                        value={searchTerm}
+                        onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                        className="w-full bg-white dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    />
+                </div>
+                <div className="relative">
+                    <select
+                        value={sortOption}
+                        onChange={e => { setSortOption(e.target.value); setCurrentPage(1); }}
+                        className="w-full sm:w-auto appearance-none bg-white dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-lg pl-4 pr-10 py-2 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    >
+                        <option value="newest">Sort by: Newest</option>
+                        <option value="oldest">Sort by: Oldest</option>
+                        <option value="title-asc">Sort by: Title (A-Z)</option>
+                        <option value="title-desc">Sort by: Title (Z-A)</option>
+                        <option value="author-asc">Sort by: Author (A-Z)</option>
+                    </select>
+                    <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                </div>
+            </div>
+
             {loading ? (
                 <div className="text-center p-8">Loading posts...</div>
-            ) : posts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {posts.map(post => (
-                        <PostCard key={post.id} post={post} />
-                    ))}
-                </div>
+            ) : paginatedPosts.length > 0 ? (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {paginatedPosts.map(post => (
+                            <PostCard key={post.id} post={post} />
+                        ))}
+                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-8">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                <Button
+                                    key={page}
+                                    variant={currentPage === page ? 'primary' : 'outline'}
+                                    size="sm"
+                                    onClick={() => handlePageChange(page)}
+                                    className="!px-3 !py-1"
+                                >
+                                    {page}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+                </>
             ) : (
                 <Card>
                     <div className="text-center py-12">
                         <BookOpenIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
-                        <h3 className="text-lg font-semibold mt-4">No Posts Yet</h3>
-                        <p className="text-gray-500 mt-2">Check back soon for devotionals, teachings, and more!</p>
+                        <h3 className="text-lg font-semibold mt-4">No Posts Found</h3>
+                        <p className="text-gray-500 mt-2">Your search didn't match any posts. Try a different term.</p>
                     </div>
                 </Card>
             )}

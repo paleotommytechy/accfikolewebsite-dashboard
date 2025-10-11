@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
@@ -95,7 +96,7 @@ const FacultiesManager: React.FC = () => {
             editingItem={editing}
             onSetEditing={setEditing}
             onDelete={handleDelete}
-            renderItem={item => <span>{item.name}</span>}
+            renderItem={item => <p className="truncate">{item.name}</p>}
             renderForm={() => (
                 <InputField label="Faculty Name" value={editing?.name || ''} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} required />
             )}
@@ -157,7 +158,7 @@ const DepartmentsManager: React.FC = () => {
             editingItem={editing}
             onSetEditing={setEditing}
             onDelete={handleDelete}
-            renderItem={item => <span>{item.name} <span className="text-xs text-gray-500">({faculties.find(f => f.id === item.faculty_id)?.name})</span></span>}
+            renderItem={item => <p className="truncate">{item.name} <span className="text-xs text-gray-500">({faculties.find(f => f.id === item.faculty_id)?.name})</span></p>}
             renderForm={() => (
                 <>
                     <InputField label="Department Name" value={editing?.name || ''} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} required />
@@ -243,7 +244,7 @@ const CoursesManager: React.FC = () => {
             renderItem={item => (
                 <div>
                     <p className="font-semibold text-gray-800 dark:text-white truncate">{item.code} - {item.name} ({item.level}L)</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 truncate">
                         {item.is_general ? 'University-wide' : 
                             item.department_id ? departments.find(d => d.id === item.department_id)?.name :
                             item.faculty_id ? `${faculties.find(f => f.id === item.faculty_id)?.name} (Faculty-wide)` : 'N/A'}
@@ -329,12 +330,12 @@ const MaterialsManager: React.FC = () => {
             onSetEditing={item => setEditing(item || { title: '', type: 'pdf_link', url: '' })}
             onDelete={handleDelete}
             renderItem={item => (
-                <span>
+                <p className="truncate">
                     {item.title}
                     <span className="text-xs text-gray-500 ml-2">
                         ({courses.find(c => c.id === item.course_id)?.code || 'N/A'})
                     </span>
-                </span>
+                </p>
             )}
             renderForm={() => (
                 <>
@@ -408,7 +409,7 @@ const BorrowedCoursesManager: React.FC = () => {
             renderItem={item => {
                 const course = courses.find(c => c.id === item.course_id);
                 const department = departments.find(d => d.id === item.department_id);
-                return <span><strong>{department?.name || '...'}</strong> borrows <strong>{course?.code || '...'}</strong></span>;
+                return <p className="truncate"><strong>{department?.name || '...'}</strong> borrows <strong>{course?.code || '...'}</strong></p>;
             }}
             renderForm={() => (
                  <>

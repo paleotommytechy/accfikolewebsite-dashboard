@@ -1,3 +1,4 @@
+
 // This is a new file: pages/BlogPost.tsx
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -25,6 +26,30 @@ const BlogPost: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
     const [isBookmarked, setIsBookmarked] = useState(false);
+
+    // SEO Effect
+    useEffect(() => {
+        if (!post) return;
+        
+        const originalTitle = document.title;
+        const metaDescription = document.querySelector('meta[name="description"]');
+        const originalDescriptionContent = metaDescription ? metaDescription.getAttribute('content') : null;
+
+        // Set new title and description
+        document.title = `${post.title} - ACCF Ikole Blog`;
+        if (metaDescription) {
+            const excerpt = post.content.substring(0, 160).replace(/\n/g, ' ').trim() + '...';
+            metaDescription.setAttribute('content', excerpt);
+        }
+
+        // Cleanup function
+        return () => {
+            document.title = originalTitle;
+            if (metaDescription && originalDescriptionContent) {
+                metaDescription.setAttribute('content', originalDescriptionContent);
+            }
+        };
+    }, [post]);
 
     const fetchPostAndInteractions = useCallback(async () => {
         if (!supabase || !postId) return;
@@ -177,7 +202,7 @@ const BlogPost: React.FC = () => {
     if (loading) return <div className="text-center p-8">Loading post...</div>;
     if (!post) return <div className="text-center p-8">Post not found.</div>;
 
-    const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format&fit=crop";
+    const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format=fit=crop";
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
