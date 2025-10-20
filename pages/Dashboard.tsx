@@ -11,6 +11,8 @@ import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture } from '../types';
 // FIX: Import missing icons to resolve module export errors.
 import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon } from '../components/ui/Icons';
+import { GoogleGenAI, Type } from "@google/genai";
+
 
 const CompleteProfileCard: React.FC = () => (
     <Card className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 animate-fade-in-up">
@@ -36,33 +38,103 @@ const CompleteProfileCard: React.FC = () => (
 const ScriptureOfTheDay: React.FC = () => {
     const [scripture, setScripture] = useState<Partial<Scripture> | null>(null);
     const [loading, setLoading] = useState(true);
+    const [generating, setGenerating] = useState(false);
 
     useEffect(() => {
-        const fetchScripture = async () => {
+        const fetchOrGenerateScripture = async () => {
             if (!supabase) {
                 setLoading(false);
                 return;
             }
+            setLoading(true);
             const today = new Date().toISOString().split('T')[0];
+
+            // 1. Check if scripture for today exists
             const { data, error } = await supabase
                 .from('scripture_of_the_day')
                 .select('verse_reference, verse_text')
                 .eq('date_for', today)
                 .maybeSingle();
-            
+
             if (error) {
-                console.error("Error fetching scripture of the day:", error);
-            } else {
-                setScripture(data);
+                console.error("Error fetching scripture:", error);
+                setLoading(false);
+                return; // Fallback will be shown
             }
-            setLoading(false);
+
+            if (data) {
+                // 2. If it exists, display it
+                setScripture(data);
+                setLoading(false);
+            } else {
+                // 3. If not, generate a new one
+                setGenerating(true);
+                setLoading(false);
+
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                    const response = await ai.models.generateContent({
+                        model: 'gemini-2.5-flash',
+                        contents: "Provide a single, inspiring and encouraging bible verse for a Christian fellowship dashboard. Your response must be only the JSON object, with no extra text or markdown.",
+                        config: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    verse_reference: { type: Type.STRING, description: "The book, chapter, and verse (e.g., John 3:16)" },
+                                    verse_text: { type: Type.STRING, description: "The full text of the verse." },
+                                },
+                                required: ['verse_reference', 'verse_text']
+                            }
+                        }
+                    });
+
+                    const jsonStr = response.text.trim();
+                    const newScripture = JSON.parse(jsonStr);
+
+                    // 4. Save the generated scripture to the database for today
+                    const { data: insertedData, error: insertError } = await supabase
+                        .from('scripture_of_the_day')
+                        .insert({
+                            date_for: today,
+                            verse_reference: newScripture.verse_reference,
+                            verse_text: newScripture.verse_text
+                        })
+                        .select('verse_reference, verse_text')
+                        .single();
+
+                    if (insertError) {
+                        // Handle potential race condition where another user generated it milliseconds before.
+                        if (insertError.code === '23505') { // unique_violation
+                           const { data: refetchedData } = await supabase
+                                .from('scripture_of_the_day')
+                                .select('verse_reference, verse_text')
+                                .eq('date_for', today)
+                                .single();
+                            if(refetchedData) setScripture(refetchedData);
+                        } else {
+                           throw insertError;
+                        }
+                    } else {
+                        setScripture(insertedData);
+                    }
+                } catch (genError) {
+                    console.error("Error generating or saving scripture:", genError);
+                    // Let the component render the fallback scripture
+                } finally {
+                    setGenerating(false);
+                }
+            }
         };
-        fetchScripture();
+        fetchOrGenerateScripture();
     }, []);
 
     const content = () => {
         if (loading) {
             return <p className="text-center italic">Loading scripture...</p>;
+        }
+        if (generating) {
+            return <p className="text-center italic">Generating today's verse...</p>;
         }
         if (scripture) {
             return (
@@ -72,7 +144,7 @@ const ScriptureOfTheDay: React.FC = () => {
                 </blockquote>
             );
         }
-        // Fallback content if nothing is set for the day
+        // Fallback content if API fails or nothing is set
         return (
             <blockquote className="text-center">
                 <p className="text-lg italic">"For I know the plans I have for you,” declares the LORD, “plans to prosper you and not to harm you, plans to give you hope and a future."</p>
@@ -86,7 +158,7 @@ const ScriptureOfTheDay: React.FC = () => {
             {content()}
         </Card>
     );
-}
+};
 
 const DailyTasks: React.FC<{ tasks: TaskAssignment[] }> = ({ tasks }) => {
     const totalTasks = tasks.length;

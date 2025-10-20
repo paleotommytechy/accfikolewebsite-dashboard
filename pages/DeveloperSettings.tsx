@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { WeeklyChallenge, Task, CoinTransaction, Scripture, Resource, ResourceCategory, Quiz, QuizQuestion } from '../types';
+import type { WeeklyChallenge, Task, CoinTransaction, Resource, ResourceCategory, Quiz, QuizQuestion } from '../types';
 import Avatar from '../components/auth/Avatar';
 import { CheckIcon, PlusIcon, PencilAltIcon, TrashIcon, ChatIcon, CheckCircleIcon, XCircleIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
@@ -12,100 +13,6 @@ import { useAppContext } from '../context/AppContext';
 const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
 const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 const EditorLoadingSkeleton = () => <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
-
-const ScriptureManager: React.FC = () => {
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [reference, setReference] = useState('');
-    const [text, setText] = useState('');
-    const { addToast } = useNotifier();
-    const { currentUser } = useAppContext();
-
-    useEffect(() => {
-        const fetchScripture = async () => {
-            if (!supabase || !date) return;
-            
-            // Clear previous state when date changes
-            setReference(localStorage.getItem(`scripture-editor-reference-${date}`) || '');
-            setText(localStorage.getItem(`scripture-editor-text-${date}`) || '');
-
-            const { data, error } = await supabase
-                .from('scripture_of_the_day')
-                .select('*')
-                .eq('date_for', date)
-                .maybeSingle();
-
-            if (error) {
-                console.error("Error fetching scripture for date:", error);
-            } else if (data) {
-                // If data exists, it overrides any local storage drafts
-                setReference(data.verse_reference);
-                setText(data.verse_text);
-            }
-        };
-        fetchScripture();
-    }, [date]);
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!supabase || !currentUser || !date || !reference || !text) {
-            addToast("Please fill all fields.", 'error');
-            return;
-        }
-
-        const upsertData = {
-            date_for: date,
-            verse_reference: reference,
-            verse_text: text,
-            set_by: currentUser.id,
-        };
-        
-        const { error } = await supabase
-            .from('scripture_of_the_day')
-            .upsert(upsertData, { onConflict: 'date_for' });
-        
-        if (error) {
-            addToast('Error saving scripture: ' + error.message, 'error');
-        } else {
-            addToast('Scripture of the day saved successfully!', 'success');
-            localStorage.removeItem(`scripture-editor-reference-${date}`);
-            localStorage.removeItem(`scripture-editor-text-${date}`);
-        }
-    };
-    
-    const commonInputProps = {
-        className: "w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500",
-    };
-
-    return (
-        <Card title="Scripture of the Day Manager">
-            <form onSubmit={handleSave} className="space-y-4">
-                <p className="text-sm text-gray-500">Select a date to view or set the scripture for that day. If a scripture already exists for the date, it will be updated.</p>
-                <InputField 
-                    label="Date" 
-                    type="date" 
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    required 
-                />
-                <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Verse Reference</label>
-                    <Suspense fallback={<InputLoadingSkeleton />}>
-                        <AutoSaveField {...commonInputProps} as="input" placeholder="e.g., Jeremiah 29:11" value={reference} onChange={e => setReference(e.target.value)} required storageKey={`scripture-editor-reference-${date}`} />
-                    </Suspense>
-                </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Verse Text</label>
-                    <Suspense fallback={<EditorLoadingSkeleton />}>
-                        <AutoSaveField {...commonInputProps} as="textarea" placeholder="Enter the scripture text..." value={text} onChange={e => setText(e.target.value)} rows={4} required storageKey={`scripture-editor-text-${date}`} />
-                    </Suspense>
-                </div>
-                <div className="flex justify-end">
-                    <Button type="submit">Save Scripture</Button>
-                </div>
-            </form>
-        </Card>
-    );
-};
 
 const CoinApprovalManager: React.FC = () => {
     const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
@@ -868,7 +775,6 @@ const DeveloperSettings: React.FC = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Developer Settings</h1>
-            <ScriptureManager />
             <CoinApprovalManager />
             <ResourceManager />
             <ResourceCategoryManager />
