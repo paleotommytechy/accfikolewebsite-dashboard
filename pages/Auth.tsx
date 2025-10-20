@@ -18,7 +18,7 @@ const Auth: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+    const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgotPassword'>('signup');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -50,11 +50,9 @@ const Auth: React.FC = () => {
         setError('');
 
         if (authMode === 'login') {
-            // FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions.
             const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
             if (error) setError(error.message);
-        } else { // signup
-            // FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions.
+        } else if (authMode === 'signup') {
             const { data, error } = await (supabase.auth as any).signUp({
               email,
               password,
@@ -73,6 +71,15 @@ const Auth: React.FC = () => {
                     setMessage('Signup successful! Please check your email for a verification link.');
                 }
             }
+        } else { // forgotPassword
+            const { error } = await (supabase.auth as any).resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/#/update-password',
+            });
+            if (error) {
+                setError(error.message);
+            } else {
+                setMessage('Password reset instructions sent! Please check your email.');
+            }
         }
 
         setLoading(false);
@@ -85,12 +92,8 @@ const Auth: React.FC = () => {
         }
         setLoading(true);
 
-        // The redirectTo URL tells Supabase where to send the user back to *your app*
-        // after they have authenticated with Google.
-        // Using window.location.origin makes this dynamic for any environment (dev, staging, prod).
         const redirectTo = window.location.origin;
 
-        // FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions.
         const { error } = await (supabase.auth as any).signInWithOAuth({
             provider: 'google',
             options: {
@@ -114,7 +117,10 @@ const Auth: React.FC = () => {
         );
     }
     
-    const title = authMode === 'signup' ? "We're so glad you're joining us!" : 'Welcome Back!';
+    let title = "We're so glad you're joining us!";
+    if (authMode === 'login') title = 'Welcome Back!';
+    if (authMode === 'forgotPassword') title = 'Reset Your Password';
+
 
     return (
         <div 
@@ -128,90 +134,129 @@ const Auth: React.FC = () => {
                     <p className="text-slate-600 text-sm">{title}</p>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <InputField 
-                        id="email" 
-                        placeholder="Enter your email address" 
-                        type="email" 
-                        value={email} 
-                        onChange={e => setEmail(e.target.value)} 
-                        required 
-                        autoComplete="email"
-                        icon={<EmailIcon />}
-                    />
-                    {authMode === 'signup' && (
-                         <InputField 
-                            id="full-name" 
-                            placeholder="Enter your full name" 
-                            type="text" 
-                            value={fullName} 
-                            onChange={e => setFullName(e.target.value)} 
+                 {authMode !== 'forgotPassword' ? (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <InputField 
+                            id="email" 
+                            placeholder="Enter your email address" 
+                            type="email" 
+                            value={email} 
+                            onChange={e => setEmail(e.target.value)} 
                             required 
-                            autoComplete="name"
-                            icon={<UserIcon />}
+                            autoComplete="email"
+                            icon={<EmailIcon />}
                         />
-                    )}
-                    <InputField 
-                        id="password" 
-                        placeholder="Password" 
-                        type={showPassword ? 'text' : 'password'} 
-                        value={password} 
-                        onChange={e => setPassword(e.target.value)} 
-                        required 
-                        autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
-                        icon={<LockClosedIcon />}
-                        rightContent={
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-500">
-                                {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                            </button>
-                        }
-                    />
-                    {authMode === 'signup' && (
-                         <InputField 
-                            id="confirm-password" 
-                            placeholder="Confirm Password" 
-                            type={showConfirmPassword ? 'text' : 'password'} 
-                            value={confirmPassword} 
-                            onChange={e => setConfirmPassword(e.target.value)} 
+                        {authMode === 'signup' && (
+                             <InputField 
+                                id="full-name" 
+                                placeholder="Enter your full name" 
+                                type="text" 
+                                value={fullName} 
+                                onChange={e => setFullName(e.target.value)} 
+                                required 
+                                autoComplete="name"
+                                icon={<UserIcon />}
+                            />
+                        )}
+                        <InputField 
+                            id="password" 
+                            placeholder="Password" 
+                            type={showPassword ? 'text' : 'password'} 
+                            value={password} 
+                            onChange={e => setPassword(e.target.value)} 
                             required 
-                            autoComplete="new-password"
+                            autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
                             icon={<LockClosedIcon />}
                             rightContent={
-                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-gray-500">
-                                    {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-500">
+                                    {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
                                 </button>
                             }
                         />
-                    )}
-                    
-                    {error && <p className="text-xs text-red-600 bg-red-100 p-2 rounded-md text-center">{error}</p>}
-                    {message && <p className="text-xs text-green-700 bg-green-100 p-2 rounded-md text-center">{message}</p>}
+                        {authMode === 'signup' && (
+                             <InputField 
+                                id="confirm-password" 
+                                placeholder="Confirm Password" 
+                                type={showConfirmPassword ? 'text' : 'password'} 
+                                value={confirmPassword} 
+                                onChange={e => setConfirmPassword(e.target.value)} 
+                                required 
+                                autoComplete="new-password"
+                                icon={<LockClosedIcon />}
+                                rightContent={
+                                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-gray-500">
+                                        {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                                    </button>
+                                }
+                            />
+                        )}
+                        
+                        {error && <p className="text-xs text-red-600 bg-red-100 p-2 rounded-md text-center">{error}</p>}
+                        {message && <p className="text-xs text-green-700 bg-green-100 p-2 rounded-md text-center">{message}</p>}
 
-                    <div>
-                        <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 disabled:opacity-70" disabled={loading}>
-                            {loading ? 'Processing...' : (authMode === 'signup' ? 'Sign Up' : 'Login')}
+                        {authMode === 'login' && (
+                            <div className="text-right">
+                                <button
+                                    type="button"
+                                    onClick={() => { setAuthMode('forgotPassword'); setError(''); setMessage(''); }}
+                                    className="text-sm text-slate-700 hover:text-slate-900 hover:underline font-medium"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
+                        )}
+
+                        <div>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 disabled:opacity-70" disabled={loading}>
+                                {loading ? 'Processing...' : (authMode === 'signup' ? 'Sign Up' : 'Login')}
+                            </button>
+                        </div>
+                    </form>
+                ) : (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <p className="text-sm text-slate-600 text-center">Enter your email and we'll send you a link to get back into your account.</p>
+                        <InputField 
+                            id="email" 
+                            placeholder="Enter your email address" 
+                            type="email" 
+                            value={email} 
+                            onChange={e => setEmail(e.target.value)} 
+                            required 
+                            autoComplete="email"
+                            icon={<EmailIcon />}
+                        />
+                        {error && <p className="text-xs text-red-600 bg-red-100 p-2 rounded-md text-center">{error}</p>}
+                        {message && <p className="text-xs text-green-700 bg-green-100 p-2 rounded-md text-center">{message}</p>}
+                        <div>
+                             <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 disabled:opacity-70" disabled={loading}>
+                                {loading ? 'Sending...' : 'Send Reset Link'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {authMode !== 'forgotPassword' && (
+                    <>
+                        <div className="flex items-center justify-center space-x-2 my-2">
+                            <span className="h-px bg-gray-400 w-full"></span>
+                            <span className="text-gray-600 font-medium text-sm">or</span>
+                            <span className="h-px bg-gray-400 w-full"></span>
+                        </div>
+
+                        <button 
+                            onClick={signInWithGoogle} 
+                            className="w-full flex items-center justify-center gap-2 bg-white text-slate-700 font-semibold py-3 px-4 rounded-lg border border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 disabled:opacity-70"
+                            disabled={loading}
+                        >
+                            <GoogleIcon className="w-5 h-5"/>
+                            <span>Sign up with Google</span>
                         </button>
-                    </div>
-                </form>
-
-                <div className="flex items-center justify-center space-x-2 my-2">
-                    <span className="h-px bg-gray-400 w-full"></span>
-                    <span className="text-gray-600 font-medium text-sm">or</span>
-                    <span className="h-px bg-gray-400 w-full"></span>
-                </div>
-
-                <button 
-                    onClick={signInWithGoogle} 
-                    className="w-full flex items-center justify-center gap-2 bg-white text-slate-700 font-semibold py-3 px-4 rounded-lg border border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 disabled:opacity-70"
-                    disabled={loading}
-                >
-                    <GoogleIcon className="w-5 h-5"/>
-                    <span>Sign up with Google</span>
-                </button>
+                    </>
+                )}
 
                 <div className="mt-4 text-center">
                     <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); setMessage(''); }} className="text-sm text-slate-700 hover:text-slate-900 hover:underline">
-                        {authMode === 'signup' ? "Already have an account? Login" : "Don't have an account? Sign Up"}
+                        {authMode === 'forgotPassword' ? "Back to Login" : (authMode === 'signup' ? "Already have an account? Login" : "Don't have an account? Sign Up")}
                     </button>
                 </div>
             </div>

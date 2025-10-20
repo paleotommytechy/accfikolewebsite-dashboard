@@ -38,6 +38,7 @@ import Hymns from './pages/Hymns';
 import QuizEditor from './pages/QuizEditor';
 import FinancialManagement from './pages/FinancialManagement';
 import Help from './pages/Help';
+import UpdatePassword from './pages/UpdatePassword';
 
 
 // --- SUSPENSE FALLBACK LOADER ---
@@ -63,6 +64,7 @@ function App(): React.ReactNode {
           <Suspense fallback={<FullPageLoader />}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/update-password" element={<UpdatePassword />} />
               
               {/* FIX: Use a dedicated layout route for admin pages to resolve errors from nested ProtectedRoutes. */}
               {/* Admin-only protected routes are defined first to ensure they are matched before the general user routes. */}
