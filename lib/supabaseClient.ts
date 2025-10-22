@@ -195,8 +195,8 @@ if (!supabase) {
  *    LANGUAGE plpgsql
  *    SECURITY DEFINER AS $$
  *    DECLARE
- *      today_date date := current_date;
- *      yesterday_date date := current_date - interval '1 day';
+ *      today_date date := (now() AT TIME ZONE 'utc')::date;
+ *      yesterday_date date := (now() AT TIME ZONE 'utc' - interval '1 day')::date;
  *      last_day date;
  *      total_daily_tasks integer;
  *      completed_daily_tasks integer;
@@ -208,7 +208,7 @@ if (!supabase) {
  *      JOIN public.tasks t ON ta.task_id = t.id
  *      WHERE ta.assignee_id = p_user_id
  *        AND t.frequency = 'daily'
- *        AND date(ta.created_at) = today_date;
+ *        AND (ta.created_at AT TIME ZONE 'utc')::date = today_date;
  *    
  *      IF total_daily_tasks = 0 THEN
  *        -- No daily tasks assigned for today, so streak is not affected.
@@ -220,7 +220,7 @@ if (!supabase) {
  *      JOIN public.tasks t ON ta.task_id = t.id
  *      WHERE ta.assignee_id = p_user_id
  *        AND t.frequency = 'daily'
- *        AND date(ta.created_at) = today_date
+ *        AND (ta.created_at AT TIME ZONE 'utc')::date = today_date
  *        AND ta.status = 'done';
  *    
  *      -- Only proceed if all daily tasks for today are done
