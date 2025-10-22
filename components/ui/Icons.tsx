@@ -108,6 +108,12 @@ export const ExternalLinkIcon: React.FC<IconProps> = ({ className = "w-6 h-6" })
     </svg>
 );
 
+export const FireIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path d="M9.445 0a13.33 13.33 0 00-2.455 3.344C5.46 5.56 4.25 7.25 4.25 9.25c0 2.5 1.25 3.75 2.5 3.75 1.03 0 2.26-.646 3.25-1.5C11 10.646 12.24 10 13.25 10c1.25 0 2.5 1.25 2.5 3.75 0 1.99-1.203 3.69-2.738 5.405A13.33 13.33 0 0010.555 20c.51 0 1.02-.048 1.53-.142A14.882 14.882 0 0015.75 17.5c2.5-2.5 3.75-5 3.75-8.25 0-3.32-1.31-5.64-3.32-7.27C14.71 1.002 12.25 0 9.445 0z" />
+    </svg>
+);
+
 export const SearchIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

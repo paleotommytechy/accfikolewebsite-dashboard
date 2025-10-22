@@ -7,7 +7,7 @@ import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { supabase } from '../lib/supabaseClient';
 import type { UserProfile } from '../types';
-import { ChatIcon } from '../components/ui/Icons';
+import { ChatIcon, FireIcon, TrophyIcon } from '../components/ui/Icons';
 
 const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
 const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
@@ -250,9 +250,27 @@ const Profile: React.FC = () => {
                         </div>
                     )}
                 </div>
-                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-300 justify-center sm:justify-start">
-                    <span>Level: <span className="font-semibold text-primary-500">{displayedUser.level}</span></span>
-                    <span>Coins: <span className="font-semibold text-yellow-500">{displayedUser.coins}</span></span>
+                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Level</p>
+                        <p className="text-2xl font-bold text-primary-500">{displayedUser.level}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Coins</p>
+                        <p className="text-2xl font-bold text-yellow-500">{displayedUser.coins}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Streak</p>
+                        <p className="text-2xl font-bold text-orange-500 flex items-center justify-center gap-1">
+                            <FireIcon className="w-5 h-5" /> {displayedUser.current_streak || 0}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Longest Streak</p>
+                        <p className="text-2xl font-bold text-amber-500 flex items-center justify-center gap-1">
+                            <TrophyIcon className="w-5 h-5" /> {displayedUser.longest_streak || 0}
+                        </p>
+                    </div>
                 </div>
             </div>
         </Card>

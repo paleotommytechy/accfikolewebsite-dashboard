@@ -10,7 +10,7 @@ import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture } from '../types';
 // FIX: Import missing icons to resolve module export errors.
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon } from '../components/ui/Icons';
 import { GoogleGenAI, Type } from "@google/genai";
 
 
@@ -238,7 +238,7 @@ const MyProgressCard: React.FC<{ user: UserProfile }> = ({ user }) => {
       <Avatar src={user.avatar_url} alt={user.full_name || 'User Avatar'} size="lg" className="sm:h-24 sm:w-24 border-4 border-white/50 shadow-lg mb-3 relative z-10" />
       <h3 className="text-xl font-bold relative z-10">{user.full_name || 'Member'}</h3>
       
-      <div className="flex justify-around w-full my-4 relative z-10">
+      <div className="grid grid-cols-2 gap-y-4 gap-x-2 my-4 relative z-10 w-full">
         <div className="flex flex-col items-center px-2">
           <StarIcon className="w-8 h-8 text-yellow-300" />
           <p className="font-bold text-lg mt-1">{user.level}</p>
@@ -248,6 +248,16 @@ const MyProgressCard: React.FC<{ user: UserProfile }> = ({ user }) => {
           <CoinIcon className="w-8 h-8 text-yellow-300" />
           <p className="font-bold text-lg mt-1">{user.coins}</p>
           <p className="text-xs uppercase font-semibold opacity-80">Coins</p>
+        </div>
+        <div className="flex flex-col items-center px-2">
+          <FireIcon className="w-8 h-8 text-orange-400" />
+          <p className="font-bold text-lg mt-1">{user.current_streak || 0}</p>
+          <p className="text-xs uppercase font-semibold opacity-80">Streak</p>
+        </div>
+        <div className="flex flex-col items-center px-2">
+          <TrophyIcon className="w-8 h-8 text-yellow-300" />
+          <p className="font-bold text-lg mt-1">{user.longest_streak || 0}</p>
+          <p className="text-xs uppercase font-semibold opacity-80">Best</p>
         </div>
       </div>
       

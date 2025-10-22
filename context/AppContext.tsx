@@ -77,7 +77,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Fetch role and profile in parallel
         const [roleResponse, profileResponse] = await Promise.all([
           supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
-          supabase.from('profiles').select('id, full_name, avatar_url, fellowship_position, level, department, gender, dob, whatsapp, hotline, email, coins').eq('id', user.id).maybeSingle()
+          supabase.from('profiles').select('id, full_name, avatar_url, fellowship_position, level, department, gender, dob, whatsapp, hotline, email, coins, current_streak, longest_streak').eq('id', user.id).maybeSingle()
         ]);
         
         const { data: roleData, error: roleError } = roleResponse;
