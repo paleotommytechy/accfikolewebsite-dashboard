@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
 const { useNavigate } = ReactRouterDOM;
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useNotifier } from '../context/NotificationContext';
-import { BellIcon, CheckDoubleIcon, UserIcon, ClipboardListIcon, CoinIcon, ChatIcon, HeartIcon, BookOpenIcon } from '../components/ui/Icons';
+import { BellIcon, CheckDoubleIcon, UserIcon, ClipboardListIcon, CoinIcon, ChatIcon, HeartIcon, BookOpenIcon, TrashIcon } from '../components/ui/Icons';
 import type { Notification } from '../types';
 
 const Notifications: React.FC = () => {
@@ -14,9 +14,12 @@ const Notifications: React.FC = () => {
         loadingNotifications, 
         markNotificationAsRead, 
         markAllNotificationsAsRead,
-        unreadCount
+        unreadCount,
+        showConfirm,
+        refreshNotifications
     } = useNotifier();
     const navigate = useNavigate();
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const handleNotificationClick = async (notification: Notification) => {
         if (!notification.is_read) {
@@ -25,6 +28,43 @@ const Notifications: React.FC = () => {
         if (notification.link) {
             navigate(notification.link);
         }
+    };
+
+    const handleSelectionChange = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.size === notifications.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(notifications.map(n => n.id)));
+        }
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedIds.size === 0) return;
+        showConfirm(`Are you sure you want to delete ${selectedIds.size} notification(s)?`, async () => {
+            const { supabase } = await import('../lib/supabaseClient');
+            if (!supabase) return;
+            const idsToDelete = Array.from(selectedIds);
+            
+            const { error } = await supabase.from('notifications').delete().in('id', idsToDelete);
+            if (error) {
+                // error is handled by context/notifier
+            } else {
+                refreshNotifications();
+                setSelectedIds(new Set());
+            }
+        });
     };
     
     const getNotificationIcon = (type: Notification['type']) => {
@@ -73,15 +113,30 @@ const Notifications: React.FC = () => {
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Notifications</h1>
-                    {unreadCount > 0 && <p className="text-sm text-primary-600 dark:text-primary-400 mt-1">You have {unreadCount} unread notifications</p>}
+            {selectedIds.size > 0 ? (
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <h1 className="text-xl font-bold text-gray-800 dark:text-white">{selectedIds.size} selected</h1>
+                    <div className="flex items-center gap-2">
+                         <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                            {selectedIds.size === notifications.length ? 'Deselect All' : 'Select All'}
+                         </Button>
+                         <Button variant="secondary" size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteSelected}>
+                            <TrashIcon className="w-4 h-4 mr-1.5" /> Delete Selected
+                        </Button>
+                    </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={markAllNotificationsAsRead} disabled={unreadCount === 0}>
-                    <CheckDoubleIcon className="w-5 h-5 mr-1.5" /> Mark all as read
-                </Button>
-            </div>
+            ) : (
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Notifications</h1>
+                        {unreadCount > 0 && <p className="text-sm text-primary-600 dark:text-primary-400 mt-1">You have {unreadCount} unread notifications</p>}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={markAllNotificationsAsRead} disabled={unreadCount === 0}>
+                        <CheckDoubleIcon className="w-5 h-5 mr-1.5" /> Mark all as read
+                    </Button>
+                </div>
+            )}
+
 
             <Card className="!p-0">
                 {loadingNotifications ? (
@@ -91,11 +146,19 @@ const Notifications: React.FC = () => {
                         {notifications.map(notification => (
                             <li 
                                 key={notification.id} 
-                                onClick={() => handleNotificationClick(notification)}
-                                className={`flex items-start gap-4 p-4 transition-colors cursor-pointer ${notification.is_read ? '' : 'bg-primary-50 dark:bg-primary-900/20'} hover:bg-gray-100/50 dark:hover:bg-gray-800/40`}
+                                className={`flex items-start gap-3 p-4 transition-colors ${notification.is_read ? '' : 'bg-primary-50 dark:bg-primary-900/20'}`}
                             >
-                                <div className="flex-shrink-0 mt-1">{getNotificationIcon(notification.type)}</div>
-                                <div className="flex-1">
+                                <div className="flex items-center h-10">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600"
+                                        checked={selectedIds.has(notification.id)}
+                                        onChange={() => handleSelectionChange(notification.id)}
+                                    />
+                                </div>
+
+                                <div className="flex-shrink-0 mt-1 cursor-pointer" onClick={() => handleNotificationClick(notification)}>{getNotificationIcon(notification.type)}</div>
+                                <div className="flex-1 cursor-pointer" onClick={() => handleNotificationClick(notification)}>
                                     <p className="text-sm text-gray-800 dark:text-gray-200">{notification.message}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{timeAgo(notification.created_at)}</p>
                                 </div>

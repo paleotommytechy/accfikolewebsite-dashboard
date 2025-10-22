@@ -14,6 +14,9 @@ export interface UserProfile {
   email: string;
   coins: number;
   role: string;
+  current_streak?: number;
+  longest_streak?: number;
+  last_streak_day?: string;
 }
 
 export interface Task {

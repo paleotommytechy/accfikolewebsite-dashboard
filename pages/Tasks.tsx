@@ -708,6 +708,13 @@ const Tasks: React.FC = () => {
             if (newStatus === 'done' && assignment.tasks) {
                  await createCoinTransaction('task', assignment.task_id, assignment.tasks.coin_reward);
                  
+                 if (assignment.tasks.frequency === 'daily') {
+                    const { error: streakError } = await supabase.rpc('update_user_streak', { p_user_id: currentUser.id });
+                    if (streakError) {
+                        console.error('Error updating user streak:', streakError);
+                    }
+                 }
+
                  const remainingTasks = assignments.filter(a => a.id !== assignment.id && a.status === 'assigned');
                  if (remainingTasks.length === 0) {
                      await grantVersePackReward();

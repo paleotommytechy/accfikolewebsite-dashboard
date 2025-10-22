@@ -177,6 +177,86 @@ if (!supabase) {
  *    $$;
  *
  *    -- ================================================================================================
+ *    -- === STREAKS & BONUSES (NEW)                                                                  ===
+ *    -- ================================================================================================
+ *    -- 1. Add streak columns to the profiles table
+ *    ALTER TABLE public.profiles
+ *    ADD COLUMN IF NOT EXISTS current_streak integer DEFAULT 0 NOT NULL,
+ *    ADD COLUMN IF NOT EXISTS longest_streak integer DEFAULT 0 NOT NULL,
+ *    ADD COLUMN IF NOT EXISTS last_streak_day date;
+ *
+ *    COMMENT ON COLUMN public.profiles.current_streak IS 'User''s current daily task completion streak.';
+ *    COMMENT ON COLUMN public.profiles.longest_streak IS 'User''s longest-ever daily task completion streak.';
+ *    COMMENT ON COLUMN public.profiles.last_streak_day IS 'The last date the streak was updated or maintained.';
+ *    
+ *    -- 2. Create a function to update user streaks upon completion of all daily tasks
+ *    CREATE OR REPLACE FUNCTION public.update_user_streak(p_user_id uuid)
+ *    RETURNS void
+ *    LANGUAGE plpgsql
+ *    SECURITY DEFINER AS $$
+ *    DECLARE
+ *      today_date date := current_date;
+ *      yesterday_date date := current_date - interval '1 day';
+ *      last_day date;
+ *      total_daily_tasks integer;
+ *      completed_daily_tasks integer;
+ *      current_s integer;
+ *    BEGIN
+ *      -- Check if all daily tasks for today are completed for the user
+ *      SELECT count(*) INTO total_daily_tasks
+ *      FROM public.tasks_assignments ta
+ *      JOIN public.tasks t ON ta.task_id = t.id
+ *      WHERE ta.assignee_id = p_user_id
+ *        AND t.frequency = 'daily'
+ *        AND date(ta.created_at) = today_date;
+ *    
+ *      IF total_daily_tasks = 0 THEN
+ *        -- No daily tasks assigned for today, so streak is not affected.
+ *        RETURN;
+ *      END IF;
+ *    
+ *      SELECT count(*) INTO completed_daily_tasks
+ *      FROM public.tasks_assignments ta
+ *      JOIN public.tasks t ON ta.task_id = t.id
+ *      WHERE ta.assignee_id = p_user_id
+ *        AND t.frequency = 'daily'
+ *        AND date(ta.created_at) = today_date
+ *        AND ta.status = 'done';
+ *    
+ *      -- Only proceed if all daily tasks for today are done
+ *      IF total_daily_tasks > 0 AND completed_daily_tasks = total_daily_tasks THEN
+ *        -- Get the user's current streak info
+ *        SELECT current_streak, last_streak_day INTO current_s, last_day
+ *        FROM public.profiles
+ *        WHERE id = p_user_id;
+ *        
+ *        -- Avoid double-incrementing on the same day
+ *        IF last_day = today_date THEN
+ *          RETURN;
+ *        END IF;
+ *    
+ *        -- Update streak logic
+ *        IF last_day = yesterday_date THEN
+ *          -- Streak continues, increment it
+ *          current_s := COALESCE(current_s, 0) + 1;
+ *        ELSE
+ *          -- Streak is broken or new, reset to 1
+ *          current_s := 1;
+ *        END IF;
+ *    
+ *        -- Update the profile
+ *        UPDATE public.profiles
+ *        SET
+ *          current_streak = current_s,
+ *          longest_streak = GREATEST(longest_streak, current_s),
+ *          last_streak_day = today_date
+ *        WHERE id = p_user_id;
+ *        
+ *      END IF;
+ *    END;
+ *    $$;
+ *
+ *    -- ================================================================================================
  *    -- === GIVING & DONATION SYSTEM (NEW)                                                          ===
  *    -- ================================================================================================
  *    
