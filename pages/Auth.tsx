@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -92,7 +93,7 @@ const Auth: React.FC = () => {
         }
         setLoading(true);
 
-        const redirectTo = window.location.origin;
+        const redirectTo = `${window.location.origin}/#/auth/callback`;
 
         const { error } = await (supabase.auth as any).signInWithOAuth({
             provider: 'google',
@@ -125,7 +126,7 @@ const Auth: React.FC = () => {
     return (
         <div 
             className="min-h-screen bg-cover bg-center flex flex-col justify-center items-center p-4" 
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1469228252629-cbe7cb7db2c8?q=80&w=773&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }}
+            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1469228252629-cbe7cb7db2c8?q=80&w=773&auto=format=fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }}
         >
             <div className="w-full max-w-sm bg-white/30 backdrop-blur-lg rounded-2xl shadow-2xl p-6 md:p-8 space-y-4">
                 <div className="text-center">
