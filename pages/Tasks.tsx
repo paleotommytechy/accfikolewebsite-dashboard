@@ -41,16 +41,22 @@ const AccountabilitySection: React.FC<{ participants: WeeklyParticipant[] }> = (
 };
 
 
-const WeeklyGroupChallenge: React.FC<{
-    challenge: WeeklyChallenge | null,
-    participant: WeeklyParticipant | null,
-    allParticipants: WeeklyParticipant[],
-    txStatus: TxStatus,
-    quiz: Quiz | null,
-    quizAttempt: QuizAttempt | null,
-    onJoin: () => void,
-    onStartQuiz: () => void,
-}> = ({ challenge, participant, allParticipants, txStatus, quiz, quizAttempt, onJoin, onStartQuiz }) => {
+interface WeeklyGroupChallengeProps {
+    challenge: WeeklyChallenge | null;
+    participant: WeeklyParticipant | null;
+    allParticipants: WeeklyParticipant[];
+    txStatus: TxStatus;
+    quiz: Quiz | null;
+    quizAttempt: QuizAttempt | null;
+    onJoin: () => void;
+    onStartQuiz: () => void;
+    onCompleteNoQuiz: () => void;
+    isCompleting: boolean;
+}
+
+const WeeklyGroupChallenge: React.FC<WeeklyGroupChallengeProps> = ({
+    challenge, participant, allParticipants, txStatus, quiz, quizAttempt, onJoin, onStartQuiz, onCompleteNoQuiz, isCompleting
+}) => {
     
     if (!challenge) {
         return (
@@ -64,7 +70,6 @@ const WeeklyGroupChallenge: React.FC<{
     }
     
     const progress = participant ? participant.progress : 0;
-    const isCompleted = progress >= 100;
 
     const daysLeft = challenge.due_date ? (() => {
         const due = new Date(challenge.due_date);
@@ -118,16 +123,32 @@ const WeeklyGroupChallenge: React.FC<{
             
             return (
                 <Button onClick={onStartQuiz} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
-                    Done
+                    Take Quiz to Complete
                 </Button>
             );
     
         } else {
-             // This handles the case where there is a challenge but no quiz is associated with it in the DB.
+             // Non-quiz challenge flow
+            const isCompleted = participant.progress >= 100;
+
+            if (isCompleted) {
+                 return (
+                    <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 ${
+                        txStatus === 'approved' ? 'bg-green-500/30 text-green-100' : 
+                        txStatus === 'rejected' ? 'bg-red-500/30 text-red-100' : 'bg-white/20'
+                    }`}>
+                        {txStatus === 'approved' && "Rewards approved!"}
+                        {txStatus === 'rejected' && "Submission rejected."}
+                        {txStatus === 'pending' && "Completed! Rewards are pending approval."}
+                        {!txStatus && "Completed! Processing rewards..."}
+                    </div>
+                );
+            }
+            
             return (
-                <div className={`text-center font-semibold py-3 px-4 rounded-lg mt-4 bg-white/20`}>
-                    Challenge details are being prepared. Check back soon.
-                </div>
+                <Button onClick={onCompleteNoQuiz} disabled={isCompleting} className="w-full bg-white text-primary-700 font-bold hover:bg-primary-100 !py-3 mt-4">
+                    {isCompleting ? 'Submitting...' : 'Mark as Complete'}
+                </Button>
             );
         }
     };
@@ -156,7 +177,7 @@ const WeeklyGroupChallenge: React.FC<{
                 </div>
 
                 <div className="mt-6">
-                    {participant && isCompleted && (
+                    {participant && (
                          <>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm font-semibold">Your Progress</span>
@@ -383,7 +404,7 @@ const QuizModal: React.FC<QuizModalProps> = ({ quiz, onClose, onComplete }) => {
 
     const handlePrevious = () => {
         if (currentStep > 0) {
-            setCurrentStep(currentStep - 1);
+            setCurrentStep(currentStep + 1);
         }
     };
 
@@ -470,6 +491,7 @@ const Tasks: React.FC = () => {
     const [quiz, setQuiz] = useState<Quiz | null>(null);
     const [quizAttempt, setQuizAttempt] = useState<QuizAttempt | null>(null);
     const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+    const [isCompletingChallenge, setIsCompletingChallenge] = useState(false);
 
     const createCoinTransaction = async (
         sourceType: 'task' | 'challenge' | 'quiz',
@@ -693,6 +715,27 @@ const Tasks: React.FC = () => {
         }
     };
     
+    const handleCompleteNoQuizChallenge = async () => {
+        if (!supabase || !currentUser || !challenge || !participant || isCompletingChallenge) return;
+
+        setIsCompletingChallenge(true);
+        
+        const { error: progressError } = await supabase.from('weekly_participants')
+            .update({ progress: 100 })
+            .eq('id', participant.id);
+
+        if (progressError) {
+            addToast('Error updating challenge progress.', 'error');
+            setIsCompletingChallenge(false);
+            return;
+        }
+
+        await createCoinTransaction('challenge', challenge.id, challenge.coin_reward);
+        
+        await fetchData();
+        setIsCompletingChallenge(false);
+    };
+
     const handleToggleTask = async (assignment: TaskAssignment, currentStatus: 'assigned' | 'done') => {
         if (!supabase || !currentUser) return;
         const newStatus = currentStatus === 'assigned' ? 'done' : 'assigned';
@@ -745,6 +788,8 @@ const Tasks: React.FC = () => {
             quizAttempt={quizAttempt}
             onJoin={handleJoinChallenge} 
             onStartQuiz={() => setIsQuizModalOpen(true)}
+            onCompleteNoQuiz={handleCompleteNoQuizChallenge}
+            isCompleting={isCompletingChallenge}
         />
         <MyTasksComponent tasks={assignments} onTaskAction={handleTaskAction} />
 

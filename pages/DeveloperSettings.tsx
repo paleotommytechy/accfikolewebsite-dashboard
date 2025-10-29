@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -97,6 +98,8 @@ const CoinApprovalManager: React.FC = () => {
             return tx.tasks.title;
         } else if (tx.source_type === 'challenge' && tx.weekly_challenges) {
             return tx.weekly_challenges.title;
+        } else if (tx.source_type === 'onboarding' && tx.reason) {
+            return tx.reason;
         }
         return 'an activity';
     };
@@ -144,6 +147,8 @@ const CoinApprovalManager: React.FC = () => {
             title = tx.tasks.title;
         } else if (tx.source_type === 'challenge' && tx.weekly_challenges) {
             title = tx.weekly_challenges.title;
+        } else if (tx.source_type === 'onboarding' && tx.reason) {
+            title = tx.reason;
         }
         return `${type}: ${title}`;
     };
