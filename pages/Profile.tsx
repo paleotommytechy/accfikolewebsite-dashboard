@@ -148,7 +148,7 @@ const Profile: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profileForEditing || !supabase || !isOwnProfile) return;
+    if (!profileForEditing || !supabase || !currentUser) return;
 
     try {
         const { id, email, coins, level, role, ...updateData } = profileForEditing;
@@ -160,6 +160,35 @@ const Profile: React.FC = () => {
         if (error) throw error;
         
         addToast('Profile saved successfully!', 'success');
+        
+        // --- ONBOARDING LOGIC ---
+        const isNowComplete = updateData.full_name && updateData.department && updateData.whatsapp;
+        if (isNowComplete) {
+            try {
+                const { data: onboarding, error: onboardingError } = await supabase
+                    .from('onboarding_progress')
+                    .select('completed_profile')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+
+                if (onboardingError && onboardingError.code !== '42P01') {
+                    console.error("Could not check onboarding status:", onboardingError);
+                } else if (onboarding && !onboarding.completed_profile) {
+                    await supabase.from('onboarding_progress').update({ completed_profile: true }).eq('user_id', currentUser.id);
+                    await supabase.from('coin_transactions').insert({
+                        user_id: currentUser.id,
+                        source_type: 'onboarding',
+                        source_id: 'profile_completion',
+                        coin_amount: 25,
+                        status: 'pending',
+                        reason: 'Completed profile'
+                    });
+                    addToast('Onboarding task complete! 25 coins are pending approval.', 'success');
+                }
+            } catch (e) {
+                console.warn("Onboarding feature not available. Table might be missing.", e);
+            }
+        }
         
         // Clear autosaved data from localStorage
         const fieldsToClear = ['full_name', 'fellowship_position', 'department', 'dob', 'whatsapp', 'hotline'];

@@ -138,10 +138,39 @@ const Events: React.FC = () => {
   const handleRsvp = async (eventId: string) => {
     if (!supabase || !currentUser) return;
     setProcessingRsvpId(eventId);
+
+    // --- ONBOARDING LOGIC ---
+    try {
+        const { data: onboarding, error: onboardingError } = await supabase
+            .from('onboarding_progress')
+            .select('rsvpd_to_event')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+        
+        if (onboardingError && onboardingError.code !== '42P01') {
+            console.error("Onboarding check failed:", onboardingError);
+        } else if (onboarding && !onboarding.rsvpd_to_event) {
+            await supabase.from('onboarding_progress').update({ rsvpd_to_event: true }).eq('user_id', currentUser.id);
+            await supabase.from('coin_transactions').insert({
+                user_id: currentUser.id,
+                source_type: 'onboarding',
+                source_id: 'first_rsvp',
+                coin_amount: 25,
+                status: 'pending',
+                reason: 'First event RSVP'
+            });
+            addToast('First RSVP! 25 coins are pending approval.', 'success');
+        }
+    } catch (e) {
+        console.warn("Could not perform onboarding check for first RSVP.", e);
+    }
+    // --- END ONBOARDING LOGIC ---
+
     const { error } = await supabase.from('event_rsvps').insert({
         event_id: eventId,
         user_id: currentUser.id,
     });
+
     if (error) {
         addToast('Error RSVPing: ' + error.message, 'error');
     } else {

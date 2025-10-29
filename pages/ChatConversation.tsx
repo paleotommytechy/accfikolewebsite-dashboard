@@ -345,6 +345,33 @@ const ChatConversation: React.FC = () => {
         setShowEmojiPicker(false);
 
         try {
+            // --- ONBOARDING LOGIC ---
+            try {
+                const { data: onboarding, error: onboardingError } = await supabase
+                    .from('onboarding_progress')
+                    .select('sent_first_message')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+                
+                if (onboardingError && onboardingError.code !== '42P01') {
+                    console.error("Onboarding check failed:", onboardingError);
+                } else if (onboarding && !onboarding.sent_first_message) {
+                    await supabase.from('onboarding_progress').update({ sent_first_message: true }).eq('user_id', currentUser.id);
+                    await supabase.from('coin_transactions').insert({
+                        user_id: currentUser.id,
+                        source_type: 'onboarding',
+                        source_id: 'first_message',
+                        coin_amount: 25,
+                        status: 'pending',
+                        reason: 'Sent first message'
+                    });
+                    addToast('First message sent! 25 coins are pending approval.', 'success');
+                }
+            } catch (onboardingError) {
+                console.warn("Could not perform onboarding check for first message.", onboardingError);
+            }
+            // --- END ONBOARDING LOGIC ---
+
             const { error } = await supabase.from('messages').insert({
                 sender_id: currentUser.id,
                 recipient_id: userId,

@@ -504,8 +504,16 @@ const Dashboard: React.FC = () => {
         if (leaderboardRes.error) console.error('Error fetching leaderboard', leaderboardRes.error.message);
         else setLeaderboard(leaderboardRes.data || []);
 
-        if (onboardingRes.error) console.error('Error fetching onboarding progress', onboardingRes.error.message);
-        else setOnboardingProgress(onboardingRes.data as OnboardingProgress);
+        if (onboardingRes.error) {
+            // Gracefully handle if the table doesn't exist (e.g., before DB migration)
+            // The error code for a non-existent table in Postgres is '42P01'
+            if (onboardingRes.error.code !== '42P01') {
+                console.error('Error fetching onboarding progress', onboardingRes.error.message);
+            }
+            setOnboardingProgress(null);
+        } else {
+            setOnboardingProgress(onboardingRes.data as OnboardingProgress);
+        }
       };
 
       fetchDashboardData();
