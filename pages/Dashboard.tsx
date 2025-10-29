@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -8,9 +9,9 @@ import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
-import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture } from '../types';
+import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture, OnboardingProgress } from '../types';
 // FIX: Import missing icons to resolve module export errors.
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon, CheckCircleIcon } from '../components/ui/Icons';
 import { GoogleGenAI, Type } from "@google/genai";
 
 
@@ -34,6 +35,43 @@ const CompleteProfileCard: React.FC = () => (
         </div>
     </Card>
 );
+
+const OnboardingCard: React.FC<{ progress: OnboardingProgress }> = ({ progress }) => {
+    const tasks = [
+        { id: 'profile', text: 'Complete your profile', completed: progress.completed_profile, link: '/profile' },
+        { id: 'message', text: 'Send your first message', completed: progress.sent_first_message, link: '/messages' },
+        { id: 'rsvp', text: 'RSVP for an event', completed: progress.rsvpd_to_event, link: '/events' },
+    ];
+    
+    const isAllComplete = tasks.every(t => t.completed);
+    if (isAllComplete) return null;
+
+    return (
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 animate-fade-in-up">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white">Your Adventure Begins!</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Complete these first steps to get started and earn bonus coins.</p>
+            <ul className="space-y-3 mt-4">
+                {tasks.map(task => (
+                    <li key={task.id} className={`flex items-center gap-3 p-3 rounded-lg transition-all ${task.completed ? 'bg-green-100 dark:bg-green-900/40' : 'bg-white/50 dark:bg-dark/50'}`}>
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center border-2 ${task.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                            {task.completed && <CheckIcon className="w-4 h-4 text-white" />}
+                        </div>
+                        <div className="flex-1">
+                            <p className={`font-semibold ${task.completed ? 'line-through text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>{task.text}</p>
+                            {!task.completed && <p className="text-xs text-yellow-600 dark:text-yellow-500 font-medium">Reward: 25 Coins (pending approval)</p>}
+                        </div>
+                        {!task.completed && (
+                            <Button to={task.link} size="sm" variant="outline">
+                                Go
+                            </Button>
+                        )}
+                    </li>
+                ))}
+            </ul>
+        </Card>
+    );
+};
+
 
 const ScriptureOfTheDay: React.FC = () => {
     const [scripture, setScripture] = useState<Partial<Scripture> | null>(null);
@@ -413,59 +451,64 @@ const Dashboard: React.FC = () => {
   const [taskAssignments, setTaskAssignments] = useState<TaskAssignment[]>([]);
   const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
   const [leaderboard, setLeaderboard] = useState<Partial<UserProfile>[]>([]);
+  const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
 
   useEffect(() => {
     if (currentUser && supabase) {
-      const fetchTaskAssignments = async () => {
+      const fetchDashboardData = async () => {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const todayEnd = new Date();
         todayEnd.setHours(23, 59, 59, 999);
 
-        const { data, error } = await supabase
-          .from('tasks_assignments')
-          .select('*, tasks!inner(*)')
-          .eq('assignee_id', currentUser.id)
-          .gte('created_at', todayStart.toISOString())
-          .lte('created_at', todayEnd.toISOString())
-          .limit(3);
-        if (error) {
-            console.error('Error fetching tasks', error.message);
-        } else {
-            setTaskAssignments((data as TaskAssignment[]) || []);
-        }
+        // Fetch all data in parallel
+        const [
+            tasksRes,
+            challengeRes,
+            leaderboardRes,
+            onboardingRes
+        ] = await Promise.all([
+            supabase
+              .from('tasks_assignments')
+              .select('*, tasks!inner(*)')
+              .eq('assignee_id', currentUser.id)
+              .gte('created_at', todayStart.toISOString())
+              .lte('created_at', todayEnd.toISOString())
+              .limit(3),
+            supabase
+              .from('weekly_challenges')
+              .select('*')
+              .lte('start_date', new Date().toISOString())
+              .gte('due_date', new Date().toISOString())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url, coins')
+              .order('coins', { ascending: false })
+              .limit(4),
+            supabase
+                .from('onboarding_progress')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .maybeSingle()
+        ]);
+
+        if (tasksRes.error) console.error('Error fetching tasks', tasksRes.error.message);
+        else setTaskAssignments((tasksRes.data as TaskAssignment[]) || []);
+        
+        if (challengeRes.error) console.error('Error fetching challenge', challengeRes.error.message);
+        else setChallenge(challengeRes.data);
+
+        if (leaderboardRes.error) console.error('Error fetching leaderboard', leaderboardRes.error.message);
+        else setLeaderboard(leaderboardRes.data || []);
+
+        if (onboardingRes.error) console.error('Error fetching onboarding progress', onboardingRes.error.message);
+        else setOnboardingProgress(onboardingRes.data as OnboardingProgress);
       };
 
-      const fetchChallenge = async () => {
-        const today = new Date().toISOString();
-        const { data, error } = await supabase
-          .from('weekly_challenges')
-          .select('*')
-          .lte('start_date', today)
-          .gte('due_date', today)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (error) {
-            console.error('Error fetching challenge', error.message);
-        } else {
-            setChallenge(data);
-        }
-      };
-
-      const fetchLeaderboard = async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, coins')
-          .order('coins', { ascending: false })
-          .limit(4);
-        if (error) console.error('Error fetching leaderboard', error.message);
-        else setLeaderboard(data || []);
-      };
-
-      fetchTaskAssignments();
-      fetchChallenge();
-      fetchLeaderboard();
+      fetchDashboardData();
     }
   }, [currentUser]);
 
@@ -476,6 +519,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {!isProfileComplete && <CompleteProfileCard />}
+      {onboardingProgress && <OnboardingCard progress={onboardingProgress} />}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Column */}

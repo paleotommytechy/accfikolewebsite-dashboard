@@ -66,7 +66,7 @@ export interface WeeklyParticipant {
 export interface CoinTransaction {
   id: number;
   user_id: string;
-  source_type: 'task' | 'challenge' | 'admin_adjustment' | 'quiz';
+  source_type: 'task' | 'challenge' | 'admin_adjustment' | 'quiz' | 'onboarding';
   source_id: string;
   coin_amount: number;
   status: 'pending' | 'approved' | 'rejected';
@@ -340,4 +340,12 @@ export interface Donation {
   created_at: string;
   confirmed_at: string | null;
   profiles?: Pick<UserProfile, 'full_name' | 'avatar_url' | 'whatsapp'>;
+}
+
+// --- NEW: Onboarding System ---
+export interface OnboardingProgress {
+  user_id: string;
+  completed_profile: boolean;
+  sent_first_message: boolean;
+  rsvpd_to_event: boolean;
 }
