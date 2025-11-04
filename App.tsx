@@ -1,4 +1,5 @@
 
+
 import React, { Suspense } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -10,6 +11,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // --- LAZY-LOADED PAGES ---
 import Auth from './pages/Auth';
+import AuthCallback from './context/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
@@ -64,6 +66,7 @@ function App(): React.ReactNode {
           <Suspense fallback={<FullPageLoader />}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/update-password" element={<UpdatePassword />} />
               
               {/* FIX: Use a dedicated layout route for admin pages to resolve errors from nested ProtectedRoutes. */}

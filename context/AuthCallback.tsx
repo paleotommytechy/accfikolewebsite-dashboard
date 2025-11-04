@@ -10,21 +10,23 @@ const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // The AppContext's onAuthStateChange listener is the primary mechanism
-    // for handling the session. It will parse the token from the URL hash.
-    // This component's effect is a fallback/helper to ensure the user is
-    // navigated away once the state is resolved.
-    if (!isLoading) {
-      if (currentUser) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        // If after loading, there's still no user, something might be wrong.
-        // We can wait a bit and then redirect to login.
-        const timeoutId = setTimeout(() => {
-          navigate('/auth', { replace: true });
-        }, 2000); // 2-second delay before redirecting to login on failure.
-        return () => clearTimeout(timeoutId);
+    // If the URL has an access_token, Supabase is processing it.
+    // We should wait until isLoading is false before making any decisions.
+    if (window.location.hash.includes('access_token')) {
+      if (!isLoading) {
+        // By now, currentUser should be set if login was successful
+        if (currentUser) {
+          navigate('/dashboard', { replace: true });
+        } else {
+          // If still no user, something went wrong with the session validation.
+          navigate('/auth', { state: { error: 'Authentication failed. Please try again.' }, replace: true });
+        }
       }
+      // If isLoading is true, we just wait for the next render for AppContext to update.
+    } else if (!isLoading) {
+      // If there's no token in the hash and we're not loading,
+      // the user shouldn't be on this page. Go back to auth.
+      navigate('/auth', { replace: true });
     }
   }, [currentUser, isLoading, navigate]);
 

@@ -69,10 +69,10 @@ const Auth: React.FC = () => {
         }
         setLoading(true);
 
-        // The redirectTo URL tells Supabase where to send the user back to *your app*
-        // after they have authenticated with Google.
-        // Using window.location.origin makes this dynamic for any environment (dev, staging, prod).
-        const redirectTo = window.location.origin;
+        const isHashRouter = !window.location.hostname.endsWith('vercel.app');
+        const redirectTo = isHashRouter
+            ? `${window.location.origin}/#/auth/callback`
+            : `${window.location.origin}/auth/callback`;
 
         // FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions.
         const { error } = await (supabase.auth as any).signInWithOAuth({
@@ -103,7 +103,7 @@ const Auth: React.FC = () => {
     return (
         <div 
             className="min-h-screen bg-cover bg-center flex flex-col justify-center items-center p-4" 
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1469228252629-cbe7cb7db2c8?q=80&w=773&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }}
+            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1469228252629-cbe7cb7db2c8?q=80&w=773&auto=format=fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')" }}
         >
             <div className="w-full max-w-sm bg-white/30 backdrop-blur-lg rounded-2xl shadow-2xl p-6 md:p-8 space-y-4">
                 <div className="text-center">
@@ -203,14 +203,4 @@ const InputField: React.FC<InputFieldProps> = ({ icon, rightContent, ...props })
         </div>
         <input
             {...props}
-            className="w-full bg-white/70 shadow-inner border border-transparent rounded-lg pl-10 pr-10 py-3 text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-        />
-        {rightContent && (
-             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                {rightContent}
-            </div>
-        )}
-    </div>
-);
-
-export default Auth;
+            className="w-full bg-white/70 shadow-inner border border-transparent rounded-lg pl-10 pr-10 py-3 text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border

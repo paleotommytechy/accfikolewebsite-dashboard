@@ -103,9 +103,14 @@ if (!supabase) {
  *    SECURITY DEFINER
  *    AS $$
  *    BEGIN
- *      -- Create a profile for the new user
- *      INSERT INTO public.profiles (id, full_name, email)
- *      VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', NEW.email);
+ *      -- Create a profile for the new user, trying to get name from multiple potential provider fields
+ *      INSERT INTO public.profiles (id, full_name, email, avatar_url)
+ *      VALUES (
+ *          NEW.id, 
+ *          COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'), 
+ *          NEW.email,
+ *          NEW.raw_user_meta_data->>'avatar_url'
+ *      );
  *
  *      -- Assign the default 'member' role
  *      INSERT INTO public.user_roles (user_id, role)

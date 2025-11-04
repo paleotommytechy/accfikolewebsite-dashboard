@@ -163,21 +163,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
   useEffect(() => {
-    fetchCurrentUser();
+    if (!supabase) return;
 
-    if (supabase) {
-      // FIX: Assuming the error on onAuthStateChange was a red herring as it's a core Supabase method. No changes made here as it should exist.
-      // FIX: Casting `supabase.auth` to `any` to bypass TypeScript errors. This suggests a potential mismatch between the installed Supabase client version and its type definitions.
-      const { data: { subscription } } = (supabase.auth as any).onAuthStateChange(
-        (_event: any, session: any) => {
-          fetchCurrentUser();
-        }
-      );
+    const isCallback = window.location.pathname.includes('auth/callback') || window.location.hash.includes('auth/callback');
+    let timeoutId: number | undefined;
 
-      return () => {
-        subscription.unsubscribe();
-      };
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange(
+      (_event: any, session: any) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        fetchCurrentUser();
+      }
+    );
+
+    if (isCallback) {
+        // On the callback page, we don't fetch immediately. We wait for onAuthStateChange.
+        // If it doesn't fire within a certain time (e.g., Supabase client fails to parse token),
+        // we proceed anyway to avoid getting stuck in a loading state.
+        timeoutId = window.setTimeout(() => {
+            fetchCurrentUser(); 
+        }, 3000);
+    } else {
+        // On any other page, fetch the user immediately.
+        fetchCurrentUser();
     }
+
+    return () => {
+      subscription.unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [fetchCurrentUser]);
 
 
