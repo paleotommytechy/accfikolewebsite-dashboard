@@ -74,6 +74,7 @@ export interface CoinTransaction {
   reason?: string | null;
   tasks?: { title: string };
   weekly_challenges?: { title: string };
+  quizzes?: { title: string };
   profiles?: { full_name: string | null; avatar_url?: string | null };
 }
 

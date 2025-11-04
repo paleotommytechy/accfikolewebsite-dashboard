@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import { supabase } from '../lib/supabaseClient';
@@ -25,7 +24,6 @@ const Store: React.FC = () => {
             if (!supabase || !currentUser) return;
             setLoading(true);
             
-            // Step 1: Fetch transactions without the broken joins
             const { data: txData, error: txError } = await supabase
                 .from('coin_transactions')
                 .select('*')
@@ -44,35 +42,33 @@ const Store: React.FC = () => {
                 return;
             }
 
-            // Step 2: Group source IDs by type
-            const taskIds = txData
-                .filter(tx => tx.source_type === 'task')
-                .map(tx => tx.source_id);
-            const challengeIds = txData
-                .filter(tx => tx.source_type === 'challenge')
-                .map(tx => tx.source_id);
+            const taskIds = txData.filter(tx => tx.source_type === 'task').map(tx => tx.source_id);
+            const challengeIds = txData.filter(tx => tx.source_type === 'challenge').map(tx => tx.source_id);
+            const quizIds = txData.filter(tx => tx.source_type === 'quiz').map(tx => tx.source_id);
 
-            // Step 3: Fetch source details in parallel
-            const [tasksResponse, challengesResponse] = await Promise.all([
+            const [tasksResponse, challengesResponse, quizzesResponse] = await Promise.all([
                 taskIds.length > 0 ? supabase.from('tasks').select('id, title').in('id', taskIds) : Promise.resolve({ data: [], error: null }),
-                challengeIds.length > 0 ? supabase.from('weekly_challenges').select('id, title').in('id', challengeIds) : Promise.resolve({ data: [], error: null })
+                challengeIds.length > 0 ? supabase.from('weekly_challenges').select('id, title').in('id', challengeIds) : Promise.resolve({ data: [], error: null }),
+                quizIds.length > 0 ? supabase.from('quizzes').select('id, title').in('id', quizIds) : Promise.resolve({ data: [], error: null }),
             ]);
 
             if (tasksResponse.error) console.error("Error fetching task details:", tasksResponse.error);
             if (challengesResponse.error) console.error("Error fetching challenge details:", challengesResponse.error);
+            if (quizzesResponse.error) console.error("Error fetching quiz details:", quizzesResponse.error);
 
-            // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
             const tasksMap = new Map(tasksResponse.data?.map((t: { id: string; title: string }): [string, string] => [t.id, t.title]));
-            // FIX: Explicitly type the items in the map to ensure they are treated as tuples, resolving the Map constructor overload error.
             const challengesMap = new Map(challengesResponse.data?.map((c: { id: string; title: string }): [string, string] => [c.id, c.title]));
+            const quizzesMap = new Map(quizzesResponse.data?.map((q: { id: string; title: string }): [string, string] => [q.id, q.title]));
 
-            // Step 4: Combine data
             const enrichedTransactions = txData.map(tx => {
                 if (tx.source_type === 'task') {
                     return { ...tx, tasks: { title: tasksMap.get(tx.source_id) || 'Unknown Task' } };
                 }
                 if (tx.source_type === 'challenge') {
                     return { ...tx, weekly_challenges: { title: challengesMap.get(tx.source_id) || 'Unknown Challenge' } };
+                }
+                if (tx.source_type === 'quiz') {
+                    return { ...tx, quizzes: { title: quizzesMap.get(tx.source_id) || 'Unknown Quiz' } };
                 }
                 return tx;
             });
@@ -85,13 +81,20 @@ const Store: React.FC = () => {
     }, [currentUser]);
 
     const getSourceName = (tx: CoinTransaction): string => {
-        if (tx.source_type === 'task' && tx.tasks) {
-            return tx.tasks.title;
+        switch (tx.source_type) {
+            case 'task':
+                return tx.tasks?.title || 'Unknown Task';
+            case 'challenge':
+                return tx.weekly_challenges?.title || 'Unknown Challenge';
+            case 'quiz':
+                return tx.quizzes?.title || 'Unknown Quiz';
+            case 'onboarding':
+                return `Onboarding: ${tx.reason || 'First Steps'}`;
+            case 'admin_adjustment':
+                return `Admin: ${tx.reason || 'Adjustment'}`;
+            default:
+                return tx.reason || 'Unknown Activity';
         }
-        if (tx.source_type === 'challenge' && tx.weekly_challenges) {
-            return tx.weekly_challenges.title;
-        }
-        return 'Unknown Activity';
     }
 
     return (
