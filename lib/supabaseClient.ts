@@ -45,7 +45,7 @@ if (!supabase) {
  *        dob text,
  *        whatsapp text,
  *        hotline text,
- *        email text UNIQUE,
+ *        email text,
  *        coins integer DEFAULT 0 NOT NULL,
  *        created_at timestamp with time zone DEFAULT now(),
  *        updated_at timestamp with time zone DEFAULT now()
@@ -74,7 +74,7 @@ if (!supabase) {
  *    CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
  *
  *    -- ================================================================================================
- *    -- === NEW: GAMIFIED ONBOARDING SYSTEM (Run this to enable the Welcome Challenge)               ===
+ *    -- === GAMIFIED ONBOARDING SYSTEM (Run this to enable the Welcome Challenge)               ===
  *    -- ================================================================================================
  *
  *    -- 1. Create onboarding_progress table
@@ -95,44 +95,7 @@ if (!supabase) {
  *    CREATE POLICY "Users can view and update their own onboarding progress" ON public.onboarding_progress
  *    FOR ALL USING (auth.uid() = user_id);
  *    
- *    -- 4. This function now creates a profile, role, AND an onboarding record for every new user.
- *    -- It replaces any previous "handle_new_user" function.
- *    CREATE OR REPLACE FUNCTION public.handle_new_user_onboarding()
- *    RETURNS TRIGGER
- *    LANGUAGE plpgsql
- *    SECURITY DEFINER
- *    AS $$
- *    BEGIN
- *      -- Create a profile for the new user, trying to get name from multiple potential provider fields
- *      INSERT INTO public.profiles (id, full_name, email, avatar_url)
- *      VALUES (
- *          NEW.id, 
- *          COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'), 
- *          NEW.email,
- *          NEW.raw_user_meta_data->>'avatar_url'
- *      );
- *
- *      -- Assign the default 'member' role
- *      INSERT INTO public.user_roles (user_id, role)
- *      VALUES (NEW.id, 'member');
- *
- *      -- Create the onboarding progress tracker
- *      INSERT INTO public.onboarding_progress (user_id)
- *      VALUES (NEW.id);
- *
- *      RETURN NEW;
- *    END;
- *    $$;
- *
- *    -- 5. This trigger executes the function above. It replaces any previous user creation trigger.
- *    DROP TRIGGER IF EXISTS on_auth_user_created_onboarding ON auth.users;
- *    CREATE TRIGGER on_auth_user_created_onboarding
- *      AFTER INSERT ON auth.users
- *      FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_onboarding();
- *      
- *    -- 6. Update coin_transactions source_type to include 'onboarding'
- *    -- If you created `source_type` as a CHECK constraint, you will need to manually update it.
- *    -- If it is an ENUM type, this command should work. The name may vary (e.g., `public.source_type`).
+ *    -- 4. Update coin_transactions source_type to include 'onboarding'
  *    DO $$
  *    BEGIN
  *        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'source_type_enum') THEN
@@ -144,7 +107,20 @@ if (!supabase) {
  *    $$;
  *
  *    -- ================================================================================================
- *    -- === END OF GAMIFIED ONBOARDING SYSTEM                                                        ===
+ *    -- === DEPRECATED: NEW USER ONBOARDING TRIGGER                                                    ===
+ *    -- ================================================================================================
+ *    --
+ *    -- NOTE: The database trigger for new user onboarding has been removed.
+ *    -- It was causing persistent "Database error saving new user" errors for some OAuth sign-ups.
+ *    -- The logic has been moved to the client-side in `/context/AppContext.tsx`.
+ *    -- The new approach is for the client to detect a missing profile for an authenticated user
+ *    -- and create it on the fly. This is more resilient to RLS policies and auth provider variations.
+ *    --
+ *    -- Run these DROP commands in your SQL Editor to remove the old function and trigger.
+ *    
+ *    DROP TRIGGER IF EXISTS on_auth_user_created_onboarding ON auth.users;
+ *    DROP FUNCTION IF EXISTS public.handle_new_user_onboarding();
+ *    --
  *    -- ================================================================================================
  * 
  *    ```

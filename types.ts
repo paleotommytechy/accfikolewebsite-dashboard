@@ -7,7 +7,7 @@ export interface UserProfile {
   fellowship_position: string | null;
   level: number;
   department: string | null;
-  gender: 'Male' | 'Female' | 'Other' | null;
+  gender: 'Male' | 'Female' | null;
   dob: string | null; // MM-DD format
   whatsapp: string | null;
   hotline: string | null;

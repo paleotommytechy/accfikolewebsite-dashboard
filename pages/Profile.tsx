@@ -55,7 +55,6 @@ const ProfileEditor: React.FC<{
                 <option value="" disabled>Select gender...</option>
                 <option>Male</option>
                 <option>Female</option>
-                <option>Other</option>
             </SelectField>
              <div>
                 <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Birthday (MM-DD)</label>
