@@ -122,6 +122,62 @@ if (!supabase) {
  *    DROP FUNCTION IF EXISTS public.handle_new_user_onboarding();
  *    --
  *    -- ================================================================================================
+ *
+ *    -- ================================================================================================
+ *    -- === TASK & NOTIFICATION MANAGEMENT                                                           ===
+ *    -- ================================================================================================
+ *
+ *    -- This function assigns a task to all users for the current day.
+ *    -- It checks to prevent duplicate assignments if run multiple times a day.
+ *    -- Crucially, it creates notifications for 'task_assigned' ONLY for users who are NOT admins.
+ *    CREATE OR REPLACE FUNCTION assign_task_to_all_users(task_id_to_assign uuid)
+ *    RETURNS void AS $$
+ *    DECLARE
+ *        user_record RECORD;
+ *        task_record RECORD;
+ *        assignment_exists boolean;
+ *    BEGIN
+ *        -- Get task details for the notification message
+ *        SELECT * INTO task_record FROM public.tasks WHERE id = task_id_to_assign;
+ *    
+ *        IF NOT FOUND THEN
+ *            RAISE EXCEPTION 'Task with id % not found', task_id_to_assign;
+ *        END IF;
+ *    
+ *        -- Loop through all users and their roles
+ *        FOR user_record IN 
+ *            SELECT u.id, ur.role 
+ *            FROM auth.users u
+ *            LEFT JOIN public.user_roles ur ON u.id = ur.user_id
+ *        LOOP
+ *            -- Check if a task assignment for this task and user already exists for today
+ *            SELECT EXISTS (
+ *                SELECT 1 FROM public.tasks_assignments
+ *                WHERE assignee_id = user_record.id
+ *                AND task_id = task_id_to_assign
+ *                AND created_at >= date_trunc('day', now())
+ *                AND created_at < date_trunc('day', now()) + interval '1 day'
+ *            ) INTO assignment_exists;
+ *    
+ *            -- If no assignment exists for today, create one
+ *            IF NOT assignment_exists THEN
+ *                INSERT INTO public.tasks_assignments (task_id, assignee_id, status)
+ *                VALUES (task_id_to_assign, user_record.id, 'assigned');
+ *    
+ *                -- Create a notification for the user, ONLY if they are NOT an admin
+ *                IF user_record.role IS NULL OR user_record.role != 'admin' THEN
+ *                    INSERT INTO public.notifications (user_id, type, message, link)
+ *                    VALUES (
+ *                        user_record.id,
+ *                        'task_assigned',
+ *                        'Your daily task "' || task_record.title || '" has been assigned.',
+ *                        '/tasks'
+ *                    );
+ *                END IF;
+ *            END IF;
+ *        END LOOP;
+ *    END;
+ *    $$ LANGUAGE plpgsql SECURITY DEFINER;
  * 
  *    ```
  * 
