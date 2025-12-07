@@ -18,6 +18,7 @@ export const NAV_LINKS = [
   { name: 'Notifications', href: '/notifications', icon: <BellIcon /> },
   { name: 'Coin Store', href: '/store', icon: <ShoppingCartIcon /> },
   { name: 'Giving', href: '/giving', icon: <GiftIcon /> },
+  { name: 'Sponsorships', href: '/sponsorships', icon: <HeartIcon /> },
   { name: 'Help & Support', href: '/help', icon: <QuestionMarkCircleIcon /> },
 ];
 
@@ -34,9 +35,9 @@ export const ACADEMICS_LINKS = [
 ];
 
 export const ADMIN_LINKS = [
-  { name: 'Leader Analytics', href: '/analytics', icon: <ChartBarIcon /> },
-  { name: 'User Management', href: '/user-management', icon: <UsersIcon /> },
+  { name: 'Task & Coin Mgt.', href: '/task-management', icon: <ClipboardListIcon /> },
+  { name: 'Resource Mgt.', href: '/resource-management', icon: <ArchiveIcon /> },
   { name: 'Event Management', href: '/event-management', icon: <CalendarIcon /> },
   { name: 'Financial Mgt.', href: '/financial-management', icon: <GiftIcon /> },
-  { name: 'Developer Settings', href: '/developer-settings', icon: <CodeIcon /> },
+  { name: 'Admin & User Mgt.', href: '/developer-settings', icon: <UsersIcon /> },
 ];

@@ -107,6 +107,38 @@ if (!supabase) {
  *    $$;
  *
  *    -- ================================================================================================
+ *    -- === SPONSORSHIP SYSTEM                                                                         ===
+ *    -- ================================================================================================
+ *
+ *    -- 1. Create sponsorship_inquiries table
+ *    CREATE TABLE IF NOT EXISTS public.sponsorship_inquiries (
+ *        id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+ *        created_at timestamp with time zone DEFAULT now(),
+ *        name text NOT NULL,
+ *        organization text,
+ *        email text NOT NULL,
+ *        phone text,
+ *        interest text,
+ *        message text,
+ *        status text NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'closed'))
+ *    );
+ *    COMMENT ON TABLE public.sponsorship_inquiries IS 'Stores inquiries from potential sponsors.';
+ *
+ *    -- 2. Enable RLS
+ *    ALTER TABLE public.sponsorship_inquiries ENABLE ROW LEVEL SECURITY;
+ *
+ *    -- 3. RLS Policies
+ *    -- Allow authenticated users to submit inquiries.
+ *    DROP POLICY IF EXISTS "Authenticated users can submit inquiries" ON public.sponsorship_inquiries;
+ *    CREATE POLICY "Authenticated users can submit inquiries" ON public.sponsorship_inquiries FOR INSERT TO authenticated WITH CHECK (true);
+ *
+ *    -- Allow admins to view and manage all inquiries.
+ *    DROP POLICY IF EXISTS "Admins can manage inquiries" ON public.sponsorship_inquiries;
+ *    CREATE POLICY "Admins can manage inquiries" ON public.sponsorship_inquiries FOR ALL USING (
+ *        (SELECT role FROM public.user_roles WHERE user_id = auth.uid()) = 'admin'
+ *    );
+ *
+ *    -- ================================================================================================
  *    -- === DEPRECATED: NEW USER ONBOARDING TRIGGER                                                    ===
  *    -- ================================================================================================
  *    --

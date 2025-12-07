@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { HeartIcon, CheckCircleIcon, SparklesIcon, CalendarIcon, CheckIcon } from '../components/ui/Icons';
+import { supabase } from '../lib/supabaseClient';
+import { useNotifier } from '../context/NotificationContext';
 
 const sponsorshipTiers = [
     {
@@ -54,6 +56,7 @@ const SponsorshipTierCard: React.FC<{ tier: typeof sponsorshipTiers[0] }> = ({ t
 );
 
 const Sponsorships: React.FC = () => {
+    const { addToast } = useNotifier();
     const [formState, setFormState] = useState({
         name: '',
         organization: '',
@@ -69,12 +72,29 @@ const Sponsorships: React.FC = () => {
         setFormState(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Here you would typically send the data to a backend or service like Supabase
-        console.log('Sponsorship Inquiry:', formState);
-        setIsSubmitted(true);
-        window.scrollTo(0, 0); // Scroll to top to show success message
+        if (!supabase) {
+            addToast('Database connection not available.', 'error');
+            return;
+        }
+        try {
+            const { error } = await supabase.from('sponsorship_inquiries').insert([
+                {
+                    name: formState.name,
+                    organization: formState.organization || null,
+                    email: formState.email,
+                    phone: formState.phone || null,
+                    interest: formState.interest || null,
+                    message: formState.message || null,
+                }
+            ]);
+            if (error) throw error;
+            setIsSubmitted(true);
+            window.scrollTo(0, 0); // Scroll to top to show success message
+        } catch (error: any) {
+            addToast('Failed to submit inquiry: ' + error.message, 'error');
+        }
     };
 
     if (isSubmitted) {

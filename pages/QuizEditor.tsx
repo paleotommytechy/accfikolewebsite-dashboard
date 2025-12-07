@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -36,7 +37,7 @@ const QuizEditor: React.FC = () => {
 
         if (quizError || !quizData) {
             addToast('Could not find the specified quiz.', 'error');
-            navigate('/developer-settings');
+            navigate('/task-management');
             return;
         }
         
@@ -154,8 +155,8 @@ const QuizEditor: React.FC = () => {
     return (
         <div className="space-y-6">
             <div>
-                <Button variant="ghost" onClick={() => navigate('/developer-settings')} className="mb-4">
-                    <ArrowLeftIcon className="w-5 h-5 mr-2"/> Back to Developer Settings
+                <Button variant="ghost" onClick={() => navigate('/task-management')} className="mb-4">
+                    <ArrowLeftIcon className="w-5 h-5 mr-2"/> Back to Task Management
                 </Button>
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white">{quiz.title}</h1>
                 <p className="text-lg text-gray-500 dark:text-gray-400">Questions for challenge: "{challenge?.title || '...'}"</p>

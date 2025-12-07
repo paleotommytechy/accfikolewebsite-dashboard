@@ -1,5 +1,4 @@
 
-
 import React, { Suspense } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -18,11 +17,12 @@ import Tasks from './pages/Tasks';
 import Leaderboard from './pages/Leaderboard';
 import Events from './pages/Events';
 import PrayerRequests from './pages/PrayerRequests';
-import Analytics from './pages/Analytics';
-import DeveloperSettings from './pages/DeveloperSettings';
+// Analytics is removed
+import DeveloperSettings from './pages/DeveloperSettings'; // Now acts as User/Admin Management
+import TaskManagement from './pages/TaskManagement';
+import ResourceManagement from './pages/ResourceManagement';
 import Store from './pages/Store';
 import ChatHistory from './pages/ChatHistory';
-import UserManagement from './pages/UserManagement';
 import ChatConversation from './pages/ChatConversation';
 import Notifications from './pages/Notifications';
 import Giving from './pages/Giving';
@@ -41,6 +41,7 @@ import QuizEditor from './pages/QuizEditor';
 import FinancialManagement from './pages/FinancialManagement';
 import Help from './pages/Help';
 import UpdatePassword from './pages/UpdatePassword';
+import Sponsorships from './pages/Sponsorships';
 
 
 // --- SUSPENSE FALLBACK LOADER ---
@@ -78,10 +79,10 @@ function App(): React.ReactNode {
                   </ProtectedRoute>
                 }
               >
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/task-management" element={<TaskManagement />} />
+                <Route path="/resource-management" element={<ResourceManagement />} />
                 <Route path="/developer-settings" element={<DeveloperSettings />} />
-                <Route path="/developer-settings/quiz-editor/:quizId" element={<QuizEditor />} />
+                <Route path="/task-management/quiz-editor/:quizId" element={<QuizEditor />} />
               </Route>
               
               {/* Pro & Admin protected routes */}
@@ -166,6 +167,7 @@ function App(): React.ReactNode {
                 <Route path="/store" element={<Store />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/giving" element={<Giving />} />
+                <Route path="/sponsorships" element={<Sponsorships />} />
                 <Route path="/help" element={<Help />} />
                 
                 {/* Redirect from root and any other unmatched protected route to dashboard */}
