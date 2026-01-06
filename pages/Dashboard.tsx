@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 // FIX: Use wildcard import for react-router-dom to resolve module export errors.
 import * as ReactRouterDOM from 'react-router-dom';
@@ -9,10 +8,12 @@ import Button from '../components/ui/Button';
 import Avatar from '../components/auth/Avatar';
 import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
-import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture, OnboardingProgress } from '../types';
+import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture, OnboardingProgress, UserCourseMaterial } from '../types';
 // FIX: Import missing icons to resolve module export errors.
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon, CheckCircleIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon, CheckCircleIcon, CloudUploadIcon, SparklesIcon, BookOpenIcon } from '../components/ui/Icons';
 import { GoogleGenAI, Type } from "@google/genai";
+import UploadMaterialModal from '../components/academics/UploadMaterialModal';
+import MaterialQuizModal from '../components/academics/MaterialQuizModal';
 
 
 const CompleteProfileCard: React.FC = () => (
@@ -445,6 +446,80 @@ const WebsiteCtaCard: React.FC = () => (
     </Card>
 );
 
+// --- NEW: Upload CTA Component ---
+const UploadCtaCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => (
+    <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg shadow-lg p-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in-up">
+        <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
+                <CloudUploadIcon className="w-8 h-8 text-white" />
+            </div>
+            <div>
+                <h3 className="text-xl font-bold">Upload & Earn Coins!</h3>
+                <p className="text-primary-100 text-sm mt-1">Got Past Questions? Upload them to earn 50 coins. Notes earn 100 coins!</p>
+            </div>
+        </div>
+        <Button onClick={onOpen} className="bg-white text-primary-700 hover:bg-primary-50 font-bold whitespace-nowrap">
+            Upload Material
+        </Button>
+    </div>
+);
+
+// --- NEW: Exam Prep Shortcut Card ---
+const ExamPrepCard: React.FC<{ materials: UserCourseMaterial[], onQuiz: (material: UserCourseMaterial) => void }> = ({ materials, onQuiz }) => {
+    if (materials.length === 0) return null;
+
+    return (
+        <Card title={
+            <div className="flex items-center gap-2">
+                <SparklesIcon className="w-5 h-5 text-yellow-500" />
+                <span>Ace Your Exams</span>
+            </div>
+        } className="border-t-4 border-yellow-400">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Quickly jump into a quiz for recently added materials.</p>
+            <div className="space-y-3">
+                {materials.map(mat => (
+                    <div key={mat.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <div className="min-w-0 flex-1 mr-4">
+                            <p className="font-semibold text-gray-900 dark:text-white truncate">{mat.courses?.code} - {mat.title}</p>
+                            <p className="text-xs text-gray-500 truncate">{mat.material_type.replace('_', ' ')}</p>
+                        </div>
+                        <Button size="sm" onClick={() => onQuiz(mat)} className="flex-shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white border-none">
+                            Quiz Me
+                        </Button>
+                    </div>
+                ))}
+            </div>
+            <div className="mt-4 pt-3 border-t dark:border-gray-700 text-center">
+                <Link to="/academics" className="text-sm text-primary-600 hover:underline flex items-center justify-center gap-1">
+                    <BookOpenIcon className="w-4 h-4" /> View All Materials
+                </Link>
+            </div>
+        </Card>
+    );
+};
+
+const GameCenterPromoCard: React.FC = () => (
+    <Card className="bg-gradient-to-r from-orange-500 to-red-600 text-white animate-fade-in-up border-none overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+            <FireIcon className="w-32 h-32 text-white transform rotate-12" />
+        </div>
+        <div className="relative z-10 flex flex-col items-start gap-3">
+            <div className="flex items-center gap-2 mb-1">
+                <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                    <FireIcon className="w-6 h-6 text-yellow-300" />
+                </div>
+                <h3 className="text-xl font-bold">Game Center</h3>
+            </div>
+            <p className="text-sm text-orange-100 font-medium">
+                Level up your dopamine feeling! Perfect for celebrating after you score more than 3/5 in a Genius Quiz.
+            </p>
+            <Button to="/game" className="w-full bg-white text-orange-600 hover:bg-orange-50 font-bold border-none mt-2 shadow-lg">
+                Play Spirit Blitz
+            </Button>
+        </div>
+    </Card>
+);
+
 
 const Dashboard: React.FC = () => {
   const { currentUser, isLoading, isProfileComplete } = useAppContext();
@@ -452,6 +527,10 @@ const Dashboard: React.FC = () => {
   const [challenge, setChallenge] = useState<WeeklyChallenge | null>(null);
   const [leaderboard, setLeaderboard] = useState<Partial<UserProfile>[]>([]);
   const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
+  const [recentMaterials, setRecentMaterials] = useState<UserCourseMaterial[]>([]);
+  
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedQuizMaterial, setSelectedQuizMaterial] = useState<UserCourseMaterial | null>(null);
 
   useEffect(() => {
     if (currentUser && supabase) {
@@ -466,7 +545,8 @@ const Dashboard: React.FC = () => {
             tasksRes,
             challengeRes,
             leaderboardRes,
-            onboardingRes
+            onboardingRes,
+            materialsRes
         ] = await Promise.all([
             supabase
               .from('tasks_assignments')
@@ -492,7 +572,13 @@ const Dashboard: React.FC = () => {
                 .from('onboarding_progress')
                 .select('*')
                 .eq('user_id', currentUser.id)
-                .maybeSingle()
+                .maybeSingle(),
+            supabase
+                .from('user_course_materials')
+                .select('*, courses(code, name)')
+                .eq('status', 'approved')
+                .order('created_at', { ascending: false })
+                .limit(3)
         ]);
 
         if (tasksRes.error) console.error('Error fetching tasks', tasksRes.error.message);
@@ -505,8 +591,6 @@ const Dashboard: React.FC = () => {
         else setLeaderboard(leaderboardRes.data || []);
 
         if (onboardingRes.error) {
-            // Gracefully handle if the table doesn't exist (e.g., before DB migration)
-            // The error code for a non-existent table in Postgres is '42P01'
             if (onboardingRes.error.code !== '42P01') {
                 console.error('Error fetching onboarding progress', onboardingRes.error.message);
             }
@@ -514,6 +598,9 @@ const Dashboard: React.FC = () => {
         } else {
             setOnboardingProgress(onboardingRes.data as OnboardingProgress);
         }
+
+        if (materialsRes.error) console.error('Error fetching recent materials', materialsRes.error.message);
+        else setRecentMaterials(materialsRes.data as any || []);
       };
 
       fetchDashboardData();
@@ -529,6 +616,8 @@ const Dashboard: React.FC = () => {
       {!isProfileComplete && <CompleteProfileCard />}
       {onboardingProgress && <OnboardingCard progress={onboardingProgress} />}
       
+      <UploadCtaCard onOpen={() => setIsUploadModalOpen(true)} />
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
@@ -540,10 +629,22 @@ const Dashboard: React.FC = () => {
         {/* Sidebar Column */}
         <div className="lg:col-span-1 space-y-6">
           <MyProgressCard user={currentUser} />
+          <GameCenterPromoCard />
+          {/* New Exam Prep Shortcut */}
+          <ExamPrepCard materials={recentMaterials} onQuiz={setSelectedQuizMaterial} />
           <WeeklyChallengeCard challenge={challenge} />
           <MiniLeaderboard leaderboard={leaderboard} />
         </div>
       </div>
+      
+      {isUploadModalOpen && <UploadMaterialModal onClose={() => setIsUploadModalOpen(false)} />}
+      
+      {selectedQuizMaterial && (
+          <MaterialQuizModal 
+              material={selectedQuizMaterial} 
+              onClose={() => setSelectedQuizMaterial(null)} 
+          />
+      )}
     </div>
   );
 };

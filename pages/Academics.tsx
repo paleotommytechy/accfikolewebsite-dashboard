@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
 import Card from '../components/ui/Card';
-import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon } from '../components/ui/Icons';
+import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon, SparklesIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
 import Button from '../components/ui/Button';
 import StudyPlanner from '../components/academics/StudyPlanner';
 import CourseCompanion from '../components/academics/CourseCompanion';
+import MaterialQuizModal from '../components/academics/MaterialQuizModal';
 
 // Reusable Collapsible Component for nesting sections
 interface CollapsibleProps {
@@ -37,7 +38,10 @@ const Collapsible: React.FC<CollapsibleProps> = ({ title, children, defaultOpen 
 };
 
 // Component to render a list of courses, grouped by level
-const CourseLevelGroup: React.FC<{ coursesByLevel: Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed?: boolean })[]> }> = ({ coursesByLevel }) => (
+const CourseLevelGroup: React.FC<{ 
+    coursesByLevel: Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed?: boolean })[]>,
+    onQuizStart: (material: UserCourseMaterial) => void 
+}> = ({ coursesByLevel, onQuizStart }) => (
     <div className="pl-4">
         {Object.entries(coursesByLevel).sort(([a], [b]) => Number(a) - Number(b)).map(([level, coursesInLevel]) => (
             <Collapsible key={level} title={<span className="text-base font-medium">{level} Level</span>}>
@@ -68,15 +72,19 @@ const CourseLevelGroup: React.FC<{ coursesByLevel: Record<number, (Course & { ma
                                     <h5 className="text-sm font-semibold mt-3 text-gray-600 dark:text-gray-400">Community Materials</h5>
                                     <ul className="pl-4 mt-2 space-y-2">
                                         {course.userMaterials.map(um => (
-                                            <li key={um.id}>
-                                                <a href={um.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
-                                                    <ExternalLinkIcon className="w-4 h-4" />
-                                                    <span>{um.title}</span>
-                                                </a>
-                                                <p className="text-xs text-gray-500 pl-6">
-                                                    Uploaded by {um.profiles?.full_name || '...'}
-                                                    {um.description && ` - ${um.description}`}
-                                                </p>
+                                            <li key={um.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
+                                                <div>
+                                                    <a href={um.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline font-medium">
+                                                        <ExternalLinkIcon className="w-4 h-4" />
+                                                        <span>{um.title}</span>
+                                                    </a>
+                                                    <p className="text-xs text-gray-500">
+                                                        By {um.profiles?.full_name || 'Member'}
+                                                    </p>
+                                                </div>
+                                                <Button size="sm" variant="ghost" onClick={() => onQuizStart(um)} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
+                                                    <SparklesIcon className="w-3 h-3 mr-1" /> Quiz Me
+                                                </Button>
                                             </li>
                                         ))}
                                     </ul>
@@ -103,6 +111,9 @@ const Academics: React.FC = () => {
     const [userMaterials, setUserMaterials] = useState<UserCourseMaterial[]>([]);
     const [courseBorrowers, setCourseBorrowers] = useState<CourseBorrower[]>([]);
     const [loading, setLoading] = useState(true);
+    
+    // Quiz State
+    const [selectedMaterialForQuiz, setSelectedMaterialForQuiz] = useState<UserCourseMaterial | null>(null);
 
     const fetchAllData = useCallback(async () => {
         if (!supabase) return;
@@ -113,7 +124,8 @@ const Academics: React.FC = () => {
                 supabase.from('departments').select('*').order('name'),
                 supabase.from('courses').select('*').order('level, code'),
                 supabase.from('course_materials').select('*').order('title'),
-                supabase.from('user_course_materials').select('*, profiles:uploader_id(full_name, avatar_url)').order('created_at', { ascending: false }),
+                // Filter user materials to only approved ones for public view
+                supabase.from('user_course_materials').select('*, profiles:uploader_id(full_name, avatar_url)').eq('status', 'approved').order('created_at', { ascending: false }),
                 supabase.from('course_borrowers').select('*')
             ]);
 
@@ -218,7 +230,7 @@ const Academics: React.FC = () => {
                     <>
                         {Object.keys(universityCoursesByLevel).length > 0 && (
                             <Collapsible title="University General Courses" defaultOpen>
-                               <CourseLevelGroup coursesByLevel={universityCoursesByLevel} />
+                               <CourseLevelGroup coursesByLevel={universityCoursesByLevel} onQuizStart={setSelectedMaterialForQuiz} />
                             </Collapsible>
                         )}
 
@@ -227,12 +239,12 @@ const Academics: React.FC = () => {
                                 <div className="pl-4 space-y-2">
                                     {Object.keys(faculty.facultyCoursesByLevel).length > 0 && (
                                         <Collapsible title={<span className="text-base">Faculty-Wide Courses</span>}>
-                                            <CourseLevelGroup coursesByLevel={faculty.facultyCoursesByLevel} />
+                                            <CourseLevelGroup coursesByLevel={faculty.facultyCoursesByLevel} onQuizStart={setSelectedMaterialForQuiz} />
                                         </Collapsible>
                                     )}
                                     {faculty.departments.map(dept => (
                                         <Collapsible key={dept.id} title={<span className="text-base">{dept.name}</span>}>
-                                            <CourseLevelGroup coursesByLevel={dept.coursesByLevel} />
+                                            <CourseLevelGroup coursesByLevel={dept.coursesByLevel} onQuizStart={setSelectedMaterialForQuiz} />
                                         </Collapsible>
                                     ))}
                                 </div>
@@ -244,6 +256,13 @@ const Academics: React.FC = () => {
             
             <StudyPlanner allCourses={allCoursesForPlanner} />
             <CourseCompanion allCourses={allCoursesForPlanner} />
+            
+            {selectedMaterialForQuiz && (
+                <MaterialQuizModal 
+                    material={selectedMaterialForQuiz} 
+                    onClose={() => setSelectedMaterialForQuiz(null)} 
+                />
+            )}
         </div>
     );
 };

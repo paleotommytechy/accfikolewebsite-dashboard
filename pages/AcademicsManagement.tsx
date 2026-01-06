@@ -4,20 +4,21 @@ import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserC
 import { useNotifier } from '../context/NotificationContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import { PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
+import { PlusIcon, PencilAltIcon, TrashIcon, CheckIcon, XIcon, ExternalLinkIcon } from '../components/ui/Icons';
 import Avatar from '../components/auth/Avatar';
+import { useAppContext } from '../context/AppContext';
 
-type Tab = 'Faculties' | 'Departments' | 'Courses' | 'Materials' | 'Borrowed Courses' | 'User Materials';
+type Tab = 'Pending Uploads' | 'Faculties' | 'Departments' | 'Courses' | 'Materials' | 'Borrowed Courses' | 'User Materials';
 
 const AcademicsManagement: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<Tab>('Faculties');
+    const [activeTab, setActiveTab] = useState<Tab>('Pending Uploads');
     
     return (
         <div className="space-y-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Academics Management</h1>
             <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-4 sm:space-x-6 overflow-x-auto" aria-label="Tabs">
-                    {(['Faculties', 'Departments', 'Courses', 'Materials', 'Borrowed Courses', 'User Materials'] as Tab[]).map(tab => (
+                    {(['Pending Uploads', 'Faculties', 'Departments', 'Courses', 'Materials', 'Borrowed Courses', 'User Materials'] as Tab[]).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -34,6 +35,7 @@ const AcademicsManagement: React.FC = () => {
             </div>
             
             <div>
+                {activeTab === 'Pending Uploads' && <PendingUploadsManager />}
                 {activeTab === 'Faculties' && <FacultiesManager />}
                 {activeTab === 'Departments' && <DepartmentsManager />}
                 {activeTab === 'Courses' && <CoursesManager />}
@@ -42,6 +44,216 @@ const AcademicsManagement: React.FC = () => {
                 {activeTab === 'User Materials' && <UserMaterialsManager />}
             </div>
         </div>
+    );
+};
+
+// --- NEW: Pending Uploads Manager with Edit Capability ---
+const PendingUploadsManager: React.FC = () => {
+    const { currentUser } = useAppContext();
+    const { addToast } = useNotifier();
+    const [uploads, setUploads] = useState<(UserCourseMaterial & { profiles: { full_name: string, avatar_url: string } })[]>([]);
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [processingId, setProcessingId] = useState<string | null>(null);
+    
+    // Edit state
+    const [editingUploadId, setEditingUploadId] = useState<string | null>(null);
+    const [editedCourseId, setEditedCourseId] = useState<string>('');
+    const [editedTitle, setEditedTitle] = useState<string>('');
+
+    const fetchPending = useCallback(async () => {
+        if (!supabase) return;
+        setLoading(true);
+        // Fetch uploads
+        const { data: uploadsData, error: uploadsError } = await supabase
+            .from('user_course_materials')
+            .select('*, profiles:uploader_id(full_name, avatar_url), courses:course_id(code, name)')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
+
+        if (uploadsError) addToast(uploadsError.message, 'error');
+        else setUploads(uploadsData as any || []);
+        
+        // Fetch courses for dropdown
+        const { data: coursesData } = await supabase.from('courses').select('id, code, name').order('code');
+        if (coursesData) setCourses(coursesData);
+
+        setLoading(false);
+    }, [addToast]);
+
+    useEffect(() => { fetchPending(); }, [fetchPending]);
+
+    const startEditing = (upload: UserCourseMaterial) => {
+        setEditingUploadId(upload.id);
+        setEditedCourseId(upload.course_id || '');
+        setEditedTitle(upload.title);
+    };
+
+    const cancelEditing = () => {
+        setEditingUploadId(null);
+        setEditedCourseId('');
+        setEditedTitle('');
+    };
+
+    const handleSaveEdit = async (uploadId: string) => {
+        if (!supabase) return;
+        if (!editedCourseId) {
+            addToast('Please select a valid course code.', 'error');
+            return;
+        }
+        
+        const { error } = await supabase
+            .from('user_course_materials')
+            .update({ 
+                course_id: editedCourseId, 
+                title: editedTitle,
+                suggested_course_code: null // Clear suggestion as it's mapped now
+            })
+            .eq('id', uploadId);
+
+        if (error) {
+            addToast('Error updating upload: ' + error.message, 'error');
+        } else {
+            addToast('Details updated. You can now approve.', 'success');
+            cancelEditing();
+            fetchPending();
+        }
+    };
+
+    const handleApprove = async (upload: UserCourseMaterial) => {
+        if (!supabase || !currentUser) return;
+        
+        if (!upload.course_id) {
+            addToast('Cannot approve. Please click "Edit Details" to map this to a valid Course Code first.', 'error');
+            return;
+        }
+
+        setProcessingId(upload.id);
+        const reward = upload.material_type === 'past_question' ? 50 : 100;
+
+        try {
+            const { error } = await supabase.rpc('approve_material_upload', {
+                p_material_id: upload.id,
+                p_admin_id: currentUser.id,
+                p_coin_reward: reward
+            });
+
+            if (error) throw error;
+
+            addToast('Upload approved and coins awarded!', 'success');
+            fetchPending();
+        } catch (error: any) {
+            addToast('Approval failed: ' + error.message, 'error');
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleReject = async (id: string) => {
+        if (!supabase) return;
+        setProcessingId(id);
+        const { error } = await supabase
+            .from('user_course_materials')
+            .update({ status: 'rejected' })
+            .eq('id', id);
+
+        if (error) addToast(error.message, 'error');
+        else {
+            addToast('Upload rejected.', 'info');
+            fetchPending();
+        }
+        setProcessingId(null);
+    };
+
+    return (
+        <Card title="Pending Material Approvals">
+            {loading ? <p>Loading pending uploads...</p> : uploads.length === 0 ? <p className="text-center py-8 text-gray-500">No pending uploads.</p> : (
+                <ul className="space-y-4">
+                    {uploads.map(item => {
+                        const isEditing = editingUploadId === item.id;
+                        const displayCourseCode = item.courses?.code || item.suggested_course_code || 'Unknown';
+                        
+                        return (
+                            <li key={item.id} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
+                                {isEditing ? (
+                                    <div className="space-y-3">
+                                        <h4 className="font-bold text-gray-800 dark:text-white">Edit Details</h4>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                                value={editedTitle}
+                                                onChange={e => setEditedTitle(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-500 mb-1">Map to Course (Required)</label>
+                                            <select 
+                                                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                                value={editedCourseId}
+                                                onChange={e => setEditedCourseId(e.target.value)}
+                                            >
+                                                <option value="">Select a course...</option>
+                                                {courses.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
+                                                ))}
+                                            </select>
+                                            {item.suggested_course_code && <p className="text-xs text-orange-500 mt-1">User suggested: {item.suggested_course_code}</p>}
+                                        </div>
+                                        <div className="flex gap-2 justify-end">
+                                            <Button size="sm" variant="ghost" onClick={cancelEditing}>Cancel</Button>
+                                            <Button size="sm" onClick={() => handleSaveEdit(item.id)}>Save Changes</Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className={`px-2 py-0.5 text-xs font-bold rounded capitalize ${item.material_type === 'past_question' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                                    {item.material_type.replace('_', ' ')}
+                                                </span>
+                                                <span className="text-xs text-gray-500">{new Date(item.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                            <h4 className="font-bold text-lg">{item.title}</h4>
+                                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                                                Code: <span className={!item.course_id ? "text-red-500 font-bold" : ""}>{displayCourseCode}</span> 
+                                                {!item.course_id && " (Not Linked)"} | Session: {item.academic_session || 'N/A'}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+                                                <Avatar src={item.profiles.avatar_url} alt="" size="sm" />
+                                                <span>Uploaded by {item.profiles.full_name}</span>
+                                            </div>
+                                            <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary-600 hover:underline mt-2 text-sm">
+                                                <ExternalLinkIcon className="w-4 h-4" /> View File
+                                            </a>
+                                        </div>
+                                        <div className="flex flex-col gap-2 justify-center">
+                                            {!item.course_id && (
+                                                <div className="text-xs text-red-500 text-center mb-1">
+                                                    ⚠️ Map to course to approve
+                                                </div>
+                                            )}
+                                            <div className="flex flex-row sm:flex-col gap-2 justify-center">
+                                                <Button size="sm" variant="outline" onClick={() => startEditing(item)}>
+                                                    <PencilAltIcon className="w-4 h-4 mr-1" /> Edit Details
+                                                </Button>
+                                                <Button size="sm" onClick={() => handleApprove(item)} disabled={processingId === item.id || !item.course_id}>
+                                                    <CheckIcon className="w-4 h-4 mr-1" /> Approve (+{item.material_type === 'past_question' ? 50 : 100})
+                                                </Button>
+                                                <Button size="sm" variant="secondary" onClick={() => handleReject(item.id)} disabled={processingId === item.id} className="text-red-600 hover:bg-red-50">
+                                                    <XIcon className="w-4 h-4 mr-1" /> Reject
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </Card>
     );
 };
 
@@ -433,9 +645,11 @@ const UserMaterialsManager: React.FC = () => {
 
     const fetchMaterials = useCallback(async () => {
         if (!supabase) return;
+        // Fetch approved materials only for this view
         const { data, error } = await supabase
             .from('user_course_materials')
             .select('*, courses(code, name), profiles(full_name, avatar_url)')
+            .eq('status', 'approved') 
             .order('created_at', { ascending: false });
         if (error) addToast(error.message, 'error');
         else setMaterials(data as any || []);
@@ -447,10 +661,10 @@ const UserMaterialsManager: React.FC = () => {
         showConfirm(`Are you sure you want to delete "${material.title}"? This will also remove the file from storage.`, async () => {
             if (!supabase) return;
             // 1. Delete from storage
-            const { error: storageError } = await supabase.storage.from('course_materials').remove([material.file_path]);
+            const { error: storageError } = await supabase.storage.from('academic_uploads').remove([material.file_path]);
             if (storageError) {
-                addToast('Could not delete file from storage: ' + storageError.message, 'error');
-                // We can choose to continue or stop. Let's continue to delete DB record.
+                // If it fails (maybe file missing), log but try to delete record anyway
+                console.warn('Could not delete file from storage: ', storageError.message);
             }
             // 2. Delete from database
             const { error: dbError } = await supabase.from('user_course_materials').delete().eq('id', material.id);
@@ -463,7 +677,7 @@ const UserMaterialsManager: React.FC = () => {
     };
 
     return (
-        <Card title="User-Uploaded Materials">
+        <Card title="Approved Community Materials">
             {materials.length > 0 ? (
                 <ul className="space-y-2">
                     {materials.map(item => (
@@ -471,7 +685,7 @@ const UserMaterialsManager: React.FC = () => {
                             <div className="flex-grow w-full min-w-0">
                                 <p className="font-semibold text-gray-800 dark:text-white truncate">{item.title}</p>
                                 <p className="text-sm text-gray-500 truncate">
-                                    For: {item.courses.code || 'N/A'} | Uploaded by: {item.profiles.full_name || '...'}
+                                    {item.material_type} | For: {item.courses?.code || 'N/A'} | Uploaded by: {item.profiles?.full_name || '...'}
                                 </p>
                             </div>
                             <div className="flex-shrink-0 w-full md:w-auto flex items-center justify-end gap-2">
@@ -482,7 +696,7 @@ const UserMaterialsManager: React.FC = () => {
                         </li>
                     ))}
                 </ul>
-            ) : <p className="text-center text-gray-500 py-4">No community materials uploaded yet.</p>}
+            ) : <p className="text-center text-gray-500 py-4">No approved community materials yet.</p>}
         </Card>
     );
 };

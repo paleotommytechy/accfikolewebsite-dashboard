@@ -42,6 +42,7 @@ import FinancialManagement from './pages/FinancialManagement';
 import Help from './pages/Help';
 import UpdatePassword from './pages/UpdatePassword';
 import Sponsorships from './pages/Sponsorships';
+import GameCenter from './pages/GameCenter';
 
 
 // --- SUSPENSE FALLBACK LOADER ---
@@ -169,6 +170,7 @@ function App(): React.ReactNode {
                 <Route path="/giving" element={<Giving />} />
                 <Route path="/sponsorships" element={<Sponsorships />} />
                 <Route path="/help" element={<Help />} />
+                <Route path="/game" element={<GameCenter />} />
                 
                 {/* Redirect from root and any other unmatched protected route to dashboard */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />

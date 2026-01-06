@@ -66,7 +66,8 @@ export interface WeeklyParticipant {
 export interface CoinTransaction {
   id: number;
   user_id: string;
-  source_type: 'task' | 'challenge' | 'admin_adjustment' | 'quiz' | 'onboarding';
+  // Updated source_type to include 'store_purchase'
+  source_type: 'task' | 'challenge' | 'admin_adjustment' | 'quiz' | 'onboarding' | 'store_purchase';
   source_id: string;
   coin_amount: number;
   status: 'pending' | 'approved' | 'rejected';
@@ -137,6 +138,19 @@ export interface StoreItem {
   description: string;
   cost: number;
   icon: string;
+}
+
+// --- NEW: Store Purchase ---
+export interface StorePurchase {
+    id: string;
+    user_id: string;
+    item_id: string;
+    item_name: string;
+    cost: number;
+    status: 'pending' | 'fulfilled' | 'rejected';
+    purchase_metadata: { phoneNumber?: string; network?: string; } | null;
+    created_at: string;
+    profiles?: Pick<UserProfile, 'full_name' | 'avatar_url' | 'whatsapp'>;
 }
 
 export interface Scripture {
@@ -276,13 +290,19 @@ export interface CourseMaterial {
 export interface UserCourseMaterial {
   id: string;
   uploader_id: string;
-  course_id: string;
+  course_id: string | null; 
+  suggested_course_code?: string;
   title: string;
   file_url: string;
   file_path: string;
   description: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  material_type: 'past_question' | 'lecture_note' | 'textbook' | 'other';
+  academic_session?: string;
+  admin_feedback?: string;
   created_at: string;
   profiles?: Pick<UserProfile, 'full_name' | 'avatar_url'>; // For uploader details
+  courses?: Pick<Course, 'name' | 'code'>;
 }
 
 export interface CourseBorrower {
@@ -328,6 +348,30 @@ export interface QuizAttempt {
     quiz_id: string;
     score: number;
     passed: boolean;
+    created_at: string;
+}
+
+// --- NEW: Strategy 3 - Material Quizzes ---
+export interface MaterialQuiz {
+    id: string;
+    material_id: string;
+    created_at: string;
+}
+
+export interface MaterialQuizQuestion {
+    id: string;
+    quiz_id: string;
+    question_text: string;
+    options: string[];
+    correct_option_index: number;
+}
+
+export interface MaterialQuizAttempt {
+    id: string;
+    quiz_id: string;
+    user_id: string;
+    score: number;
+    total_questions: number;
     created_at: string;
 }
 

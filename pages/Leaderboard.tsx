@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Avatar from '../components/auth/Avatar';
 import { supabase } from '../lib/supabaseClient';
 import { useAppContext } from '../context/AppContext';
 import type { UserProfile } from '../types';
-import { CrownIcon } from '../components/ui/Icons';
+import { CrownIcon, UsersIcon, SparklesIcon, TrendingUpIcon } from '../components/ui/Icons';
 
 interface PodiumItemProps {
-  user: Partial<UserProfile>;
+  user: { full_name: string | null; avatar_url: string | null; score: number };
   rank: 1 | 2 | 3;
+  metricLabel: string;
 }
 
-const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
+const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank, metricLabel }) => {
   const styles: { [key in 1 | 2 | 3]: {
       podiumHeight: string;
       bgColor: string;
@@ -72,7 +73,7 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
         <Avatar src={user.avatar_url} alt={user.full_name || ''} className={`border-4 ${borderColor} shadow-lg ${avatarSize}`} />
       </div>
       <h3 className="font-bold text-center text-sm md:text-base truncate w-full px-1">{user.full_name}</h3>
-      <p className="text-yellow-500 dark:text-yellow-400 font-semibold text-xs md:text-sm">{user.coins} coins</p>
+      <p className="text-yellow-500 dark:text-yellow-400 font-semibold text-xs md:text-sm">{user.score} {metricLabel}</p>
       <div className={`mt-2 w-full ${podiumHeight} ${bgColor} rounded-t-lg flex items-center justify-center`}>
         <span className={`${rankTextSize} font-black ${textColor}`}>{rank}</span>
       </div>
@@ -80,31 +81,79 @@ const PodiumItem: React.FC<PodiumItemProps> = ({ user, rank }) => {
   );
 };
 
+// Generic Leaderboard Entry Type
+interface LeaderboardEntry {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    score: number;
+    subtext?: string;
+}
 
 const Leaderboard: React.FC = () => {
   const { currentUser } = useAppContext();
-  const [leaderboard, setLeaderboard] = useState<Partial<UserProfile>[]>([]);
+  const [activeTab, setActiveTab] = useState<'overall' | 'giants' | 'pillars'>('overall');
+  const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
       if (!supabase) return;
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, coins, level')
-        .order('coins', { ascending: false })
-        .limit(50);
       
-      if(error) console.error('Error fetching leaderboard:', error);
-      else setLeaderboard(data || []);
+      let fetchedData: LeaderboardEntry[] = [];
+
+      if (activeTab === 'overall') {
+          const { data: profiles, error } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, coins, level')
+            .order('coins', { ascending: false })
+            .limit(50);
+          
+          if (!error && profiles) {
+              fetchedData = profiles.map(p => ({
+                  id: p.id,
+                  full_name: p.full_name,
+                  avatar_url: p.avatar_url,
+                  score: p.coins,
+                  subtext: `Level ${p.level}`
+              }));
+          }
+      } else if (activeTab === 'pillars') {
+          // Using RPC for pillars (upload counts)
+          const { data: pillars, error } = await supabase.rpc('get_community_pillars_leaderboard');
+          if (!error && pillars) {
+              fetchedData = pillars.map((p: any) => ({
+                  id: p.user_id,
+                  full_name: p.full_name,
+                  avatar_url: p.avatar_url,
+                  score: p.upload_count,
+                  subtext: 'uploads'
+              }));
+          }
+      } else if (activeTab === 'giants') {
+          // Using RPC for giants (quiz scores)
+          const { data: giants, error } = await supabase.rpc('get_academic_giants_leaderboard');
+          if (!error && giants) {
+              fetchedData = giants.map((g: any) => ({
+                  id: g.user_id,
+                  full_name: g.full_name,
+                  avatar_url: g.avatar_url,
+                  score: g.total_score, // This RPC should return total correct answers
+                  subtext: `${g.quizzes_taken} quizzes`
+              }));
+          }
+      }
+
+      setData(fetchedData);
       setLoading(false);
-    };
+  }, [activeTab]);
+
+  useEffect(() => {
     fetchLeaderboard();
-  }, []);
+  }, [fetchLeaderboard]);
   
-  const topThree = leaderboard.slice(0, 3);
-  const restOfLeaderboard = leaderboard.slice(3);
+  const topThree = data.slice(0, 3);
+  const restOfLeaderboard = data.slice(3);
 
   const mobileRankStyles: { [key: number]: { bg: string; text: string; border: string; crown?: boolean } } = {
     1: { 
@@ -125,27 +174,48 @@ const Leaderboard: React.FC = () => {
     },
   };
 
-  if (loading) {
-      return (
+  const metricLabel = activeTab === 'overall' ? 'coins' : activeTab === 'pillars' ? 'uploads' : 'points';
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Leaderboard</h1>
+      
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('overall')}
+              className={`${activeTab === 'overall' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+            >
+              <TrendingUpIcon className="w-5 h-5"/> Overall
+            </button>
+            <button
+              onClick={() => setActiveTab('giants')}
+              className={`${activeTab === 'giants' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+            >
+              <SparklesIcon className="w-5 h-5"/> Academic Giants
+            </button>
+            <button
+              onClick={() => setActiveTab('pillars')}
+              className={`${activeTab === 'pillars' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+            >
+              <UsersIcon className="w-5 h-5"/> Community Pillars
+            </button>
+          </nav>
+      </div>
+
+      {loading ? (
         <div className="space-y-8 animate-pulse">
-            <div className="h-10 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div>
             <div className="h-64 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
             <div className="h-96 bg-gray-300 dark:bg-gray-700 rounded-lg"></div>
         </div>
-      );
-  }
-
-  return (
-    <div className="space-y-8">
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Leaderboard</h1>
-      
-      {leaderboard.length > 0 && (
+      ) : data.length > 0 ? (
         <Card className="!p-0 overflow-hidden">
             {/* --- DESKTOP PODIUM --- */}
             <div className="hidden sm:flex justify-center items-end gap-1 px-1 pt-6 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-secondary dark:to-gray-800 min-h-[320px] md:min-h-[350px]">
-                {topThree[1] && <PodiumItem user={topThree[1]} rank={2} />}
-                {topThree[0] && <PodiumItem user={topThree[0]} rank={1} />}
-                {topThree[2] && <PodiumItem user={topThree[2]} rank={3} />}
+                {topThree[1] && <PodiumItem user={topThree[1]} rank={2} metricLabel={metricLabel} />}
+                {topThree[0] && <PodiumItem user={topThree[0]} rank={1} metricLabel={metricLabel} />}
+                {topThree[2] && <PodiumItem user={topThree[2]} rank={3} metricLabel={metricLabel} />}
             </div>
             
             {/* --- MOBILE PODIUM --- */}
@@ -170,63 +240,64 @@ const Leaderboard: React.FC = () => {
                             </div>
                             <div className="text-right flex-shrink-0">
                                 <p className="font-bold text-yellow-600 dark:text-yellow-500">
-                                    {user.coins}
+                                    {user.score}
                                 </p>
-                                <p className="text-xs text-gray-500">coins</p>
+                                <p className="text-xs text-gray-500">{metricLabel}</p>
                             </div>
                         </div>
                     );
                 })}
             </div>
         </Card>
+      ) : (
+          <div className="text-center p-8 text-gray-500">No data available for this leaderboard yet.</div>
       )}
 
-      <Card title="All Rankings">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
-                <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Level</th>
-                <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coins</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
-              {restOfLeaderboard.map((person, index) => (
-                <tr key={person.id} className={`${person.id === currentUser?.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors`}>
-                  <td className="px-2 sm:px-3 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-500">{index + 4}</div>
-                  </td>
-                  <td className="px-2 sm:px-3 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <Avatar src={person.avatar_url} alt={person.full_name || ''} size="sm" />
-                      </div>
-                      <div className="ml-2 sm:ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {person.full_name}
+      {restOfLeaderboard.length > 0 && (
+          <Card title="All Rankings">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                    <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Player</th>
+                    <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Details</th>
+                    <th scope="col" className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{metricLabel}</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-dark divide-y divide-gray-200 dark:divide-gray-700">
+                  {restOfLeaderboard.map((person, index) => (
+                    <tr key={person.id} className={`${person.id === currentUser?.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''} hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors`}>
+                      <td className="px-2 sm:px-3 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-gray-500">{index + 4}</div>
+                      </td>
+                      <td className="px-2 sm:px-3 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0">
+                            <Avatar src={person.avatar_url} alt={person.full_name || ''} size="sm" />
+                          </div>
+                          <div className="ml-2 sm:ml-4">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {person.full_name}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-3 py-4 whitespace-nowrap hidden sm:table-cell">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
-                        Level {person.level}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-3 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                    {person.coins}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {leaderboard.length === 0 && (
-          <p className="text-center p-4 text-gray-500">The leaderboard is still being calculated. Check back soon!</p>
-        )}
-      </Card>
+                      </td>
+                      <td className="px-2 sm:px-3 py-4 whitespace-nowrap hidden sm:table-cell">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                            {person.subtext}
+                        </span>
+                      </td>
+                      <td className="px-2 sm:px-3 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                        {person.score}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+      )}
     </div>
   );
 };

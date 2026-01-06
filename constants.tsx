@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon, PencilAltIcon, CameraIcon, ArchiveIcon, MusicNoteIcon, QuestionMarkCircleIcon } from './components/ui/Icons';
+import { HomeIcon, UserIcon, ClipboardListIcon, TrendingUpIcon, CalendarIcon, ChatIcon, ChartBarIcon, ShoppingCartIcon, CodeIcon, UsersIcon, BellIcon, GiftIcon, HeartIcon, SparklesIcon, BookOpenIcon, PencilAltIcon, CameraIcon, ArchiveIcon, MusicNoteIcon, QuestionMarkCircleIcon, FireIcon } from './components/ui/Icons';
 
 export const NAV_LINKS = [
   { name: 'Dashboard', href: '/dashboard', icon: <HomeIcon /> },
@@ -8,6 +8,7 @@ export const NAV_LINKS = [
   { name: 'Fellowship Blog', href: '/blog', icon: <BookOpenIcon /> },
   { name: 'Hymns', href: '/hymns', icon: <MusicNoteIcon /> },
   { name: 'Tasks & Challenges', href: '/tasks', icon: <ClipboardListIcon /> },
+  { name: 'Game Center', href: '/game', icon: <FireIcon /> },
   { name: 'Leaderboard', href: '/leaderboard', icon: <TrendingUpIcon /> },
   { name: 'Events', href: '/events', icon: <CalendarIcon /> },
   { name: 'Gallery', href: '/gallery', icon: <CameraIcon /> },
