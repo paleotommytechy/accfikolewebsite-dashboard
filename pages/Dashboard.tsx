@@ -458,7 +458,7 @@ const UploadCtaCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => (
                 <p className="text-primary-100 text-sm mt-1">Got Past Questions? Upload them to earn 50 coins. Notes earn 100 coins!</p>
             </div>
         </div>
-        <Button onClick={onOpen} className="bg-white text-primary-700 hover:bg-primary-50 font-bold whitespace-nowrap">
+        <Button onClick={onOpen} className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-700 font-bold whitespace-nowrap">
             Upload Material
         </Button>
     </div>
@@ -499,7 +499,7 @@ const ExamPrepCard: React.FC<{ materials: UserCourseMaterial[], onQuiz: (materia
 };
 
 const GameCenterPromoCard: React.FC = () => (
-    <Card className="bg-gradient-to-r from-orange-500 to-red-600 text-white animate-fade-in-up border-none overflow-hidden relative">
+    <Card className="bg-primary-600 text-white animate-fade-in-up border-none overflow-hidden relative">
         <div className="absolute top-0 right-0 p-4 opacity-10">
             <FireIcon className="w-32 h-32 text-white transform rotate-12" />
         </div>
@@ -510,10 +510,10 @@ const GameCenterPromoCard: React.FC = () => (
                 </div>
                 <h3 className="text-xl font-bold">Game Center</h3>
             </div>
-            <p className="text-sm text-orange-100 font-medium">
+            <p className="text-sm text-primary-100 font-medium">
                 Level up your dopamine feeling! Perfect for celebrating after you score more than 3/5 in a Genius Quiz.
             </p>
-            <Button to="/game" className="w-full bg-white text-orange-600 hover:bg-orange-50 font-bold border-none mt-2 shadow-lg">
+            <Button to="/game" className="w-full bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 font-bold mt-2 shadow-lg">
                 Play Spirit Blitz
             </Button>
         </div>

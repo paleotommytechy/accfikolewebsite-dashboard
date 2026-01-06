@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import type { Donation, StorePurchase } from '../types';
+import type { Donation, StorePurchase, StoreItem } from '../types';
 import Avatar from '../components/auth/Avatar';
-import { ChatIcon, CheckCircleIcon, XCircleIcon, ShoppingCartIcon, WifiIcon } from '../components/ui/Icons';
+import { ChatIcon, CheckCircleIcon, XCircleIcon, ShoppingCartIcon, WifiIcon, PlusIcon, PencilAltIcon, TrashIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
+
+const AutoSaveField = lazy(() => import('../components/ui/AutoSaveField'));
+const InputLoadingSkeleton = () => <div className="w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md animate-pulse"></div>;
 
 const FinancialManagement: React.FC = () => {
     const { currentUser } = useAppContext();
@@ -15,7 +19,7 @@ const FinancialManagement: React.FC = () => {
     // Donation State
     const [donations, setDonations] = useState<Donation[]>([]);
     const [loadingDonations, setLoadingDonations] = useState(true);
-    const [activeTab, setActiveTab] = useState<'donations' | 'redemptions'>('donations');
+    const [activeTab, setActiveTab] = useState<'donations' | 'redemptions' | 'items'>('donations');
     
     // Store Redemptions State
     const [redemptions, setRedemptions] = useState<StorePurchase[]>([]);
@@ -56,7 +60,7 @@ const FinancialManagement: React.FC = () => {
 
     useEffect(() => {
         if (activeTab === 'donations') fetchDonations();
-        else fetchRedemptions();
+        else if (activeTab === 'redemptions') fetchRedemptions();
     }, [activeTab, fetchDonations, fetchRedemptions]);
 
     // --- Real-time Subscription ---
@@ -139,24 +143,30 @@ const FinancialManagement: React.FC = () => {
          <div className="space-y-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Financial Management</h1>
             
-            <div className="border-b dark:border-gray-700">
+            <div className="border-b dark:border-gray-700 overflow-x-auto">
                 <nav className="-mb-px flex space-x-6">
                     <button
                         onClick={() => setActiveTab('donations')}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'donations' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'donations' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                     >
                         Donations
                     </button>
                     <button
                         onClick={() => setActiveTab('redemptions')}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'redemptions' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'redemptions' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                     >
                         Store Redemptions
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('items')}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === 'items' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    >
+                        Manage Store Items
                     </button>
                 </nav>
             </div>
 
-            {activeTab === 'donations' ? (
+            {activeTab === 'donations' && (
                 <Card title="Donation Tracking">
                     {loadingDonations ? <p>Loading...</p> : donations.length === 0 ? <p className="text-gray-500">No donations found.</p> : (
                         <ul className="space-y-3">
@@ -186,7 +196,9 @@ const FinancialManagement: React.FC = () => {
                         </ul>
                     )}
                 </Card>
-            ) : (
+            )}
+
+            {activeTab === 'redemptions' && (
                 <Card title="Store Redemptions">
                     {loadingRedemptions ? <p>Loading...</p> : redemptions.length === 0 ? <p className="text-gray-500">No requests found.</p> : (
                         <ul className="space-y-3">
@@ -236,7 +248,166 @@ const FinancialManagement: React.FC = () => {
                     )}
                 </Card>
             )}
+
+            {activeTab === 'items' && <StoreItemsManager />}
         </div>
+    );
+};
+
+// --- Store Items Manager Component ---
+const StoreItemsManager: React.FC = () => {
+    const { addToast, showConfirm } = useNotifier();
+    const [items, setItems] = useState<StoreItem[]>([]);
+    const [editing, setEditing] = useState<Partial<StoreItem> | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    const fetchItems = useCallback(async () => {
+        if (!supabase) return;
+        setLoading(true);
+        const { data, error } = await supabase.from('store_items').select('*').order('cost', { ascending: true });
+        if (error) {
+            console.error("Error fetching items:", error);
+            // Don't toast here as table might not exist yet during migration
+        } else {
+            setItems(data || []);
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        fetchItems();
+    }, [fetchItems]);
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!supabase || !editing || !editing.name || !editing.cost) return;
+
+        const { error } = await supabase.from('store_items').upsert(editing);
+        if (error) {
+            addToast('Error saving item: ' + error.message, 'error');
+        } else {
+            addToast(`Item ${editing.id ? 'updated' : 'created'} successfully!`, 'success');
+            setEditing(null);
+            fetchItems();
+        }
+    };
+
+    const handleDelete = (id: string) => {
+        showConfirm('Are you sure you want to delete this item?', async () => {
+            if (!supabase) return;
+            const { error } = await supabase.from('store_items').delete().eq('id', id);
+            if (error) {
+                addToast('Error deleting item: ' + error.message, 'error');
+            } else {
+                addToast('Item deleted.', 'success');
+                fetchItems();
+            }
+        });
+    };
+
+    return (
+        <Card title="Manage Store Inventory">
+            <div className="space-y-4">
+                {editing ? (
+                    <form onSubmit={handleSave} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-fade-in-up">
+                        <h3 className="font-bold mb-4">{editing.id ? 'Edit Item' : 'Add New Item'}</h3>
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Item Name</label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                        value={editing.name || ''} 
+                                        onChange={e => setEditing(p => ({ ...p, name: e.target.value }))}
+                                        required 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Cost (Coins)</label>
+                                    <input 
+                                        type="number" 
+                                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                        value={editing.cost || 0} 
+                                        onChange={e => setEditing(p => ({ ...p, cost: parseInt(e.target.value) }))}
+                                        required 
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <textarea 
+                                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                    rows={2}
+                                    value={editing.description || ''} 
+                                    onChange={e => setEditing(p => ({ ...p, description: e.target.value }))}
+                                    required 
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Icon Type</label>
+                                    <select 
+                                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                        value={editing.icon || 'shopping-cart'} 
+                                        onChange={e => setEditing(p => ({ ...p, icon: e.target.value }))}
+                                    >
+                                        <option value="shopping-cart">General (Cart)</option>
+                                        <option value="wifi">Data Bundle (Wifi)</option>
+                                        <option value="coffee">Coffee</option>
+                                        <option value="shirt">Merch/Shirt</option>
+                                        <option value="book">Book</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2 mt-6">
+                                    <input 
+                                        type="checkbox" 
+                                        id="isActive"
+                                        checked={editing.is_active ?? true}
+                                        onChange={e => setEditing(p => ({ ...p, is_active: e.target.checked }))}
+                                        className="h-4 w-4 rounded text-primary-600"
+                                    />
+                                    <label htmlFor="isActive" className="text-sm">Is Active (Visible in Store)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                            <Button type="submit">Save Item</Button>
+                        </div>
+                    </form>
+                ) : (
+                    <Button onClick={() => setEditing({ icon: 'shopping-cart', cost: 100, is_active: true })}>
+                        <PlusIcon className="w-5 h-5 mr-2" /> Add New Item
+                    </Button>
+                )}
+
+                {loading ? <p>Loading inventory...</p> : items.length === 0 && !editing ? <p className="text-gray-500 py-4">No items found.</p> : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {items.map(item => (
+                            <div key={item.id} className={`p-4 rounded-lg border ${item.is_active ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 'bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-800 opacity-75'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`p-2 rounded-full ${item.icon === 'wifi' ? 'bg-yellow-100 text-yellow-600' : 'bg-primary-100 text-primary-600'}`}>
+                                            {item.icon === 'wifi' ? <WifiIcon className="w-5 h-5"/> : <ShoppingCartIcon className="w-5 h-5"/>}
+                                        </div>
+                                        <h4 className="font-bold">{item.name}</h4>
+                                    </div>
+                                    <span className="font-bold text-yellow-600">{item.cost}</span>
+                                </div>
+                                <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
+                                <div className="flex justify-end gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => setEditing(item)}><PencilAltIcon className="w-4 h-4"/></Button>
+                                    <Button size="sm" variant="secondary" onClick={() => handleDelete(item.id)}><TrashIcon className="w-4 h-4"/></Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </Card>
     );
 };
 
