@@ -1,4 +1,4 @@
-// This is a new file: api/course-companion.ts
+
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req: any, res: any) {
@@ -14,9 +14,9 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'User prompt is required.' });
     }
 
-    const apiKey = process.env.API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("API_KEY environment variable is not set on the server.");
+      console.error("GEMINI_API_KEY is not set in environment variables");
       return res.status(500).json({ message: 'AI service is not configured.' });
     }
     

@@ -1,4 +1,4 @@
-// This is a new file: api/generate-image.ts
+
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req: any, res: any) {
@@ -14,10 +14,9 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'Prompt is required in the request body.' });
     }
 
-    const apiKey = process.env.API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      // This error is for the server logs, not for the user to see the key is missing.
-      console.error("API_KEY environment variable is not set on the server.");
+      console.error("GEMINI_API_KEY is not set in environment variables");
       return res.status(500).json({ message: 'Image generation service is not configured.' });
     }
     
@@ -36,10 +35,7 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error('Error in generate-image API route:', error);
-    // Avoid sending detailed internal errors to the client
-    const errorMessage = error.message.includes('API key') 
-      ? 'An error occurred with the image generation service.'
-      : error.message;
-    return res.status(500).json({ message: errorMessage || 'Internal Server Error' });
+    const errorMessage = error.message || 'Internal Server Error';
+    return res.status(500).json({ message: errorMessage });
   }
 }

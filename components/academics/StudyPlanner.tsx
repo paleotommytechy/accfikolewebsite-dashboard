@@ -1,3 +1,4 @@
+
 // This is a new file: components/academics/StudyPlanner.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { BookOpenIcon, XIcon, SendIcon, SparklesIcon } from '../ui/Icons';
@@ -71,7 +72,24 @@ const StudyPlanner: React.FC<StudyPlannerProps> = ({ allCourses }) => {
             setMessages(prev => [...prev, { sender: 'ai', text: plan }]);
 
         } catch (error: any) {
-            setMessages(prev => [...prev, { sender: 'ai', text: `Sorry, I encountered an error: ${error.message}` }]);
+            let msg = error.message || '';
+            // Handle specific Google API error for leaked keys or permission denied
+            if (msg.includes("leaked") || msg.includes("PERMISSION_DENIED") || msg.includes("403")) {
+                msg = "The AI service is temporarily unavailable due to a configuration issue (API Key). Please contact the administrator.";
+            } else if (msg.includes('{"error":')) {
+                 // Try to clean up JSON error messages if they slip through
+                 try {
+                     const match = msg.match(/(\{.*\})/);
+                     if (match) {
+                         const json = JSON.parse(match[0]);
+                         if (json.error?.message) {
+                             msg = json.error.message;
+                             if (msg.includes("leaked")) msg = "AI Service Unavailable (Key Error).";
+                         }
+                     }
+                 } catch(e) {}
+            }
+            setMessages(prev => [...prev, { sender: 'ai', text: `Sorry, I encountered an error: ${msg}` }]);
         } finally {
             setIsLoading(false);
         }

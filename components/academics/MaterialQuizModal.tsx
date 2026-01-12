@@ -6,7 +6,6 @@ import { useNotifier } from '../../context/NotificationContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { XIcon, SparklesIcon, CheckCircleIcon, XCircleIcon, LightBulbIcon, PencilAltIcon, PaperclipIcon, ArrowLeftIcon, ArrowUpIcon, ClockIcon, FireIcon } from '../ui/Icons';
-import { GoogleGenAI, Type } from "@google/genai";
 import { UserCourseMaterial, MaterialQuizQuestion } from '../../types';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
@@ -168,14 +167,11 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
         setGeneratingTips(true);
         setLoadingStage('AI Thinking...');
         try {
-            const apiKey = process.env.API_KEY;
-            if (!apiKey) throw new Error("AI key missing");
-            const ai = new GoogleGenAI({ apiKey });
-
-            let prompt = '';
-            let contents: any;
-            
-            const topicFocus = customTopic ? `Focus specifically on: "${customTopic}".` : '';
+            let apiBody: any = { 
+                type: 'tips',
+                customTopic,
+                courseInfo: `${material.courses?.code || 'Course'} - ${material.title}`
+            };
 
             if (activeMode === 'manual') {
                 if(!manualText.trim()) {
@@ -183,29 +179,36 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
                     setGeneratingTips(false);
                     return;
                 }
-                prompt = `Role: Academic Coach. Context: ${material.courses?.code || 'Course'} - ${material.title}. ${topicFocus} Content: "${manualText.substring(0, 10000)}...". Task: Provide 3-5 high-impact study tips for an exam based on this content. Highlight pitfalls. Format: Markdown bullets.`;
-                contents = prompt;
+                apiBody.content = manualText.substring(0, 10000);
             } else {
                 const fileData = await getOptimizedFileBlob();
                 setLoadingStage('Generating Tips...');
-                prompt = `Role: Academic Coach. Context: ${material.courses?.code} - ${material.title}. ${topicFocus} Task: Analyze the first few pages of this document. Provide 3-5 specific study tips to pass an exam on this topic. Format: Markdown bullets.`;
-                contents = {
-                    parts: [
-                        { inlineData: fileData },
-                        { text: prompt }
-                    ]
-                };
+                apiBody.content = fileData.data;
+                apiBody.mimeType = fileData.mimeType;
             }
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: contents,
+            // Call Secure Endpoint
+            const response = await fetch('/api/generate-learning-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(apiBody)
             });
 
-            setTips(response.text || "No tips generated.");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to generate tips.");
+            }
+
+            const data = await response.json();
+            setTips(data.text || "No tips generated.");
+
         } catch (error: any) {
             console.error("Error generating tips:", error);
-            addToast("Could not generate tips. Try 'Paste Content' mode if the file is too large.", "error");
+            if (error.message?.includes("leaked") || error.message?.includes("PERMISSION_DENIED")) {
+                addToast("AI Service Unavailable: Configuration Error.", "error");
+            } else {
+                addToast("Could not generate tips. Try 'Paste Content' mode.", "error");
+            }
         } finally {
             setGeneratingTips(false);
             setLoadingStage('');
@@ -217,14 +220,11 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
         setGenerating(true);
         
         try {
-            const apiKey = process.env.API_KEY;
-            if (!apiKey) throw new Error("AI key missing");
-            const ai = new GoogleGenAI({ apiKey });
-
-            const topicFocus = customTopic ? `IMPORTANT: Focus the questions specifically on the topic: "${customTopic}".` : '';
-            const systemPrompt = `Role: Examiner. Task: Create 5 multiple-choice questions based on the provided content. ${topicFocus} Output: JSON Array only. Schema: [{question_text: string, options: string[], correct_option_index: number}].`;
-            
-            let contents: any;
+            let apiBody: any = { 
+                type: 'quiz',
+                customTopic,
+                courseInfo: `${material.courses?.code} - ${material.title}`
+            };
 
             if (activeMode === 'manual') {
                  if(!manualText.trim()) {
@@ -233,38 +233,29 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
                     return;
                 }
                 setLoadingStage('Generating Questions...');
-                contents = `${systemPrompt}\n\nContent:\n${manualText.substring(0, 15000)}`; // Text limit
+                apiBody.content = manualText.substring(0, 15000);
             } else {
                 const fileData = await getOptimizedFileBlob();
                 setLoadingStage('Analyzing & Generating...');
-                contents = {
-                    parts: [
-                        { inlineData: fileData },
-                        { text: systemPrompt }
-                    ]
-                };
+                apiBody.content = fileData.data;
+                apiBody.mimeType = fileData.mimeType;
             }
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: contents,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                question_text: { type: Type.STRING },
-                                options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                                correct_option_index: { type: Type.INTEGER }
-                            }
-                        }
-                    }
-                }
+            // Call Secure Endpoint
+            const response = await fetch('/api/generate-learning-content', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(apiBody)
             });
 
-            const generatedQuestions = JSON.parse(response.text || '[]');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to generate quiz.");
+            }
+
+            const data = await response.json();
+            const generatedQuestions = data.questions || [];
+
             if (generatedQuestions.length === 0) throw new Error("AI returned no questions.");
 
             // Save to DB
@@ -296,7 +287,11 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
 
         } catch (error: any) {
             console.error("Quiz generation error:", error);
-            addToast(`Generation failed. Try 'Paste Content' mode. Error: ${error.message}`, 'error');
+            if (error.message?.includes("leaked") || error.message?.includes("PERMISSION_DENIED")) {
+                addToast("Generation failed: Configuration Error.", "error");
+            } else {
+                addToast(`Generation failed. Try 'Paste Content' mode. Error: ${error.message}`, 'error');
+            }
         } finally {
             setGenerating(false);
             setLoadingStage('');
@@ -359,9 +354,7 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
 
     // Calculate percentage for dopamine button condition
     const scorePercentage = quizQuestions.length > 0 ? finalScore / quizQuestions.length : 0;
-    const showDopamineButton = scorePercentage > 0.6; // > 60% (e.g. 3/5 is 0.6, so > 0.6 is 4/5 or 5/5... wait, user said > 3/5. 4/5 is 0.8. Let's make it >= 0.6 to include 3/5 if that's the intent, or > 0.6 for strictly more than 3)
-    // "score more than 3/5" usually implies 4 or 5. 
-    // 3/5 = 60%. > 60% means 4/5 (80%) or 5/5 (100%).
+    const showDopamineButton = scorePercentage > 0.6; 
     
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-up">

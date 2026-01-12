@@ -1,3 +1,4 @@
+
 // This is a new file: components/academics/CourseCompanion.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatIcon, XIcon, SendIcon, CloudUploadIcon } from '../ui/Icons';
@@ -116,7 +117,12 @@ const CourseCompanion: React.FC<CourseCompanionProps> = ({ allCourses }) => {
             setMessages(prev => [...prev, { sender: 'ai', text: answer }]);
 
         } catch (error: any) {
-            setMessages(prev => [...prev, { sender: 'ai', text: `Sorry, I encountered an error: ${error.message}` }]);
+            let msg = error.message || '';
+            // Graceful handling for API key issues
+            if (msg.includes("leaked") || msg.includes("PERMISSION_DENIED")) {
+                msg = "The AI service is unavailable due to an API Key configuration issue (Key leaked/blocked). Please contact support.";
+            }
+            setMessages(prev => [...prev, { sender: 'ai', text: `Sorry, I encountered an error: ${msg}` }]);
         } finally {
             setIsLoading(false);
         }

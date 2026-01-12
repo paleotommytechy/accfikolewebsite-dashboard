@@ -11,7 +11,6 @@ import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture, OnboardingProgress, UserCourseMaterial } from '../types';
 // FIX: Import missing icons to resolve module export errors.
 import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon, CheckCircleIcon, CloudUploadIcon, SparklesIcon, BookOpenIcon } from '../components/ui/Icons';
-import { GoogleGenAI, Type } from "@google/genai";
 import UploadMaterialModal from '../components/academics/UploadMaterialModal';
 import MaterialQuizModal from '../components/academics/MaterialQuizModal';
 
@@ -106,30 +105,18 @@ const ScriptureOfTheDay: React.FC = () => {
                 setScripture(data);
                 setLoading(false);
             } else {
-                // 3. If not, generate a new one
+                // 3. If not, generate a new one via API
                 setGenerating(true);
                 setLoading(false);
 
                 try {
-                    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                    const response = await ai.models.generateContent({
-                        model: 'gemini-2.5-flash',
-                        contents: "Provide a single, inspiring and encouraging bible verse for a Christian fellowship dashboard. Your response must be only the JSON object, with no extra text or markdown.",
-                        config: {
-                            responseMimeType: "application/json",
-                            responseSchema: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    verse_reference: { type: Type.STRING, description: "The book, chapter, and verse (e.g., John 3:16)" },
-                                    verse_text: { type: Type.STRING, description: "The full text of the verse." },
-                                },
-                                required: ['verse_reference', 'verse_text']
-                            }
-                        }
-                    });
+                    const response = await fetch('/api/daily-scripture', { method: 'POST' });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch scripture');
+                    }
 
-                    const jsonStr = response.text.trim();
-                    const newScripture = JSON.parse(jsonStr);
+                    const newScripture = await response.json();
 
                     // 4. Save the generated scripture to the database for today
                     const { data: insertedData, error: insertError } = await supabase
@@ -198,6 +185,8 @@ const ScriptureOfTheDay: React.FC = () => {
         </Card>
     );
 };
+
+// ... (Rest of the file remains unchanged: DailyTasks, MyProgressCard, WeeklyChallengeCard, MiniLeaderboard, WebsiteCtaCard, UploadCtaCard, ExamPrepCard, GameCenterPromoCard, Dashboard main component)
 
 const DailyTasks: React.FC<{ tasks: TaskAssignment[] }> = ({ tasks }) => {
     const totalTasks = tasks.length;

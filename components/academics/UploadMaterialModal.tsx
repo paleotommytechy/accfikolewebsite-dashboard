@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAppContext } from '../../context/AppContext';
@@ -5,7 +6,6 @@ import { useNotifier } from '../../context/NotificationContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { CloudUploadIcon, XIcon, CheckCircleIcon, SparklesIcon } from '../ui/Icons';
-import { GoogleGenAI, Type } from "@google/genai";
 
 interface UploadMaterialModalProps {
     onClose: () => void;
@@ -76,10 +76,6 @@ const UploadMaterialModal: React.FC<UploadMaterialModalProps> = ({ onClose }) =>
     const analyzeImage = async (imageFile: File) => {
         try {
             setAnalyzing(true);
-            const apiKey = process.env.API_KEY;
-            if (!apiKey) throw new Error("AI key missing");
-
-            const ai = new GoogleGenAI({ apiKey });
             
             // Convert file to base64
             const base64Data = await new Promise<string>((resolve) => {
@@ -88,30 +84,21 @@ const UploadMaterialModal: React.FC<UploadMaterialModalProps> = ({ onClose }) =>
                 reader.onload = () => resolve((reader.result as string).split(',')[1]);
             });
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: {
-                    parts: [
-                        { inlineData: { mimeType: imageFile.type, data: base64Data } },
-                        { text: "Extract the academic course code (e.g., GST 101, MTH 202), the academic session/year (e.g. 2023/2024), and a suitable title for this document. If it looks like a Past Question, title it 'Past Question [Year]'. If it looks like a note, title it 'Lecture Note [Topic]'. Return JSON." }
-                    ]
-                },
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            courseCode: { type: Type.STRING },
-                            session: { type: Type.STRING },
-                            title: { type: Type.STRING },
-                            type: { type: Type.STRING, enum: ['past_question', 'lecture_note', 'other'] }
-                        }
-                    }
-                }
+            // Call secure server-side endpoint
+            const response = await fetch('/api/analyze-document', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileData: base64Data, mimeType: imageFile.type })
             });
 
-            if (response.text) {
-                const data = JSON.parse(response.text);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to analyze document.");
+            }
+
+            const data = await response.json();
+            
+            if (data) {
                 if (data.courseCode) setCourseCode(data.courseCode);
                 if (data.session) setSession(data.session);
                 if (data.title) setTitle(data.title);
@@ -119,9 +106,10 @@ const UploadMaterialModal: React.FC<UploadMaterialModalProps> = ({ onClose }) =>
                 addToast("AI auto-filled details from your image!", "success");
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("AI Analysis failed", error);
-            // Non-blocking error
+            // Non-blocking error toast is optional, or maybe just silent fail
+            // addToast("Could not auto-analyze image.", "info");
         } finally {
             setAnalyzing(false);
         }
