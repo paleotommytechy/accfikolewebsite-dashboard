@@ -2,15 +2,30 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { Faculty, Department, Course, CourseMaterial, CourseBorrower, UserCourseMaterial } from '../types';
 import Card from '../components/ui/Card';
-import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon, SparklesIcon } from '../components/ui/Icons';
+import { BookOpenIcon, ChevronDownIcon, ExternalLinkIcon, ClockIcon } from '../components/ui/Icons';
 import { useNotifier } from '../context/NotificationContext';
 import { useAppContext } from '../context/AppContext';
 import Button from '../components/ui/Button';
+// FIX: Import missing Avatar component to resolve "Cannot find name 'Avatar'" error
+import Avatar from '../components/auth/Avatar';
 import StudyPlanner from '../components/academics/StudyPlanner';
 import CourseCompanion from '../components/academics/CourseCompanion';
-import MaterialQuizModal from '../components/academics/MaterialQuizModal';
+import FocusStudyModal from '../components/academics/FocusStudyModal';
 
-// Reusable Collapsible Component for nesting sections
+const AcademicSkeleton: React.FC = () => (
+    <div className="space-y-6">
+        {[...Array(3)].map((_, i) => (
+            <div key={i} className="border-b dark:border-gray-800 pb-4 last:border-0">
+                <div className="h-8 w-1/3 skeleton animate-shimmer rounded-lg mb-4" />
+                <div className="pl-6 space-y-3">
+                    <div className="h-12 w-full skeleton animate-shimmer rounded-xl" />
+                    <div className="h-12 w-5/6 skeleton animate-shimmer rounded-xl opacity-70" />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
 interface CollapsibleProps {
   title: React.ReactNode;
   children: React.ReactNode;
@@ -20,16 +35,16 @@ interface CollapsibleProps {
 const Collapsible: React.FC<CollapsibleProps> = ({ title, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="border-b dark:border-gray-700 last:border-b-0">
+    <div className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center py-4 px-2 text-left font-semibold text-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        className="w-full flex justify-between items-center py-5 px-3 text-left font-bold text-lg hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors rounded-xl"
       >
         {title}
-        <ChevronDownIcon className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
-        <div className="pb-4 px-2 animate-fade-in-up" style={{animationDuration: '300ms'}}>
+        <div className="pb-6 px-3 animate-fade-in-up" style={{animationDuration: '400ms'}}>
           {children}
         </div>
       )}
@@ -37,62 +52,65 @@ const Collapsible: React.FC<CollapsibleProps> = ({ title, children, defaultOpen 
   );
 };
 
-// Component to render a list of courses, grouped by level
 const CourseLevelGroup: React.FC<{ 
     coursesByLevel: Record<number, (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed?: boolean })[]>,
-    onQuizStart: (material: UserCourseMaterial) => void 
-}> = ({ coursesByLevel, onQuizStart }) => (
-    <div className="pl-4">
+    onStudyStart: (material: UserCourseMaterial) => void 
+}> = ({ coursesByLevel, onStudyStart }) => (
+    <div className="pl-4 space-y-2">
         {Object.entries(coursesByLevel).sort(([a], [b]) => Number(a) - Number(b)).map(([level, coursesInLevel]) => (
-            <Collapsible key={level} title={<span className="text-base font-medium">{level} Level</span>}>
-                <div className="pl-4 space-y-4">
+            <Collapsible key={level} title={<span className="text-base font-black text-primary-600 dark:text-primary-400 tracking-tight">{level} Level</span>}>
+                <div className="pl-4 space-y-6">
                     {(coursesInLevel as (Course & { materials: CourseMaterial[], userMaterials: UserCourseMaterial[], isBorrowed?: boolean })[]).map(course => (
                         <div key={course.id} className="pt-2">
-                            <h4 className="font-semibold">{course.code} - {course.name} {course.isBorrowed && <span className="text-xs font-normal bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full ml-2">Borrowed</span>}</h4>
+                            <h4 className="font-black text-gray-900 dark:text-white flex items-center flex-wrap gap-2">
+                                {course.code} - {course.name} 
+                                {course.isBorrowed && <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full uppercase tracking-tighter">Borrowed</span>}
+                            </h4>
                             
                             {course.materials.length > 0 && (
-                                <>
-                                    <h5 className="text-sm font-semibold mt-2 text-gray-600 dark:text-gray-400">Official Materials</h5>
-                                    <ul className="pl-4 mt-2 space-y-2">
+                                <div className="mt-3">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">University Source</h5>
+                                    <ul className="space-y-2">
                                         {course.materials.map(mat => (
-                                            <li key={mat.id}>
-                                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary-600 hover:underline">
-                                                    <ExternalLinkIcon className="w-4 h-4" />
-                                                    <span>{mat.title} ({mat.type.replace(/_/g, ' ')})</span>
+                                            <li key={mat.id} className="group">
+                                                <a href={mat.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-100 dark:border-gray-800 transition-all hover:bg-primary-50 hover:border-primary-200 dark:hover:bg-primary-900/10">
+                                                    <ExternalLinkIcon className="w-5 h-5 text-primary-500" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="text-sm font-bold text-gray-800 dark:text-gray-200 block truncate">{mat.title}</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{mat.type.replace(/_/g, ' ')}</span>
+                                                    </div>
                                                 </a>
-                                                {mat.description && <p className="text-xs text-gray-500 pl-6">{mat.description}</p>}
                                             </li>
                                         ))}
                                     </ul>
-                                </>
+                                </div>
                             )}
 
-                            {course.userMaterials.length > 0 && (
-                                <>
-                                    <h5 className="text-sm font-semibold mt-3 text-gray-600 dark:text-gray-400">Community Materials</h5>
-                                    <ul className="pl-4 mt-2 space-y-2">
+                            {(course.userMaterials.length > 0 || course.materials.length > 0) ? (
+                                <div className="mt-4">
+                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Fellowship Archive</h5>
+                                    <ul className="space-y-3">
                                         {course.userMaterials.map(um => (
-                                            <li key={um.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                                                <div>
-                                                    <a href={um.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline font-medium">
+                                            <li key={um.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:shadow-md">
+                                                <div className="flex-1 min-w-0">
+                                                    <a href={um.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-black text-sm">
                                                         <ExternalLinkIcon className="w-4 h-4" />
-                                                        <span>{um.title}</span>
+                                                        <span className="truncate">{um.title}</span>
                                                     </a>
-                                                    <p className="text-xs text-gray-500">
-                                                        By {um.profiles?.full_name || 'Member'}
-                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Avatar src={um.profiles?.avatar_url} alt="" size="sm" className="!w-5 !h-5" />
+                                                        <span className="text-xs font-bold text-gray-400">{um.profiles?.full_name || 'Member'}</span>
+                                                    </div>
                                                 </div>
-                                                <Button size="sm" variant="ghost" onClick={() => onQuizStart(um)} className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
-                                                    <SparklesIcon className="w-3 h-3 mr-1" /> Quiz Me
+                                                <Button size="sm" variant="ghost" onClick={() => onStudyStart(um)} className="text-[10px] font-black uppercase tracking-widest bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 rounded-full px-4 border-none shadow-none">
+                                                    <ClockIcon className="w-3.5 h-3.5 mr-1.5" /> Focus Mode
                                                 </Button>
                                             </li>
                                         ))}
                                     </ul>
-                                </>
-                            )}
-
-                            {course.materials.length === 0 && course.userMaterials.length === 0 && (
-                                <p className="text-xs text-gray-500 italic pl-4 mt-2">No materials uploaded yet.</p>
+                                </div>
+                            ) : (
+                                <p className="text-xs font-bold text-gray-400 italic mt-4 pl-1">No materials currently in vault.</p>
                             )}
                         </div>
                     ))}
@@ -101,7 +119,6 @@ const CourseLevelGroup: React.FC<{
         ))}
     </div>
 );
-
 
 const Academics: React.FC = () => {
     const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -112,8 +129,7 @@ const Academics: React.FC = () => {
     const [courseBorrowers, setCourseBorrowers] = useState<CourseBorrower[]>([]);
     const [loading, setLoading] = useState(true);
     
-    // Quiz State
-    const [selectedMaterialForQuiz, setSelectedMaterialForQuiz] = useState<UserCourseMaterial | null>(null);
+    const [selectedMaterialForStudy, setSelectedMaterialForStudy] = useState<UserCourseMaterial | null>(null);
 
     const fetchAllData = useCallback(async () => {
         if (!supabase) return;
@@ -124,7 +140,6 @@ const Academics: React.FC = () => {
                 supabase.from('departments').select('*').order('name'),
                 supabase.from('courses').select('*').order('level, code'),
                 supabase.from('course_materials').select('*').order('title'),
-                // Filter user materials to only approved ones for public view
                 supabase.from('user_course_materials').select('*, profiles:uploader_id(full_name, avatar_url)').eq('status', 'approved').order('created_at', { ascending: false }),
                 supabase.from('course_borrowers').select('*')
             ]);
@@ -211,56 +226,57 @@ const Academics: React.FC = () => {
     }, [faculties, departments, courses, materials, userMaterials, courseBorrowers]);
 
 
-    if (loading) {
-        return <div className="text-center p-8">Loading academic resources...</div>;
-    }
-
     return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Academics Roadmap</h1>
+        <div className="space-y-10">
+            <header className="animate-fade-in-up">
+                <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Academic Roadmap</h1>
+                <p className="text-gray-500 font-bold mt-2 uppercase tracking-widest text-xs">Curated Faculty & Departmental Vaults</p>
+            </header>
 
-            <Card>
-                {Object.keys(universityCoursesByLevel).length === 0 && groupedFaculties.length === 0 ? (
-                    <div className="text-center py-10">
-                        <BookOpenIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
-                        <h3 className="text-lg font-semibold mt-4">No Resources Available</h3>
-                        <p className="text-gray-500 mt-2">Academic materials have not been uploaded yet. Please check back later.</p>
+            <Card className="!p-0 border-none shadow-soft overflow-hidden">
+                {loading ? (
+                    <div className="p-8"><AcademicSkeleton /></div>
+                ) : (Object.keys(universityCoursesByLevel).length === 0 && groupedFaculties.length === 0) ? (
+                    <div className="text-center py-20">
+                        <BookOpenIcon className="w-20 h-20 mx-auto text-gray-200 dark:text-gray-700" />
+                        <h3 className="text-xl font-black mt-4 text-gray-400">Roadmap Currently Empty</h3>
+                        <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-2">Check back after materials are uploaded</p>
                     </div>
                 ) : (
-                    <>
+                    <div className="divide-y border-t border-gray-100 dark:border-gray-800">
                         {Object.keys(universityCoursesByLevel).length > 0 && (
-                            <Collapsible title="University General Courses" defaultOpen>
-                               <CourseLevelGroup coursesByLevel={universityCoursesByLevel} onQuizStart={setSelectedMaterialForQuiz} />
+                            <Collapsible title={<span className="flex items-center gap-2 font-black"><BookOpenIcon className="w-5 h-5 text-primary-500" /> University Wide</span>} defaultOpen>
+                               <CourseLevelGroup coursesByLevel={universityCoursesByLevel} onStudyStart={setSelectedMaterialForStudy} />
                             </Collapsible>
                         )}
 
                         {groupedFaculties.map(faculty => (
-                            <Collapsible key={faculty.id} title={faculty.name}>
-                                <div className="pl-4 space-y-2">
+                            <Collapsible key={faculty.id} title={<span className="font-black">{faculty.name}</span>}>
+                                <div className="pl-4 space-y-1">
                                     {Object.keys(faculty.facultyCoursesByLevel).length > 0 && (
-                                        <Collapsible title={<span className="text-base">Faculty-Wide Courses</span>}>
-                                            <CourseLevelGroup coursesByLevel={faculty.facultyCoursesByLevel} onQuizStart={setSelectedMaterialForQuiz} />
+                                        <Collapsible title={<span className="text-base font-bold text-gray-500">General Faculty</span>}>
+                                            <CourseLevelGroup coursesByLevel={faculty.facultyCoursesByLevel} onStudyStart={setSelectedMaterialForStudy} />
                                         </Collapsible>
                                     )}
                                     {faculty.departments.map(dept => (
-                                        <Collapsible key={dept.id} title={<span className="text-base">{dept.name}</span>}>
-                                            <CourseLevelGroup coursesByLevel={dept.coursesByLevel} onQuizStart={setSelectedMaterialForQuiz} />
+                                        <Collapsible key={dept.id} title={<span className="text-base font-bold text-gray-500">{dept.name}</span>}>
+                                            <CourseLevelGroup coursesByLevel={dept.coursesByLevel} onStudyStart={setSelectedMaterialForStudy} />
                                         </Collapsible>
                                     ))}
                                 </div>
                             </Collapsible>
                         ))}
-                    </>
+                    </div>
                 )}
             </Card>
             
             <StudyPlanner allCourses={allCoursesForPlanner} />
             <CourseCompanion allCourses={allCoursesForPlanner} />
             
-            {selectedMaterialForQuiz && (
-                <MaterialQuizModal 
-                    material={selectedMaterialForQuiz} 
-                    onClose={() => setSelectedMaterialForQuiz(null)} 
+            {selectedMaterialForStudy && (
+                <FocusStudyModal 
+                    material={selectedMaterialForStudy} 
+                    onClose={() => setSelectedMaterialForStudy(null)} 
                 />
             )}
         </div>

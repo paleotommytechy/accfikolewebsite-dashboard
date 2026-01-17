@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req: any, res: any) {
@@ -14,13 +13,8 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'User prompt and course context are required.' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is not set in environment variables");
-      return res.status(500).json({ message: 'AI service is not configured.' });
-    }
-    
-    const ai = new GoogleGenAI({ apiKey });
+    // FIX: Initialize GoogleGenAI with process.env.API_KEY directly as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemInstruction = `You are an expert academic advisor and study planner for a Christian university fellowship. Your goal is to create clear, actionable, and encouraging study schedules.
     
@@ -33,10 +27,12 @@ export default async function handler(req: any, res: any) {
     const fullPrompt = `## System Instruction:\n${systemInstruction}\n\n## User Request:\n${userPrompt}\n\n## Available Course Materials:\n${courseContext}`;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        // FIX: Use 'gemini-3-pro-preview' for complex text reasoning/coding/math tasks
+        model: 'gemini-3-pro-preview',
         contents: fullPrompt,
     });
     
+    // FIX: Access response.text property directly as per guidelines (not a method call)
     const studyPlan = response.text;
 
     return res.status(200).json({ plan: studyPlan });

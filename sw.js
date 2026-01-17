@@ -1,137 +1,89 @@
-const CACHE_NAME = 'accf-dashboard-cache-v4';
-// These are the core files for the app shell.
-// More resources will be cached on the fly.
-const APP_SHELL_URLS = [
-  '/',
-  '/index.html',
-  '/index.tsx',
-  '/manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg'
-];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[Service Worker] Caching app shell');
-        return cache.addAll(APP_SHELL_URLS);
-      })
-  );
-});
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
 
-self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+if (workbox) {
+  console.log('Workbox is loaded');
+
+  // 1. Precache the App Shell
+  // Note: In a production build, these would be injected with hashes.
+  workbox.precaching.precacheAndRoute([
+    { url: '/index.html', revision: '1' },
+    { url: '/manifest.json', revision: '1' },
+  ]);
+
+  // 2. Cache CSS, JS, and Web Workers with Stale-While-Revalidate
+  workbox.routing.registerRoute(
+    ({ request }) => request.destination === 'style' || 
+                     request.destination === 'script' || 
+                     request.destination === 'worker',
+    new workbox.strategies.StaleWhileRevalidate({
+      cacheName: 'assets-cache',
     })
   );
-  return self.clients.claim();
-});
 
-self.addEventListener('fetch', (event) => {
-  // Ignore non-GET requests and Supabase API calls.
-  if (event.request.method !== 'GET' || event.request.url.includes('supabase.co')) {
-    return;
-  }
-
-  // Use a cache-first strategy for all assets.
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      // 1. Try to get the response from the cache.
-      const cachedResponse = await cache.match(event.request);
-      if (cachedResponse) {
-        // If found, return it.
-        return cachedResponse;
-      }
-
-      // 2. If not in cache, fetch from the network.
-      try {
-        const networkResponse = await fetch(event.request);
-        
-        // 3. Cache the new response and return it.
-        // This condition ensures we only cache valid responses.
-        if (networkResponse && networkResponse.status === 200) {
-           cache.put(event.request, networkResponse.clone());
-        } else if (event.request.url.startsWith('https://esm.sh/')) {
-           // Also cache CDN dependencies which might not have standard response types
-           cache.put(event.request, networkResponse.clone());
-        }
-
-        return networkResponse;
-      } catch (error) {
-        // 4. If network fails and it's a navigation request, serve the SPA fallback.
-        console.log('[Service Worker] Network request failed for:', event.request.url);
-        if (event.request.mode === 'navigate') {
-          const appShell = await cache.match('/index.html');
-          if (appShell) {
-            return appShell;
-          }
-        }
-        // For other assets, the fetch will fail if not in cache, which is expected offline behavior.
-        return new Response('Content not available offline.', {
-          status: 404,
-          statusText: 'Not Found',
-          headers: { 'Content-Type': 'text/plain' },
-        });
-      }
+  // 3. Cache Images with Cache-First Strategy
+  workbox.routing.registerRoute(
+    ({ request }) => request.destination === 'image',
+    new workbox.strategies.CacheFirst({
+      cacheName: 'image-cache',
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 60,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        }),
+      ],
     })
   );
-});
 
+  // 4. Cache Google Fonts
+  workbox.routing.registerRoute(
+    ({ url }) => url.origin === 'https://fonts.googleapis.com' || 
+                 url.origin === 'https://fonts.gstatic.com',
+    new workbox.strategies.StaleWhileRevalidate({
+      cacheName: 'google-fonts',
+    })
+  );
 
-// --- PUSH NOTIFICATION LOGIC ---
+  // 5. Background Sync for Prayer Requests and Messages
+  const bgSyncPlugin = new workbox.backgroundSync.BackgroundSyncPlugin('failed-requests-queue', {
+    maxRetentionTime: 24 * 60 // Retry for max 24 Hours
+  });
 
-self.addEventListener('push', (event) => {
-    let data = {};
-    if (event.data) {
-        try {
-            data = event.data.json();
-        } catch (e) {
-            console.error('Push event data is not valid JSON', e);
-            data = { body: event.data.text() };
-        }
+  workbox.routing.registerRoute(
+    ({ url }) => url.pathname.includes('/rest/v1/prayer_requests') || 
+                 url.pathname.includes('/rest/v1/messages'),
+    new workbox.strategies.NetworkOnly({
+      plugins: [bgSyncPlugin]
+    }),
+    'POST'
+  );
+
+  // 6. SPA Routing: Fallback to index.html for navigation requests
+  workbox.routing.registerRoute(
+    ({ request }) => request.mode === 'navigate',
+    async () => {
+      const cache = await caches.open(workbox.precaching.getCacheKeyForURL('/index.html'));
+      return (await cache.match('/index.html')) || fetch('/index.html');
     }
+  );
 
-    const title = data.title || 'New Notification';
-    const options = {
-        body: data.body || 'You have a new update.',
-        icon: data.icon || 'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg',
-        badge: 'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg',
-        data: {
-            url: data.url || '/'
-        }
-    };
+} else {
+  console.log('Workbox failed to load');
+}
 
-    event.waitUntil(self.registration.showNotification(title, options));
+// Push Notifications
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'ACCF Ikole', body: 'New update available!' };
+  const options = {
+    body: data.body,
+    icon: 'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg',
+    badge: 'https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg',
+    data: { url: data.url || '/' }
+  };
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
-            
-            // Check if there's already a window open with the same URL.
-            for (const client of clientList) {
-                if (client.url === urlToOpen && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-            
-            // If not, open a new window.
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
-    );
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data.url));
 });

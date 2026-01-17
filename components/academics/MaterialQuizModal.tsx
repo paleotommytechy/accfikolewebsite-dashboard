@@ -27,7 +27,7 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
     const [activeMode, setActiveMode] = useState<InputMode>('document');
     const [manualText, setManualText] = useState('');
     const [customTopic, setCustomTopic] = useState('');
-    const [loadingStage, setLoadingStage] = useState(''); // "Downloading...", "Slicing PDF...", "AI Thinking..."
+    const [loadingStage, setLoadingStage] = useState(''); 
 
     // Quiz Logic States
     const [loading, setLoading] = useState(true);
@@ -162,6 +162,37 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
         }
     };
 
+    // Helper to safely fetch JSON even if response is not ok
+    const safeFetchJSON = async (url: string, body: any) => {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            if (response.status === 413) throw new Error("File is too large for the server. Try pasting text content instead.");
+            if (response.status === 504) throw new Error("Server timeout. The file might be too complex to analyze.");
+            
+            let errorMessage = `Server Error (${response.status})`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                // If parsing JSON fails, it's likely an HTML error page or empty body
+                const text = await response.text();
+                if (text) errorMessage = `Server Error: ${text.slice(0, 100)}...`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        try {
+            return await response.json();
+        } catch (e) {
+            throw new Error("Server response was invalid (not JSON).");
+        }
+    };
+
     const generateTips = async () => {
         if (!currentUser) return;
         setGeneratingTips(true);
@@ -187,19 +218,8 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
                 apiBody.mimeType = fileData.mimeType;
             }
 
-            // Call Secure Endpoint
-            const response = await fetch('/api/generate-learning-content', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(apiBody)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Failed to generate tips.");
-            }
-
-            const data = await response.json();
+            // Call Secure Endpoint safely
+            const data = await safeFetchJSON('/api/generate-learning-content', apiBody);
             setTips(data.text || "No tips generated.");
 
         } catch (error: any) {
@@ -207,7 +227,7 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
             if (error.message?.includes("leaked") || error.message?.includes("PERMISSION_DENIED")) {
                 addToast("AI Service Unavailable: Configuration Error.", "error");
             } else {
-                addToast("Could not generate tips. Try 'Paste Content' mode.", "error");
+                addToast(`Could not generate tips. ${error.message}`, "error");
             }
         } finally {
             setGeneratingTips(false);
@@ -241,19 +261,9 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
                 apiBody.mimeType = fileData.mimeType;
             }
 
-            // Call Secure Endpoint
-            const response = await fetch('/api/generate-learning-content', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(apiBody)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Failed to generate quiz.");
-            }
-
-            const data = await response.json();
+            // Call Secure Endpoint safely
+            const data = await safeFetchJSON('/api/generate-learning-content', apiBody);
+            
             const generatedQuestions = data.questions || [];
 
             if (generatedQuestions.length === 0) throw new Error("AI returned no questions.");
@@ -290,7 +300,7 @@ const MaterialQuizModal: React.FC<MaterialQuizModalProps> = ({ material, onClose
             if (error.message?.includes("leaked") || error.message?.includes("PERMISSION_DENIED")) {
                 addToast("Generation failed: Configuration Error.", "error");
             } else {
-                addToast(`Generation failed. Try 'Paste Content' mode. Error: ${error.message}`, 'error');
+                addToast(`Generation failed. ${error.message}`, 'error');
             }
         } finally {
             setGenerating(false);

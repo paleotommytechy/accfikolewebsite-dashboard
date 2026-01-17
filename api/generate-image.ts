@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req: any, res: any) {
@@ -14,13 +13,8 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ message: 'Prompt is required in the request body.' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is not set in environment variables");
-      return res.status(500).json({ message: 'Image generation service is not configured.' });
-    }
-    
-    const ai = new GoogleGenAI({ apiKey });
+    // FIX: Initialize GoogleGenAI with process.env.API_KEY directly as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
         prompt: `A cinematic, high-quality hero image for a blog post titled: "${prompt}". The image should be visually appealing and relevant to the title. No text in the image.`,

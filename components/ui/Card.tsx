@@ -4,23 +4,24 @@ import React from 'react';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  // FIX: Changed title prop type from string to React.ReactNode to allow JSX components.
   title?: React.ReactNode;
   action?: React.ReactNode;
-  // FIX: Add style prop to allow passing inline styles for animations.
   style?: React.CSSProperties;
 }
 
 const Card: React.FC<CardProps> = ({ children, className = '', title, action, style }) => {
   return (
-    <div className={`bg-white dark:bg-dark rounded-lg shadow-md p-4 sm:p-6 ${className}`} style={style}>
+    <div 
+      className={`bg-white dark:bg-dark rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] p-5 sm:p-7 border border-gray-100 dark:border-gray-800/50 ${className}`} 
+      style={style}
+    >
       {(title || action) && (
-        <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
-          {title && <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{title}</h3>}
-          {action && <div>{action}</div>}
+        <div className="flex items-center justify-between mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+          {title && <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{title}</h3>}
+          {action && <div className="flex-shrink-0">{action}</div>}
         </div>
       )}
-      <div>{children}</div>
+      <div className="relative">{children}</div>
     </div>
   );
 };

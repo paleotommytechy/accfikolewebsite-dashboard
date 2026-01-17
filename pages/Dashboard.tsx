@@ -10,9 +10,9 @@ import { useAppContext } from '../context/AppContext';
 import { supabase } from '../lib/supabaseClient';
 import { TaskAssignment, WeeklyChallenge, UserProfile, Scripture, OnboardingProgress, UserCourseMaterial } from '../types';
 // FIX: Import missing icons to resolve module export errors.
-import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon, CheckCircleIcon, CloudUploadIcon, SparklesIcon, BookOpenIcon } from '../components/ui/Icons';
+import { TrophyIcon, StarIcon, CoinIcon, CrownIcon, ClipboardListIcon, CheckIcon, UserIcon, ExternalLinkIcon, FireIcon, CheckCircleIcon, CloudUploadIcon, SparklesIcon, BookOpenIcon, ClockIcon } from '../components/ui/Icons';
 import UploadMaterialModal from '../components/academics/UploadMaterialModal';
-import MaterialQuizModal from '../components/academics/MaterialQuizModal';
+import FocusStudyModal from '../components/academics/FocusStudyModal';
 
 
 const CompleteProfileCard: React.FC = () => (
@@ -185,8 +185,6 @@ const ScriptureOfTheDay: React.FC = () => {
         </Card>
     );
 };
-
-// ... (Rest of the file remains unchanged: DailyTasks, MyProgressCard, WeeklyChallengeCard, MiniLeaderboard, WebsiteCtaCard, UploadCtaCard, ExamPrepCard, GameCenterPromoCard, Dashboard main component)
 
 const DailyTasks: React.FC<{ tasks: TaskAssignment[] }> = ({ tasks }) => {
     const totalTasks = tasks.length;
@@ -454,17 +452,17 @@ const UploadCtaCard: React.FC<{ onOpen: () => void }> = ({ onOpen }) => (
 );
 
 // --- NEW: Exam Prep Shortcut Card ---
-const ExamPrepCard: React.FC<{ materials: UserCourseMaterial[], onQuiz: (material: UserCourseMaterial) => void }> = ({ materials, onQuiz }) => {
+const ExamPrepCard: React.FC<{ materials: UserCourseMaterial[], onStudy: (material: UserCourseMaterial) => void }> = ({ materials, onStudy }) => {
     if (materials.length === 0) return null;
 
     return (
         <Card title={
             <div className="flex items-center gap-2">
                 <SparklesIcon className="w-5 h-5 text-yellow-500" />
-                <span>Ace Your Exams</span>
+                <span>Exam Prep</span>
             </div>
         } className="border-t-4 border-yellow-400">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Quickly jump into a quiz for recently added materials.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Start a focused study session for recently added materials.</p>
             <div className="space-y-3">
                 {materials.map(mat => (
                     <div key={mat.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -472,8 +470,8 @@ const ExamPrepCard: React.FC<{ materials: UserCourseMaterial[], onQuiz: (materia
                             <p className="font-semibold text-gray-900 dark:text-white truncate">{mat.courses?.code} - {mat.title}</p>
                             <p className="text-xs text-gray-500 truncate">{mat.material_type.replace('_', ' ')}</p>
                         </div>
-                        <Button size="sm" onClick={() => onQuiz(mat)} className="flex-shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white border-none">
-                            Quiz Me
+                        <Button size="sm" onClick={() => onStudy(mat)} className="flex-shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white border-none">
+                            <ClockIcon className="w-4 h-4 mr-1" /> Focus
                         </Button>
                     </div>
                 ))}
@@ -500,7 +498,7 @@ const GameCenterPromoCard: React.FC = () => (
                 <h3 className="text-xl font-bold">Game Center</h3>
             </div>
             <p className="text-sm text-primary-100 font-medium">
-                Level up your dopamine feeling! Perfect for celebrating after you score more than 3/5 in a Genius Quiz.
+                Level up your dopamine feeling! Perfect for celebrating after a study session.
             </p>
             <Button to="/game" className="w-full bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary-600 font-bold mt-2 shadow-lg">
                 Play Spirit Blitz
@@ -519,7 +517,7 @@ const Dashboard: React.FC = () => {
   const [recentMaterials, setRecentMaterials] = useState<UserCourseMaterial[]>([]);
   
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedQuizMaterial, setSelectedQuizMaterial] = useState<UserCourseMaterial | null>(null);
+  const [selectedStudyMaterial, setSelectedStudyMaterial] = useState<UserCourseMaterial | null>(null);
 
   useEffect(() => {
     if (currentUser && supabase) {
@@ -619,8 +617,9 @@ const Dashboard: React.FC = () => {
         <div className="lg:col-span-1 space-y-6">
           <MyProgressCard user={currentUser} />
           <GameCenterPromoCard />
-          {/* New Exam Prep Shortcut */}
-          <ExamPrepCard materials={recentMaterials} onQuiz={setSelectedQuizMaterial} />
+          {/* New Exam Prep Shortcut - HIDDEN FOR NOW
+          <ExamPrepCard materials={recentMaterials} onStudy={setSelectedStudyMaterial} />
+          */}
           <WeeklyChallengeCard challenge={challenge} />
           <MiniLeaderboard leaderboard={leaderboard} />
         </div>
@@ -628,10 +627,10 @@ const Dashboard: React.FC = () => {
       
       {isUploadModalOpen && <UploadMaterialModal onClose={() => setIsUploadModalOpen(false)} />}
       
-      {selectedQuizMaterial && (
-          <MaterialQuizModal 
-              material={selectedQuizMaterial} 
-              onClose={() => setSelectedQuizMaterial(null)} 
+      {selectedStudyMaterial && (
+          <FocusStudyModal 
+              material={selectedStudyMaterial} 
+              onClose={() => setSelectedStudyMaterial(null)} 
           />
       )}
     </div>

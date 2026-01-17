@@ -13,34 +13,40 @@ const slugify = (text: string) => {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-') // Replace spaces with -
-    .replace(/[^\w\-]+/g, '') // Remove all non-word chars
-    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
 };
 
 const PostCard: React.FC<{ post: Post }> = ({ post }) => {
-    const excerpt = post.content.substring(0, 150) + (post.content.length > 150 ? '...' : '');
-    const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format=fit=crop";
+    const excerpt = post.content.substring(0, 120) + (post.content.length > 120 ? '...' : '');
+    const defaultImage = "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=800&auto=format&fit=crop";
 
     return (
         <Link to={`/blog/${post.id}/${slugify(post.title)}`} className="block group">
-            <Card className="flex flex-col h-full !p-0 overflow-hidden transition-shadow hover:shadow-xl">
-                <img src={post.image_url || defaultImage} alt={post.title} className="w-full h-48 object-cover" />
-                <div className="p-5 flex flex-col flex-grow">
-                    <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">{post.category}</span>
-                    <h3 className="text-xl font-bold mt-2 text-gray-800 dark:text-white group-hover:text-primary-600">{post.title}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 flex-grow">{excerpt}</p>
-                    <div className="mt-4 pt-4 border-t dark:border-gray-700 flex items-center justify-between">
+            <Card className="flex flex-col h-full !p-0 overflow-hidden transition-all duration-300 hover:-translate-y-2 !border-none !shadow-xl group-hover:ring-2 group-hover:ring-primary-500/20">
+                <div className="relative h-56 overflow-hidden">
+                    <img src={post.image_url || defaultImage} alt={post.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <div className="absolute top-4 left-4">
+                        <span className="bg-white/90 dark:bg-dark/90 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-primary-600 px-3 py-1.5 rounded-full shadow-sm">
+                            {post.category}
+                        </span>
+                    </div>
+                </div>
+                <div className="p-6 flex flex-col flex-grow">
+                    <h3 className="text-xl font-black leading-tight text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{post.title}</h3>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-3 flex-grow line-clamp-3">{excerpt}</p>
+                    <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <Avatar src={post.profiles.avatar_url} alt={post.profiles.full_name || 'Author'} size="sm" />
+                            <Avatar src={post.profiles.avatar_url} alt={post.profiles.full_name || 'Author'} size="sm" className="!w-8 !h-8 border-2 border-white dark:border-gray-800 shadow-sm" />
                             <div>
-                                <p className="text-sm font-semibold">{post.profiles.full_name}</p>
-                                <p className="text-xs text-gray-500">{new Date(post.created_at).toLocaleDateString()}</p>
+                                <p className="text-[11px] font-black text-gray-800 dark:text-gray-200 truncate max-w-[100px]">{post.profiles.full_name}</p>
+                                <p className="text-[10px] font-bold text-gray-400">{new Date(post.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                             <span className="flex items-center gap-1"><HeartIcon className="w-4 h-4" /> {post.likes_count}</span>
-                             <span className="flex items-center gap-1"><ChatIcon className="w-4 h-4" /> {post.comments_count}</span>
+                        <div className="flex items-center gap-4 text-xs font-black text-gray-400">
+                             <span className="flex items-center gap-1.5"><HeartIcon className="w-3.5 h-3.5" /> {post.likes_count}</span>
+                             <span className="flex items-center gap-1.5"><ChatIcon className="w-3.5 h-3.5" /> {post.comments_count}</span>
                         </div>
                     </div>
                 </div>
@@ -120,68 +126,70 @@ const Blog: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">Fellowship Blog</h1>
+        <div className="space-y-10 animate-fade-in-up">
+            <header>
+                <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Fellowship Blog</h1>
+                <p className="text-gray-500 font-bold mt-2 uppercase tracking-widest text-xs">Stories, Devotionals & Updates</p>
+            </header>
             
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 bg-white dark:bg-dark p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="relative flex-grow">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search posts..."
+                        placeholder="Search articles..."
                         value={searchTerm}
                         onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                        className="w-full bg-white dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        className="w-full bg-gray-50 dark:bg-secondary border-none rounded-xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-primary-500/20 focus:outline-none font-medium"
                     />
                 </div>
-                <div className="relative">
+                <div className="relative min-w-[200px]">
                     <select
                         value={sortOption}
                         onChange={e => { setSortOption(e.target.value); setCurrentPage(1); }}
-                        className="w-full sm:w-auto appearance-none bg-white dark:bg-dark border border-gray-300 dark:border-gray-700 rounded-lg pl-4 pr-10 py-2 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                        className="w-full appearance-none bg-gray-50 dark:bg-secondary border-none rounded-xl pl-4 pr-10 py-3 text-sm focus:ring-2 focus:ring-primary-500/20 focus:outline-none font-black text-gray-600 dark:text-gray-300"
                     >
-                        <option value="newest">Sort by: Newest</option>
-                        <option value="oldest">Sort by: Oldest</option>
-                        <option value="title-asc">Sort by: Title (A-Z)</option>
-                        <option value="title-desc">Sort by: Title (Z-A)</option>
-                        <option value="author-asc">Sort by: Author (A-Z)</option>
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="title-asc">Title (A-Z)</option>
+                        <option value="title-desc">Title (Z-A)</option>
                     </select>
-                    <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                    <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
             </div>
 
             {loading ? (
-                <div className="text-center p-8">Loading posts...</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {[...Array(6)].map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-dark rounded-3xl h-[400px] skeleton animate-shimmer" />
+                    ))}
+                </div>
             ) : paginatedPosts.length > 0 ? (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {paginatedPosts.map(post => (
                             <PostCard key={post.id} post={post} />
                         ))}
                     </div>
                     {totalPages > 1 && (
-                        <div className="flex justify-center items-center gap-2 mt-8">
+                        <div className="flex justify-center items-center gap-3 mt-12 pb-10">
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                <Button
+                                <button
                                     key={page}
-                                    variant={currentPage === page ? 'primary' : 'outline'}
-                                    size="sm"
                                     onClick={() => handlePageChange(page)}
-                                    className="!px-3 !py-1"
+                                    className={`w-10 h-10 rounded-xl font-black text-sm transition-all ${currentPage === page ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30' : 'bg-white dark:bg-dark text-gray-400 hover:bg-gray-100'}`}
                                 >
                                     {page}
-                                </Button>
+                                </button>
                             ))}
                         </div>
                     )}
                 </>
             ) : (
-                <Card>
-                    <div className="text-center py-12">
-                        <BookOpenIcon className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600" />
-                        <h3 className="text-lg font-semibold mt-4">No Posts Found</h3>
-                        <p className="text-gray-500 mt-2">Your search didn't match any posts. Try a different term.</p>
-                    </div>
+                <Card className="text-center py-20 !border-none !shadow-none">
+                    <BookOpenIcon className="w-20 h-20 mx-auto text-gray-200 dark:text-gray-700" />
+                    <h3 className="text-xl font-black mt-6 text-gray-400">No Articles Found</h3>
+                    <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mt-2">Try adjusting your search criteria</p>
                 </Card>
             )}
         </div>

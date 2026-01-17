@@ -1,5 +1,13 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
+
+// Increase body size limit for file uploads
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '4mb',
+    },
+  },
+};
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -14,15 +22,11 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ message: "File data and mimeType are required." });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is not set in environment variables");
-      return res.status(500).json({ message: 'AI service is not configured.' });
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
+    // FIX: Initialize GoogleGenAI with process.env.API_KEY directly as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        // FIX: Use 'gemini-3-flash-preview' for general tasks
+        model: 'gemini-3-flash-preview',
         contents: {
             parts: [
                 { inlineData: { mimeType: mimeType, data: fileData } },
@@ -43,6 +47,7 @@ export default async function handler(req: any, res: any) {
         }
     });
 
+    // FIX: Access response.text property directly as per guidelines (not a method call)
     const jsonStr = response.text?.trim();
     if (!jsonStr) throw new Error("No response from AI");
 

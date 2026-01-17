@@ -1,23 +1,39 @@
+
 {
-  "name": "ACCF Ikole Dashboard",
-  "short_name": "ACCF Dashboard",
-  "description": "A comprehensive dashboard for the All Christian Campus Fellowship (ACCF Ikole Campus) to manage tasks, challenges, events, prayer requests, and community engagement, built with React and backed by Supabase.",
-  "start_url": ".",
+  "name": "ACCF Ikole Campus",
+  "short_name": "ACCF Vault",
+  "description": "Comprehensive Fellowship Dashboard for ACCF Ikole Campus",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e293b",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
   "theme_color": "#10b981",
   "icons": [
     {
       "src": "https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg",
       "sizes": "192x192",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Messages",
+      "short_name": "Chats",
+      "url": "/messages",
+      "icons": [{ "src": "https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily Tasks",
+      "short_name": "Tasks",
+      "url": "/tasks",
+      "icons": [{ "src": "https://accfikolewebsite.vercel.app/assets/logo-CsSe79S4.jpg", "sizes": "192x192" }]
     }
   ]
 }
