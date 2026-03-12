@@ -407,6 +407,12 @@ export const TrophyIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
     </svg>
 );
 
+export const PrinterIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+  </svg>
+);
+
 export const BoldIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
         <path d="M9.25 13.25a.75.75 0 010-1.5h.5a2.5 2.5 0 002.5-2.5V6.75a.75.75 0 011.5 0v2.5a4 4 0 01-4 4h-.5a.75.75 0 01-.75-.75z" />

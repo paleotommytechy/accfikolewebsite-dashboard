@@ -41,6 +41,7 @@ import Help from './pages/Help';
 import UpdatePassword from './pages/UpdatePassword';
 import Sponsorships from './pages/Sponsorships';
 import GameCenter from './pages/GameCenter';
+import LetterheadGenerator from './pages/LetterheadGenerator';
 
 const FullPageLoader = () => (
   <div className="flex h-screen items-center justify-center bg-light dark:bg-secondary">
@@ -139,6 +140,7 @@ function AppContent(): React.ReactNode {
             <Route path="/sponsorships" element={<Sponsorships />} />
             <Route path="/help" element={<Help />} />
             <Route path="/game" element={<GameCenter />} />
+            <Route path="/letterhead" element={<LetterheadGenerator />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

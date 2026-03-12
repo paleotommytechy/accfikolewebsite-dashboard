@@ -40,5 +40,6 @@ export const ADMIN_LINKS = [
   { name: 'Resource Mgt.', href: '/resource-management', icon: <ArchiveIcon /> },
   { name: 'Event Management', href: '/event-management', icon: <CalendarIcon /> },
   { name: 'Financial Mgt.', href: '/financial-management', icon: <GiftIcon /> },
+  { name: 'Letterhead Gen.', href: '/letterhead', icon: <PencilAltIcon /> },
   { name: 'Admin & User Mgt.', href: '/developer-settings', icon: <UsersIcon /> },
 ];
